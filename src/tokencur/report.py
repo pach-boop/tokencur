@@ -1,11 +1,14 @@
-"""Quick usage & cost summary over Claude Code logs.
+"""Quick usage & cost summary over local AI coding-agent logs.
 
 Usage:
-    python -m tokencur.report [ROOT]
+    python -m tokencur.report          # scan all known local sources
+    python -m tokencur.report ROOT     # scan ROOT as Claude Code logs
 
-ROOT defaults to ``~/.claude/projects``. This is the v0 "does the
-pipeline see my real spend?" check; the FOCUS normalizer and the
-DuckDB/Streamlit analysis layers build on the same records.
+With no arguments, every known source that exists on this machine is
+scanned: Claude Code (``~/.claude/projects``), Codex CLI
+(``~/.codex/sessions``) and Kimi Code (``~/.kimi-code/sessions``).
+This is the v0 "does the pipeline see my real spend?" check; the FOCUS
+normalizer and analysis layers build on the same records.
 """
 
 from __future__ import annotations
@@ -14,13 +17,21 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from tokencur.ingest.claude_code import UsageRecord, iter_usage_records
+from tokencur.ingest import claude_code, codex, kimi_code
+from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import AS_OF, record_cost_usd
+
+DEFAULT_SOURCES = (
+    (Path.home() / ".claude" / "projects", claude_code.iter_usage_records),
+    (Path.home() / ".codex" / "sessions", codex.iter_usage_records),
+    (Path.home() / ".kimi-code" / "sessions", kimi_code.iter_usage_records),
+)
 
 
 def summarize(records: list[UsageRecord]) -> str:
     by_model: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     by_day: dict[str, float] = defaultdict(float)
+    by_source: dict[str, float] = defaultdict(float)
     unpriced: dict[str, int] = defaultdict(int)
     total_cost = 0.0
 
@@ -29,6 +40,7 @@ def summarize(records: list[UsageRecord]) -> str:
         if cost is None:
             unpriced[r.model] += 1
             continue
+        by_source[r.source] += cost
         agg = by_model[r.model]
         agg["messages"] += 1
         agg["input"] += r.input_tokens
@@ -52,6 +64,10 @@ def summarize(records: list[UsageRecord]) -> str:
             f"{agg['output']:>12,.0f}{agg['cache_read']:>13,.0f}"
             f"{agg['cache_write']:>13,.0f}{agg['cost']:>11,.2f}"
         )
+    if len(by_source) > 1:
+        lines += ["", "by source:"]
+        for source, cost in sorted(by_source.items(), key=lambda kv: -kv[1]):
+            lines.append(f"  {source:<14}${cost:,.2f}")
     lines += ["", "daily cost (top 10 days):"]
     for day, cost in sorted(by_day.items(), key=lambda kv: -kv[1])[:10]:
         lines.append(f"  {day}  ${cost:,.2f}")
@@ -63,11 +79,21 @@ def summarize(records: list[UsageRecord]) -> str:
 
 
 def main(argv: list[str]) -> int:
-    root = Path(argv[1]) if len(argv) > 1 else Path.home() / ".claude" / "projects"
-    if not root.exists():
-        print(f"error: {root} does not exist", file=sys.stderr)
-        return 1
-    print(summarize(list(iter_usage_records(root))))
+    records: list[UsageRecord] = []
+    if len(argv) > 1:
+        root = Path(argv[1])
+        if not root.exists():
+            print(f"error: {root} does not exist", file=sys.stderr)
+            return 1
+        records = list(claude_code.iter_usage_records(root))
+    else:
+        for root, iter_records in DEFAULT_SOURCES:
+            if root.exists():
+                records.extend(iter_records(root))
+        if not records:
+            print("error: no known usage-log locations found", file=sys.stderr)
+            return 1
+    print(summarize(records))
     return 0
 
 
