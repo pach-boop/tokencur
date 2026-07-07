@@ -3,11 +3,13 @@ import json
 from tokencur.ingest.claude_code import iter_usage_records
 
 
-def _assistant_line(request_id: str, usage: dict, message_id: str = "msg_1") -> str:
+def _assistant_line(
+    request_id: str, usage: dict, message_id: str = "msg_1", session_id: str = "sess_1"
+) -> str:
     return json.dumps(
         {
             "type": "assistant",
-            "sessionId": "sess_1",
+            "sessionId": session_id,
             "requestId": request_id,
             "timestamp": "2026-07-01T10:00:00.000Z",
             "message": {"id": message_id, "model": "claude-opus-4-8", "usage": usage},
@@ -63,3 +65,20 @@ def test_parses_skips_and_dedups(tmp_path):
     assert (first.cache_write_5m_tokens, first.cache_write_1h_tokens) == (200, 500)
     # Old format: total attributed to the 5m tier (documented assumption).
     assert (second.cache_write_5m_tokens, second.cache_write_1h_tokens) == (300, 0)
+
+
+def test_dedups_across_session_files(tmp_path):
+    """A resumed session re-copies messages under a new session id;
+    the same API request must not be double-counted."""
+    workspace = tmp_path / "workspace-a"
+    workspace.mkdir()
+    (workspace / "original.jsonl").write_text(
+        _assistant_line("req_1", NEW_FORMAT_USAGE, session_id="sess_1"),
+        encoding="utf-8",
+    )
+    (workspace / "resumed.jsonl").write_text(
+        _assistant_line("req_1", NEW_FORMAT_USAGE, session_id="sess_2"),
+        encoding="utf-8",
+    )
+
+    assert len(list(iter_usage_records(tmp_path))) == 1

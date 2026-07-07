@@ -38,11 +38,13 @@ class UsageRecord:
 def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
     """Yield one UsageRecord per assistant message under ``root``.
 
-    Streaming can log the same assistant message across several lines,
-    so records are deduplicated on (session id, request id, message id).
+    Records are deduplicated on (request id, message id): streaming can
+    log one message across several lines, and resuming a session can
+    re-copy past messages into a new file under a new session id — the
+    same API request must never be counted twice.
     Lines that are not valid JSON or carry no usage data are skipped.
     """
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str]] = set()
     for path in sorted(root.rglob("*.jsonl")):
         workspace = path.parent.name
         with path.open(encoding="utf-8") as fh:
@@ -53,7 +55,7 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
 
 
 def _parse_line(
-    line: str, workspace: str, seen: set[tuple[str, str, str]]
+    line: str, workspace: str, seen: set[tuple[str, str]]
 ) -> UsageRecord | None:
     try:
         entry = json.loads(line)
@@ -67,7 +69,6 @@ def _parse_line(
         return None
 
     key = (
-        entry.get("sessionId", ""),
         entry.get("requestId", ""),
         message.get("id") or entry.get("uuid", ""),
     )
