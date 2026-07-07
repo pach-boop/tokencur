@@ -51,7 +51,8 @@ Requires Python 3.11+. No runtime dependencies.
 
 ```bash
 pip install -e .
-python -m tokencur.report
+python -m tokencur.report              # cost summary in your terminal
+python -m tokencur.export focus.csv    # FOCUS 1.2 conformant dataset
 ```
 
 With no arguments it scans every known local source on your machine — **Claude Code**
@@ -65,7 +66,7 @@ API-equivalent cost, including provider-correct cache economics.
 |---|---|---|
 | 1 | Repo, thesis, related work | ✅ |
 | 2 | Ingest real usage: local agent logs; Anthropic/OpenAI admin-API exports | 🔨 Claude Code, Codex CLI and Kimi Code done; API exports pending |
-| 3 | FOCUS normalizer (Python) with tests against official sample data | ⏳ |
+| 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator) | ✅ core done; cross-tests vs official sample data pending |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ⏳ |
 | 5 | Recommendation engine: model right-sizing, caching ROI, batch vs realtime, local-vs-API break-even | ⏳ |
 | 6 | Serverless AWS deployment, documented — "operating this costs $0.40/month" | ⏳ |
@@ -82,7 +83,8 @@ API-equivalent cost, including provider-correct cache economics.
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
   land on the next UTC day.
-- Not yet validated against FOCUS sample datasets — that is phase 3.
+- The export passes the Foundation's `focus-validator` (spec 1.2) in CI; cross-checks
+  against official sample datasets are still pending.
 
 ## Transparency
 

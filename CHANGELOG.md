@@ -13,6 +13,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Multi-source report: with no arguments, every known local source is
   scanned (Claude Code, Codex, Kimi Code) with per-source totals.
 - Vendor prefixes (`moonshot-ai/…`) are stripped when resolving rates.
+- FOCUS 1.2 normalizer and `python -m tokencur.export`: one charge row
+  per token bucket, showback cost semantics, explicit-null InvoiceId.
+- CI conformance gate: the export must pass the FinOps Foundation's
+  own `focus-validator` (spec 1.2) on every push.
 
 - Vendored snapshot of the LiteLLM community price database as a
   fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,
