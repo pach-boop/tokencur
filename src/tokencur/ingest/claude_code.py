@@ -29,6 +29,7 @@ class UsageRecord:
     cache_read_tokens: int
     cache_write_5m_tokens: int
     cache_write_1h_tokens: int
+    source: str = "claude-code"  # which ingester produced the record
 
     @property
     def date(self) -> str:
