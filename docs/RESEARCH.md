@@ -66,9 +66,11 @@ Claude Code, Codex CLI and Gemini CLI local histories. **Take:** their documente
 locations and formats as the spec for tokencur's next local ingesters; credit them in
 Related Work.
 
-> **Probed 2026-07-06 on the maintainer's machine:** `~/.codex` holds ~280MB of real
+> **Probed 2026-07-06/07 on the maintainer's machine:** `~/.codex` holds ~280MB of real
 > local history (`history.jsonl` + session data) — a ready-made second dataset for the
-> Codex ingester. `~/.gemini` held configuration only, no usage logs.
+> Codex ingester. `~/.kimi-code` holds real Kimi CLI sessions (`sessions/` +
+> `session_index.jsonl` + `user-history/*.jsonl`) — dataset #3. `~/.gemini` held
+> configuration only, no usage logs.
 
 ## 5. Reference implementations to study, not copy
 

@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-07-06",
+  "fetched": "2026-07-07",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -191,6 +191,21 @@
    "litellm_provider": "anthropic",
    "output_cost_per_token": 1e-05
   },
+  "codegeex4": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "codegemma": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "codellama": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
   "codex-mini-latest": {
    "cache_read_input_token_cost": 3.75e-07,
    "input_cost_per_token": 1.5e-06,
@@ -201,6 +216,79 @@
    "input_cost_per_token": 2e-06,
    "litellm_provider": "gemini",
    "output_cost_per_token": 1.2e-05
+  },
+  "deepseek-chat": {
+   "cache_read_input_token_cost": 2.8e-08,
+   "input_cost_per_token": 2.8e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 4.2e-07
+  },
+  "deepseek-coder": {
+   "input_cost_per_token": 1.4e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 2.8e-07
+  },
+  "deepseek-coder-v2-base": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "deepseek-coder-v2-instruct": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "deepseek-coder-v2-lite-base": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "deepseek-coder-v2-lite-instruct": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "deepseek-r1": {
+   "input_cost_per_token": 5.5e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 2.19e-06
+  },
+  "deepseek-reasoner": {
+   "cache_read_input_token_cost": 2.8e-08,
+   "input_cost_per_token": 2.8e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 4.2e-07
+  },
+  "deepseek-v3": {
+   "cache_creation_input_token_cost": 0.0,
+   "cache_read_input_token_cost": 7e-08,
+   "input_cost_per_token": 2.7e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 1.1e-06
+  },
+  "deepseek-v3.1:671b-cloud": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "deepseek-v3.2": {
+   "input_cost_per_token": 2.8e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 4e-07
+  },
+  "deepseek-v4-flash": {
+   "cache_creation_input_token_cost": 0.0,
+   "cache_read_input_token_cost": 2.8e-09,
+   "input_cost_per_token": 1.4e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 2.8e-07
+  },
+  "deepseek-v4-pro": {
+   "cache_creation_input_token_cost": 0.0,
+   "cache_read_input_token_cost": 3.625e-09,
+   "input_cost_per_token": 4.35e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 8.7e-07
   },
   "ft:gpt-3.5-turbo": {
    "input_cost_per_token": 3e-06,
@@ -513,6 +601,83 @@
    "input_cost_per_token": 0,
    "litellm_provider": "gemini",
    "output_cost_per_token": 0
+  },
+  "glm-4-32b-0414-128k": {
+   "input_cost_per_token": 1e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 1e-07
+  },
+  "glm-4.5": {
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 2.2e-06
+  },
+  "glm-4.5-air": {
+   "input_cost_per_token": 2e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 1.1e-06
+  },
+  "glm-4.5-airx": {
+   "input_cost_per_token": 1.1e-06,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 4.5e-06
+  },
+  "glm-4.5-flash": {
+   "input_cost_per_token": 0,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 0
+  },
+  "glm-4.5-x": {
+   "input_cost_per_token": 2.2e-06,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 8.9e-06
+  },
+  "glm-4.5v": {
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 1.8e-06
+  },
+  "glm-4.6": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 1.1e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 2.2e-06
+  },
+  "glm-4.7": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 1.1e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 2.2e-06
+  },
+  "glm-4.7-flash": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 0,
+   "input_cost_per_token": 0,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 0
+  },
+  "glm-5": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 2e-07,
+   "input_cost_per_token": 1e-06,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 3.2e-06
+  },
+  "glm-5-code": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 3e-07,
+   "input_cost_per_token": 1.2e-06,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 5e-06
+  },
+  "glm-5.1": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 2.6e-07,
+   "input_cost_per_token": 1.4e-06,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 4.4e-06
   },
   "gpt-3.5-turbo": {
    "input_cost_per_token": 5e-07,
@@ -1048,6 +1213,16 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 1e-05
   },
+  "gpt-oss:120b-cloud": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "gpt-oss:20b-cloud": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
   "gpt-realtime": {
    "cache_read_input_token_cost": 4e-07,
    "input_cost_per_token": 4e-06,
@@ -1089,10 +1264,132 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 2.4e-06
   },
+  "internlm2_5-20b-chat": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "kimi-k2-0711-preview": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2.5e-06
+  },
+  "kimi-k2-0905-preview": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2.5e-06
+  },
+  "kimi-k2-thinking": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2.5e-06
+  },
+  "kimi-k2-thinking-turbo": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 1.15e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 8e-06
+  },
+  "kimi-k2-turbo-preview": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 1.15e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 8e-06
+  },
+  "kimi-k2.5": {
+   "cache_read_input_token_cost": 1e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 3e-06
+  },
+  "kimi-k2.6": {
+   "cache_read_input_token_cost": 1.6e-07,
+   "input_cost_per_token": 9.5e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 4e-06
+  },
+  "kimi-latest": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 5e-06
+  },
+  "kimi-latest-128k": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 5e-06
+  },
+  "kimi-latest-32k": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 1e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 3e-06
+  },
+  "kimi-latest-8k": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 2e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2e-06
+  },
+  "kimi-thinking-preview": {
+   "cache_read_input_token_cost": 1.5e-07,
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2.5e-06
+  },
   "learnlm-1.5-pro-experimental": {
    "input_cost_per_token": 0,
    "litellm_provider": "gemini",
    "output_cost_per_token": 0
+  },
+  "llama2": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama2-uncensored": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama2:13b": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama2:70b": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama2:7b": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama3": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama3.1": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama3:70b": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "llama3:8b": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
   },
   "lyria-3-clip-preview": {
    "input_cost_per_token": 0,
@@ -1103,6 +1400,86 @@
    "input_cost_per_token": 0,
    "litellm_provider": "gemini",
    "output_cost_per_token": 0
+  },
+  "mistral": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "mistral-7B-Instruct-v0.1": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "mistral-7B-Instruct-v0.2": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "mistral-large-instruct-2407": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "mixtral-8x22B-Instruct-v0.1": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "mixtral-8x7B-Instruct-v0.1": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "moonshot-v1-128k": {
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 5e-06
+  },
+  "moonshot-v1-128k-0430": {
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 5e-06
+  },
+  "moonshot-v1-128k-vision-preview": {
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 5e-06
+  },
+  "moonshot-v1-32k": {
+   "input_cost_per_token": 1e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 3e-06
+  },
+  "moonshot-v1-32k-0430": {
+   "input_cost_per_token": 1e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 3e-06
+  },
+  "moonshot-v1-32k-vision-preview": {
+   "input_cost_per_token": 1e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 3e-06
+  },
+  "moonshot-v1-8k": {
+   "input_cost_per_token": 2e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2e-06
+  },
+  "moonshot-v1-8k-0430": {
+   "input_cost_per_token": 2e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2e-06
+  },
+  "moonshot-v1-8k-vision-preview": {
+   "input_cost_per_token": 2e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 2e-06
+  },
+  "moonshot-v1-auto": {
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 5e-06
   },
   "o1": {
    "cache_read_input_token_cost": 7.5e-06,
@@ -1206,6 +1583,16 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 0.0
   },
+  "orca-mini": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
+  "qwen3-coder:480b-cloud": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
+   "output_cost_per_token": 0.0
+  },
   "text-embedding-3-large": {
    "input_cost_per_token": 1.3e-07,
    "litellm_provider": "openai",
@@ -1239,6 +1626,11 @@
   "text-moderation-stable": {
    "input_cost_per_token": 0.0,
    "litellm_provider": "openai",
+   "output_cost_per_token": 0.0
+  },
+  "vicuna": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "ollama",
    "output_cost_per_token": 0.0
   }
  }

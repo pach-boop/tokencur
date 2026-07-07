@@ -37,8 +37,9 @@ savings-recommendation engine.
    computed as *API-equivalent list cost*. Pricing has two layers: a curated, dated
    Anthropic rate card ([`pricing.py`](src/tokencur/pricing.py)) that always wins, and a
    vendored snapshot of the community-maintained
-   [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (212 models
-   across Anthropic/OpenAI/Gemini, refreshed deliberately via
+   [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (284 models
+   across Anthropic, OpenAI, Gemini, DeepSeek, Kimi/Moonshot, GLM/Z.ai and Ollama,
+   refreshed deliberately via
    [`scripts/update_pricing_snapshot.py`](scripts/update_pricing_snapshot.py)). Unknown
    models surface as *unpriced usage* rather than silently costing $0.
 4. **Explainable over clever** — no line ships that the maintainer can't explain in an

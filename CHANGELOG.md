@@ -8,10 +8,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 ### Added
 
 - Vendored snapshot of the LiteLLM community price database as a
-  fallback pricing layer (212 Anthropic/OpenAI/Gemini models), with a
-  deliberate refresh script. The curated card still wins; cache rates
-  come from explicit per-model fields since multipliers differ across
-  providers.
+  fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,
+  DeepSeek, Kimi/Moonshot, GLM/Z.ai, Ollama), with a deliberate
+  refresh script. The curated card still wins; cache rates come from
+  explicit per-model fields since multipliers differ across providers.
 
 ## [0.1.0] - 2026-07-06
 

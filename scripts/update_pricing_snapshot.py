@@ -20,7 +20,17 @@ SOURCE = (
     "https://raw.githubusercontent.com/BerriAI/litellm/main/"
     "model_prices_and_context_window.json"
 )
-PROVIDERS = {"anthropic", "openai", "gemini"}
+# moonshot = Kimi, zai = GLM (Zhipu), ollama = local models ($0 rates,
+# used by the local-vs-API break-even analysis).
+PROVIDERS = {
+    "anthropic",
+    "openai",
+    "gemini",
+    "deepseek",
+    "moonshot",
+    "zai",
+    "ollama",
+}
 FIELDS = (
     "input_cost_per_token",
     "output_cost_per_token",
