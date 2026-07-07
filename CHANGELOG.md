@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Codex CLI ingester: parses rollout `token_count` events, splitting
+  OpenAI's cached input out of `input_tokens` (no write premium).
+- Kimi Code ingester: parses per-turn `usage.record` wire-log lines.
+- Multi-source report: with no arguments, every known local source is
+  scanned (Claude Code, Codex, Kimi Code) with per-source totals.
+- Vendor prefixes (`moonshot-ai/…`) are stripped when resolving rates.
+
 - Vendored snapshot of the LiteLLM community price database as a
   fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,
   DeepSeek, Kimi/Moonshot, GLM/Z.ai, Ollama), with a deliberate

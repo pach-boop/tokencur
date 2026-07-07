@@ -51,18 +51,20 @@ Requires Python 3.11+. No runtime dependencies.
 
 ```bash
 pip install -e .
-python -m tokencur.report ~/.claude/projects
+python -m tokencur.report
 ```
 
-Prints per-model and per-day API-equivalent cost of your local Claude Code usage,
-including cache-tier economics (reads at 0.1x, writes at 1.25x/2x input rate).
+With no arguments it scans every known local source on your machine — **Claude Code**
+(`~/.claude/projects`), **Codex CLI** (`~/.codex/sessions`) and **Kimi Code**
+(`~/.kimi-code/sessions`) — and prints per-model, per-source and per-day
+API-equivalent cost, including provider-correct cache economics.
 
 ## Roadmap
 
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1 | Repo, thesis, related work | ✅ |
-| 2 | Ingest real usage: Claude Code logs; Anthropic/OpenAI/Gemini exports | 🔨 Claude Code done |
+| 2 | Ingest real usage: local agent logs; Anthropic/OpenAI admin-API exports | 🔨 Claude Code, Codex CLI and Kimi Code done; API exports pending |
 | 3 | FOCUS normalizer (Python) with tests against official sample data | ⏳ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ⏳ |
 | 5 | Recommendation engine: model right-sizing, caching ROI, batch vs realtime, local-vs-API break-even | ⏳ |
@@ -71,7 +73,10 @@ including cache-tier economics (reads at 0.1x, writes at 1.25x/2x input rate).
 
 ## Limitations (honest)
 
-- Only one data source so far (Claude Code local logs).
+- Local-log sources only so far (Claude Code, Codex CLI, Kimi Code); billed-cost
+  admin-API ingesters are pending.
+- Codex records are taken from `token_count` events as reported, with only a
+  consecutive-duplicate guard — no cross-file dedup yet.
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
