@@ -51,7 +51,8 @@ RATE_CARD: dict[str, ModelRates] = {
     "claude-opus-4-6": ModelRates(input=5.00, output=25.00),
     "claude-opus-4-5": ModelRates(input=5.00, output=25.00),
     "claude-opus-4-1": ModelRates(input=15.00, output=75.00),
-    # Sonnet 5 list price; intro pricing ($2/$10) ran through 2026-08-31.
+    # Sonnet 5 standard list price. An intro price ($2/$10) applies
+    # through 2026-08-31; the card values usage at list for consistency.
     "claude-sonnet-5": ModelRates(input=3.00, output=15.00),
     "claude-sonnet-4-6": ModelRates(input=3.00, output=15.00),
     "claude-sonnet-4-5": ModelRates(input=3.00, output=15.00),
@@ -76,11 +77,10 @@ def record_cost_usd(record: UsageRecord) -> float | None:
     rates = rates_for(record.model)
     if rates is None:
         return None
-    per_mtok = (
+    return (
         record.input_tokens * rates.input
         + record.output_tokens * rates.output
         + record.cache_read_tokens * rates.cache_read
         + record.cache_write_5m_tokens * rates.cache_write_5m
         + record.cache_write_1h_tokens * rates.cache_write_1h
-    )
-    return per_mtok / 1_000_000
+    ) / 1_000_000
