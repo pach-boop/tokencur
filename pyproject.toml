@@ -1,0 +1,23 @@
+[project]
+name = "tokencur"
+version = "0.1.0"
+description = "Convert multi-provider AI/LLM usage data into FOCUS-conformant cost datasets, with unit economics and savings recommendations"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Pedro Aguayo Chávez", email = "aguayochavezpedro@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

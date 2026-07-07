@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Local data — never commit real usage data
+data/
+*.parquet
+
+# Re-include the package dir: secret-hygiene patterns like *token*
+# (common in global excludesFiles) would otherwise ignore it.
+!src/tokencur/
