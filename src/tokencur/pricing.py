@@ -102,15 +102,18 @@ def _snapshot_rates() -> dict[str, ModelRates]:
 def rates_for(model: str) -> ModelRates | None:
     """Resolve a model id to its rates; None if the model is unpriced.
 
-    Dated ids (``claude-haiku-4-5-20251001``) resolve to their alias,
-    falling back to the exact id — snapshot keys themselves can be
-    dated. The curated card wins over the community snapshot. Unknown
-    models return None so callers can surface unpriced usage instead of
+    Vendor prefixes (``moonshot-ai/kimi-k2``) are stripped, matching
+    how snapshot keys are stored. Dated ids
+    (``claude-haiku-4-5-20251001``) resolve to their alias, falling
+    back to the exact id — snapshot keys themselves can be dated. The
+    curated card wins over the community snapshot. Unknown models
+    return None so callers can surface unpriced usage instead of
     silently valuing it at zero.
     """
-    base = _DATE_SUFFIX.sub("", model)
+    bare = model.split("/")[-1]
+    base = _DATE_SUFFIX.sub("", bare)
     snapshot = _snapshot_rates()
-    return RATE_CARD.get(base) or snapshot.get(base) or snapshot.get(model)
+    return RATE_CARD.get(base) or snapshot.get(base) or snapshot.get(bare)
 
 
 def record_cost_usd(record: UsageRecord) -> float | None:

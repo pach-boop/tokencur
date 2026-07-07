@@ -48,6 +48,14 @@ def test_snapshot_extends_coverage_beyond_curated_card():
     assert all(rates_for(m) is not None for m in extra[:10])
 
 
+def test_vendor_prefix_is_stripped():
+    from tokencur.pricing import RATE_CARD
+
+    assert rates_for("anthropic/claude-opus-4-8") is RATE_CARD["claude-opus-4-8"]
+    # Kimi Code logs models as "moonshot-ai/<model>".
+    assert rates_for("moonshot-ai/kimi-k2-0711-preview") is not None
+
+
 def test_snapshot_uses_explicit_provider_cache_rates():
     # OpenAI cache reads are 0.5x input — not Anthropic's 0.1x. The
     # snapshot must carry explicit fields, not assume multipliers.
