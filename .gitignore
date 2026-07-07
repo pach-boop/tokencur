@@ -17,3 +17,6 @@ data/
 # Re-include the package dir: secret-hygiene patterns like *token*
 # (common in global excludesFiles) would otherwise ignore it.
 !src/tokencur/
+
+# Validator scratch output
+focus_validator_detailed.log
