@@ -19,6 +19,10 @@ source of truth for showback methodology.
 **Copy the pattern, not the code:** ccusage's offline-first pricing with explicit
 online refresh, and user-defined per-model price overrides via config file.
 
+> **Status: integrated 2026-07-06** — vendored snapshot (212 models) +
+> `scripts/update_pricing_snapshot.py`; curated card takes precedence. User-defined
+> overrides remain future work.
+
 ## 2. Validation — prove FOCUS conformance, don't claim it (phase 3)
 
 **[focus_validator](https://github.com/finopsfoundation/focus_validator)** — the FinOps
@@ -61,6 +65,10 @@ FOCUS's official OpenAI token example.
 Claude Code, Codex CLI and Gemini CLI local histories. **Take:** their documented log
 locations and formats as the spec for tokencur's next local ingesters; credit them in
 Related Work.
+
+> **Probed 2026-07-06 on the maintainer's machine:** `~/.codex` holds ~280MB of real
+> local history (`history.jsonl` + session data) — a ready-made second dataset for the
+> Codex ingester. `~/.gemini` held configuration only, no usage logs.
 
 ## 5. Reference implementations to study, not copy
 

@@ -34,9 +34,13 @@ savings-recommendation engine.
 2. **Measure existing spend, don't generate spend to measure** — the first data source is
    local Claude Code session logs, which already exist on disk. Budget: ~$0.
 3. **List-cost showback** — subscription usage isn't billed per token, so costs are
-   computed as *API-equivalent list cost* from a versioned rate card
-   ([`pricing.py`](src/tokencur/pricing.py), dated and sourced). Unknown models surface as
-   *unpriced usage* rather than silently costing $0.
+   computed as *API-equivalent list cost*. Pricing has two layers: a curated, dated
+   Anthropic rate card ([`pricing.py`](src/tokencur/pricing.py)) that always wins, and a
+   vendored snapshot of the community-maintained
+   [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (212 models
+   across Anthropic/OpenAI/Gemini, refreshed deliberately via
+   [`scripts/update_pricing_snapshot.py`](scripts/update_pricing_snapshot.py)). Unknown
+   models surface as *unpriced usage* rather than silently costing $0.
 4. **Explainable over clever** — no line ships that the maintainer can't explain in an
    interview.
 
