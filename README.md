@@ -42,9 +42,10 @@ savings-recommendation engine.
 
 ## Quickstart
 
-Requires Python 3.11+. No dependencies for the v0 report.
+Requires Python 3.11+. No runtime dependencies.
 
 ```bash
+pip install -e .
 python -m tokencur.report ~/.claude/projects
 ```
 
@@ -69,6 +70,8 @@ including cache-tier economics (reads at 0.1x, writes at 1.25x/2x input rate).
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
+- Daily buckets use the UTC dates recorded in the logs; a late-night local session can
+  land on the next UTC day.
 - Not yet validated against FOCUS sample datasets — that is phase 3.
 
 ## Transparency
