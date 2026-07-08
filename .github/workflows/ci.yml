@@ -17,5 +17,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e .[dev]
       - run: pytest -q
-      - run: pip install focus-validator
+      - run: pip install focus-validator==2.2.0  # pinned; bump deliberately
       - run: python scripts/validate_focus.py
