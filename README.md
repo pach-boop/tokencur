@@ -1,5 +1,7 @@
 # tokencur
 
+[![ci](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml/badge.svg)](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml)
+
 **The CUR for your tokens** — an open-source pipeline that converts multi-provider AI/LLM
 usage data (Anthropic, OpenAI, Gemini, coding agents, local models) into
 [FOCUS](https://focus.finops.org)-conformant cost datasets, validated in CI by the
