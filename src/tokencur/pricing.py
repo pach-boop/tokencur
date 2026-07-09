@@ -66,6 +66,16 @@ RATE_CARD: dict[str, ModelRates] = {
     "claude-sonnet-4-6": _anthropic_rates(3.00, 15.00),
     "claude-sonnet-4-5": _anthropic_rates(3.00, 15.00),
     "claude-haiku-4-5": _anthropic_rates(1.00, 5.00),
+    # Proxy rate (documented estimation, 2026-07-08): Kimi Code's
+    # coding-plan alias has no published per-token price. Valued at
+    # kimi-k2.6 list rates — the nearest published generation — so real
+    # usage surfaces in showback instead of reading as $0. Moonshot's
+    # automatic caching bills reads only (no write premium). Replace
+    # with the official rate if Moonshot publishes one.
+    "kimi-k2.7-code-highspeed": ModelRates(
+        input=0.95, output=4.00, cache_read=0.16,
+        cache_write_5m=0.0, cache_write_1h=0.0,
+    ),
 }
 
 _DATE_SUFFIX = re.compile(r"-20\d{6}$")

@@ -56,6 +56,13 @@ def test_vendor_prefix_is_stripped():
     assert rates_for("moonshot-ai/kimi-k2-0711-preview") is not None
 
 
+def test_kimi_coding_alias_has_documented_proxy_rate():
+    rates = rates_for("moonshot-ai/kimi-k2.7-code-highspeed")
+    assert rates is not None  # proxy at kimi-k2.6 list rates
+    assert (rates.input, rates.output) == (0.95, 4.00)
+    assert rates.cache_write_5m == 0.0  # no write premium published
+
+
 def test_snapshot_uses_explicit_provider_cache_rates():
     # OpenAI cache reads are 0.5x input — not Anthropic's 0.1x. The
     # snapshot must carry explicit fields, not assume multipliers.
