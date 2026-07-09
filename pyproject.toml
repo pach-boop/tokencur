@@ -1,7 +1,7 @@
 [project]
 name = "tokencur"
 version = "0.1.0"
-description = "Convert multi-provider AI/LLM usage data into FOCUS-conformant cost datasets, with unit economics and savings recommendations"
+description = "Convert multi-provider AI/LLM usage data into FOCUS-conformant cost datasets"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Pedro Aguayo Chávez", email = "aguayochavezpedro@gmail.com" }]

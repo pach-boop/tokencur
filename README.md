@@ -2,8 +2,9 @@
 
 **The CUR for your tokens** — an open-source pipeline that converts multi-provider AI/LLM
 usage data (Anthropic, OpenAI, Gemini, coding agents, local models) into
-[FOCUS](https://focus.finops.org)-conformant cost datasets, with unit economics and a
-savings-recommendation engine.
+[FOCUS](https://focus.finops.org)-conformant cost datasets, validated in CI by the
+FinOps Foundation's own validator. Unit economics and a savings-recommendation engine
+are next on the roadmap.
 
 > A FinOps tool that practices FinOps on itself: the first dataset is my own real AI spend.
 
