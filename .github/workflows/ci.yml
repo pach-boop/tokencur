@@ -17,5 +17,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e .[dev]
       - run: pytest -q
+      # The conformance gate needs Python 3.12+ (focus-validator's floor);
+      # the package itself still supports and tests 3.11.
       - run: pip install focus-validator==2.2.0  # pinned; bump deliberately
+        if: matrix.python-version != '3.11'
       - run: python scripts/validate_focus.py
+        if: matrix.python-version != '3.11'
