@@ -17,6 +17,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   per token bucket, showback cost semantics, explicit-null InvoiceId.
 - CI conformance gate: the export must pass the FinOps Foundation's
   own `focus-validator` (spec 1.2) on every push.
+- Documented proxy rate for Kimi Code's `kimi-k2.7-code-highspeed`
+  alias (kimi-k2.6 list rates), so real usage no longer reads as
+  unpriced.
 
 - Vendored snapshot of the LiteLLM community price database as a
   fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,

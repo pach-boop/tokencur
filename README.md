@@ -61,6 +61,24 @@ With no arguments it scans every known local source on your machine — **Claude
 (`~/.kimi-code/sessions`) — and prints per-model, per-source and per-day
 API-equivalent cost, including provider-correct cache economics.
 
+Real output over the maintainer's own machine (16k+ messages, 280MB+ of logs, ~1.6s):
+
+```text
+model                   msgs       input      output   cache_read  cache_write   cost USD
+gpt-5.4                 5713  77,366,776   3,659,955  615,555,712            0     402.21
+gpt-5.3-codex           9958  51,780,897   3,961,461  748,238,464            0     277.02
+claude-fable-5           226      59,096     467,227   35,337,099    5,559,291     170.48
+claude-opus-4-8          141      56,692     501,338    7,880,429    2,859,175      45.35
+...
+by source:
+  codex         $685.66
+  claude-code   $215.82
+  kimi-code     $2.21
+
+TOTAL: $958.26
+unpriced usage (model not in rate card): <synthetic> x7, unknown x1
+```
+
 ## Roadmap
 
 | Phase | Deliverable | Status |
