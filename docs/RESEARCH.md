@@ -55,7 +55,7 @@ upstream shape from day one is the difference between "PR merged" and "PR rewrit
 (daily buckets). Requires an Admin API key. There is an
 [official cookbook](https://platform.claude.com/cookbook/observability-usage-cost-api).
 This is the *billed* (not showback) source for API organizations — the ingester that
-makes tokencur useful to employers, not just to individuals.
+makes tokencur useful to organizations, not just to individuals.
 
 **OpenAI organization usage/costs endpoints** — same role for OpenAI orgs; pairs with
 FOCUS's official OpenAI token example.
@@ -89,6 +89,7 @@ Related Work.
    "FOCUS-conformant" claims (phase 3 gate).
 2. **LiteLLM-backed pricing loader** — removes the biggest maintenance liability
    before multi-provider ingestion lands.
-3. **Anthropic Admin API ingester** — first *billed-cost* source; employer-relevant.
+3. **Anthropic Admin API ingester** — first *billed-cost* source, the connector
+   organizations actually need.
 4. **focus_converters architecture study** — one session, before the normalizer design.
 5. Codex/Gemini local-log ingesters — after the FOCUS core exists.

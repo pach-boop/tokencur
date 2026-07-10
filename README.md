@@ -45,8 +45,8 @@ are next on the roadmap.
    refreshed deliberately via
    [`scripts/update_pricing_snapshot.py`](scripts/update_pricing_snapshot.py)). Unknown
    models surface as *unpriced usage* rather than silently costing $0.
-4. **Explainable over clever** — no line ships that the maintainer can't explain in an
-   interview.
+4. **Explainable over clever** — every line that ships is one the maintainer fully
+   understands and can defend.
 
 ## Quickstart
 
@@ -109,8 +109,8 @@ unpriced usage (model not in rate card): <synthetic> x7, unknown x1
 
 ## Transparency
 
-Built with AI assistance (Claude). Policy: no line is merged that the maintainer cannot
-explain in an interview.
+Built with AI assistance (Claude). Policy: nothing is merged that the maintainer does
+not fully understand and stand behind.
 
 ## License
 
