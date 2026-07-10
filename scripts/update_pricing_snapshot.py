@@ -61,6 +61,15 @@ def main() -> None:
             continue  # first (sorted) entry wins, deterministically
         snapshot[bare] = {f: entry[f] for f in FIELDS if f in entry}
 
+    # Only touch the file when rates actually changed, so automated
+    # refreshes produce commits with meaning (a dated price-change log),
+    # not daily noise from the fetched-at stamp.
+    if TARGET.exists():
+        previous = json.loads(TARGET.read_text(encoding="utf-8")).get("models")
+        if previous == snapshot:
+            print(f"no price changes; snapshot untouched ({len(snapshot)} models)")
+            return
+
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_text(
         json.dumps(

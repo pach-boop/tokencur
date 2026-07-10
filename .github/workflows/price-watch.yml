@@ -1,0 +1,32 @@
+name: price-watch
+
+# Daily refresh of the vendored LiteLLM pricing snapshot. Commits only
+# when rates actually changed, so the git history doubles as a dated
+# log of AI price changes.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python scripts/update_pricing_snapshot.py
+      - name: Commit price changes, if any
+        run: |
+          if git diff --quiet; then
+            echo "No price changes today."
+            exit 0
+          fi
+          git config user.name "price-watch bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/tokencur/pricing_data/litellm_snapshot.json
+          git commit -m "chore(prices): LiteLLM snapshot refresh — rates changed upstream"
+          git push
