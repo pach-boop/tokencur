@@ -20,6 +20,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Documented proxy rate for Kimi Code's `kimi-k2.7-code-highspeed`
   alias (kimi-k2.6 list rates), so real usage no longer reads as
   unpriced.
+- Cross-tests against the FinOps Foundation's official sample data
+  (CC BY 4.0 fixture slice): shared core vocabulary, mutually
+  parseable datetimes (ours strict ISO-8601 Z), spec-bounded
+  ChargeCategory, and cost/currency conventions.
+- Daily price-watch workflow: refreshes the LiteLLM snapshot and
+  commits only on real rate changes.
 
 - Vendored snapshot of the LiteLLM community price database as a
   fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,

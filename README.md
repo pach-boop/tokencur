@@ -87,7 +87,7 @@ unpriced usage (model not in rate card): <synthetic> x7, unknown x1
 |---|---|---|
 | 1 | Repo, thesis, related work | ✅ |
 | 2 | Ingest real usage: local agent logs; Anthropic/OpenAI admin-API exports | 🔨 Claude Code, Codex CLI and Kimi Code done; API exports pending |
-| 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator) | ✅ core done; cross-tests vs official sample data pending |
+| 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ⏳ |
 | 5 | Recommendation engine: model right-sizing, caching ROI, batch vs realtime, local-vs-API break-even | ⏳ |
 | 6 | Serverless AWS deployment, documented — "operating this costs $0.40/month" | ⏳ |
@@ -104,8 +104,9 @@ unpriced usage (model not in rate card): <synthetic> x7, unknown x1
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
   land on the next UTC day.
-- The export passes the Foundation's `focus-validator` (spec 1.2) in CI; cross-checks
-  against official sample datasets are still pending.
+- The export passes the Foundation's `focus-validator` (spec 1.2) in CI and is
+  cross-checked against the Foundation's official sample data (which targets FOCUS 1.0;
+  the tests assert convention compatibility, not column equality).
 
 ## Transparency
 
