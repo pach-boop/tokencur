@@ -17,6 +17,7 @@ import pandas as pd
 import streamlit as st
 
 from tokencur.focus import to_focus_rows, unpriced_models
+from tokencur.recommend import recommendations
 from tokencur.report import DEFAULT_SOURCES
 
 # Fixed service→color mapping (color follows the entity, never the
@@ -38,12 +39,12 @@ def _mode() -> str:
 
 
 @st.cache_data(show_spinner="Scanning local usage logs…")
-def load() -> tuple[pd.DataFrame, dict[str, int]]:
+def load() -> tuple[pd.DataFrame, dict[str, int], list]:
     records = []
     for root, iter_records in DEFAULT_SOURCES:
         if root.exists():
             records.extend(iter_records(root))
-    return pd.DataFrame(to_focus_rows(records)), unpriced_models(records)
+    return pd.DataFrame(to_focus_rows(records)), unpriced_models(records), records
 
 
 def view(title: str, sql: str, frame: pd.DataFrame) -> pd.DataFrame:
@@ -59,7 +60,7 @@ def view(title: str, sql: str, frame: pd.DataFrame) -> pd.DataFrame:
 st.set_page_config(page_title="tokencur", page_icon="🧾", layout="wide")
 st.title("tokencur — local AI spend, FOCUS-shaped")
 
-focus, unpriced = load()
+focus, unpriced, records = load()
 if focus.empty:
     st.warning("No usage found in any known local source.")
     st.stop()
@@ -149,6 +150,27 @@ view(
     ORDER BY 2 DESC
     """,
     focus,
+)
+
+st.subheader("Recommendations")
+recs = recommendations(records)
+achieved = sum(r.savings_usd for r in recs if r.kind == "achieved")
+potential = sum(r.savings_usd for r in recs if r.kind == "potential")
+r1, r2 = st.columns(2)
+r1.metric("Caching savings (measured)", f"${achieved:,.2f}")
+r2.metric("Potential savings (what-if)", f"${potential:,.2f}")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "kind": r.kind,
+            "recommendation": r.title,
+            "savings USD": round(r.savings_usd, 2),
+            "% of baseline": round(r.savings_pct, 1),
+            "detail": r.detail,
+        }
+        for r in recs
+    ),
+    use_container_width=True,
 )
 
 st.caption(

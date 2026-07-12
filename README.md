@@ -54,8 +54,9 @@ Requires Python 3.11+. No runtime dependencies.
 
 ```bash
 pip install -e .
-python -m tokencur.report              # cost summary in your terminal
-python -m tokencur.export focus.csv    # FOCUS 1.2 conformant dataset
+python -m tokencur report             # cost summary in your terminal
+python -m tokencur export focus.csv   # FOCUS 1.2 conformant dataset
+python -m tokencur recommend          # measured + what-if savings
 ```
 
 With no arguments it scans every known local source on your machine — **Claude Code**
@@ -97,7 +98,7 @@ unpriced usage (model not in rate card): <synthetic> x7, unknown x1
 | 2 | Ingest real usage: local agent logs; Anthropic/OpenAI admin-API exports | 🔨 Claude Code, Codex CLI and Kimi Code done; API exports pending |
 | 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
-| 5 | Recommendation engine: model right-sizing, caching ROI, batch vs realtime, local-vs-API break-even | ⏳ |
+| 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
 | 6 | Serverless AWS deployment, documented — "operating this costs $0.40/month" | ⏳ |
 | 7 | PR to `focus_converters` + bilingual (EN/ES) case study | ⏳ |
 

@@ -13,4 +13,4 @@ def test_dashboard_runs_without_exceptions():
 
     assert not at.exception
     assert at.title[0].value.startswith("tokencur")
-    assert len(at.metric) == 4
+    assert len(at.metric) == 6  # 4 KPIs + 2 recommendation metrics

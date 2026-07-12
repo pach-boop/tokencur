@@ -31,6 +31,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   unit economics — every view exposing its SQL and table.
 - RunPod billing-API probe script (auth recipe + dailyCharges shape),
   groundwork for the billed-cost ingester.
+- Recommendation engine (`python -m tokencur recommend` and a
+  dashboard section): measured caching ROI per model (savings vs
+  re-sending cached tokens as fresh input) and what-if model
+  right-sizing over curated one-tier-down pairs, emitted only when
+  the sibling is actually cheaper at list rates.
+- `python -m tokencur <report|export|recommend>` command router.
 
 - Vendored snapshot of the LiteLLM community price database as a
   fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,
