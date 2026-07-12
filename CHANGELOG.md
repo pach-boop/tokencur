@@ -26,6 +26,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   ChargeCategory, and cost/currency conventions.
 - Daily price-watch workflow: refreshes the LiteLLM snapshot and
   commits only on real rate changes.
+- Streamlit + DuckDB dashboard (`pip install -e .[dashboard]`): KPI
+  tiles, daily cost by service, cost by model, token-type mix and
+  unit economics — every view exposing its SQL and table.
+- RunPod billing-API probe script (auth recipe + dailyCharges shape),
+  groundwork for the billed-cost ingester.
 
 - Vendored snapshot of the LiteLLM community price database as a
   fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,

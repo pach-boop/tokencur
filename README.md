@@ -63,6 +63,14 @@ With no arguments it scans every known local source on your machine — **Claude
 (`~/.kimi-code/sessions`) — and prints per-model, per-source and per-day
 API-equivalent cost, including provider-correct cache economics.
 
+For the visual version — daily trend, cost by model, token-type mix and unit
+economics, each view exposing the DuckDB SQL behind it:
+
+```bash
+pip install -e .[dashboard]
+streamlit run src/tokencur/dashboard.py
+```
+
 Real output over the maintainer's own machine (16k+ messages, 280MB+ of logs, ~1.6s):
 
 ```text
@@ -88,7 +96,7 @@ unpriced usage (model not in rate card): <synthetic> x7, unknown x1
 | 1 | Repo, thesis, related work | ✅ |
 | 2 | Ingest real usage: local agent logs; Anthropic/OpenAI admin-API exports | 🔨 Claude Code, Codex CLI and Kimi Code done; API exports pending |
 | 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
-| 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ⏳ |
+| 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: model right-sizing, caching ROI, batch vs realtime, local-vs-API break-even | ⏳ |
 | 6 | Serverless AWS deployment, documented — "operating this costs $0.40/month" | ⏳ |
 | 7 | PR to `focus_converters` + bilingual (EN/ES) case study | ⏳ |
