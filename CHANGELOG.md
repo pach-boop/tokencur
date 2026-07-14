@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-13
+
 ### Added
 
 - Codex CLI ingester: parses rollout `token_count` events, splitting
@@ -13,6 +15,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Multi-source report: with no arguments, every known local source is
   scanned (Claude Code, Codex, Kimi Code) with per-source totals.
 - Vendor prefixes (`moonshot-ai/…`) are stripped when resolving rates.
+- Vendored snapshot of the LiteLLM community price database as a
+  fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,
+  DeepSeek, Kimi/Moonshot, GLM/Z.ai, Ollama), with a deliberate
+  refresh script. The curated card still wins; cache rates come from
+  explicit per-model fields since multipliers differ across providers.
 - FOCUS 1.2 normalizer and `python -m tokencur.export`: one charge row
   per token bucket, showback cost semantics, explicit-null InvoiceId.
 - CI conformance gate: the export must pass the FinOps Foundation's
@@ -37,12 +44,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   right-sizing over curated one-tier-down pairs, emitted only when
   the sibling is actually cheaper at list rates.
 - `python -m tokencur <report|export|recommend>` command router.
-
-- Vendored snapshot of the LiteLLM community price database as a
-  fallback pricing layer (284 models: Anthropic, OpenAI, Gemini,
-  DeepSeek, Kimi/Moonshot, GLM/Z.ai, Ollama), with a deliberate
-  refresh script. The curated card still wins; cache rates come from
-  explicit per-model fields since multipliers differ across providers.
 
 ## [0.1.0] - 2026-07-06
 
