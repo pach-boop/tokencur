@@ -15,6 +15,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
+#: Claude Code logs client-side placeholder messages (API-error stubs,
+#: interrupted turns) under this sentinel model, with all-zero usage.
+#: They are not API traffic and must not surface as unpriced rows.
+SYNTHETIC_MODEL = "<synthetic>"
+
 
 @dataclass(frozen=True)
 class UsageRecord:
@@ -43,7 +48,8 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
     log one message across several lines, and resuming a session can
     re-copy past messages into a new file under a new session id — the
     same API request must never be counted twice.
-    Lines that are not valid JSON or carry no usage data are skipped.
+    Lines that are not valid JSON or carry no usage data are skipped,
+    as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``).
     """
     seen: set[tuple[str, str]] = set()
     for path in sorted(root.rglob("*.jsonl")):
@@ -65,6 +71,8 @@ def _parse_line(
     if entry.get("type") != "assistant":
         return None
     message = entry.get("message") or {}
+    if message.get("model") == SYNTHETIC_MODEL:
+        return None
     usage = message.get("usage")
     if not usage:
         return None

@@ -4,7 +4,11 @@ from tokencur.ingest.claude_code import iter_usage_records
 
 
 def _assistant_line(
-    request_id: str, usage: dict, message_id: str = "msg_1", session_id: str = "sess_1"
+    request_id: str,
+    usage: dict,
+    message_id: str = "msg_1",
+    session_id: str = "sess_1",
+    model: str = "claude-opus-4-8",
 ) -> str:
     return json.dumps(
         {
@@ -12,7 +16,7 @@ def _assistant_line(
             "sessionId": session_id,
             "requestId": request_id,
             "timestamp": "2026-07-01T10:00:00.000Z",
-            "message": {"id": message_id, "model": "claude-opus-4-8", "usage": usage},
+            "message": {"id": message_id, "model": model, "usage": usage},
         }
     )
 
@@ -65,6 +69,33 @@ def test_parses_skips_and_dedups(tmp_path):
     assert (first.cache_write_5m_tokens, first.cache_write_1h_tokens) == (200, 500)
     # Old format: total attributed to the 5m tier (documented assumption).
     assert (second.cache_write_5m_tokens, second.cache_write_1h_tokens) == (300, 0)
+
+
+def test_skips_synthetic_placeholder_messages(tmp_path):
+    """Claude Code logs client-side stubs (API-error placeholders,
+    interrupted turns) with model "<synthetic>" and all-zero usage.
+    They are not API traffic and must not become unpriced rows."""
+    log = tmp_path / "workspace-a" / "session.jsonl"
+    log.parent.mkdir()
+    zero_usage = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+    }
+    log.write_text(
+        "\n".join(
+            [
+                _assistant_line("req_1", zero_usage, model="<synthetic>"),
+                _assistant_line("req_2", NEW_FORMAT_USAGE, message_id="msg_2"),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    records = list(iter_usage_records(tmp_path))
+
+    assert [r.model for r in records] == ["claude-opus-4-8"]
 
 
 def test_dedups_across_session_files(tmp_path):

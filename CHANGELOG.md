@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- Claude Code's synthetic placeholder messages (model `<synthetic>`,
+  all-zero usage — client-side stubs for API errors and interrupted
+  turns) are skipped at parse time. They are not API traffic and were
+  surfacing as noise in the unpriced-usage section of reports.
+
 ## [0.2.0] - 2026-07-13
 
 ### Added
