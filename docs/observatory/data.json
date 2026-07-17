@@ -1,0 +1,534 @@
+{
+ "generated_at": "2026-07-17 21:43 UTC",
+ "rates_as_of": "2026-07-06",
+ "kpis": {
+  "total_usd": 1245.78,
+  "days": 66,
+  "avg_day_usd": 18.88,
+  "messages": 16944,
+  "achieved_savings_usd": 3943.99,
+  "potential_savings_usd": 381.71
+ },
+ "daily": [
+  {
+   "day": "2026-02-07",
+   "services": {
+    "Codex CLI": 3.978
+   }
+  },
+  {
+   "day": "2026-02-08",
+   "services": {
+    "Codex CLI": 2.6625
+   }
+  },
+  {
+   "day": "2026-02-09",
+   "services": {
+    "Codex CLI": 4.8308
+   }
+  },
+  {
+   "day": "2026-02-10",
+   "services": {
+    "Codex CLI": 16.558
+   }
+  },
+  {
+   "day": "2026-02-11",
+   "services": {
+    "Codex CLI": 10.5031
+   }
+  },
+  {
+   "day": "2026-02-12",
+   "services": {
+    "Codex CLI": 24.233
+   }
+  },
+  {
+   "day": "2026-02-13",
+   "services": {
+    "Codex CLI": 4.9671
+   }
+  },
+  {
+   "day": "2026-02-14",
+   "services": {
+    "Codex CLI": 15.2265
+   }
+  },
+  {
+   "day": "2026-02-15",
+   "services": {
+    "Codex CLI": 27.7915
+   }
+  },
+  {
+   "day": "2026-02-16",
+   "services": {
+    "Codex CLI": 9.4766
+   }
+  },
+  {
+   "day": "2026-02-17",
+   "services": {
+    "Codex CLI": 1.5547
+   }
+  },
+  {
+   "day": "2026-02-18",
+   "services": {
+    "Codex CLI": 32.2997
+   }
+  },
+  {
+   "day": "2026-02-19",
+   "services": {
+    "Codex CLI": 2.9065
+   }
+  },
+  {
+   "day": "2026-02-20",
+   "services": {
+    "Codex CLI": 62.822
+   }
+  },
+  {
+   "day": "2026-02-21",
+   "services": {
+    "Codex CLI": 20.4351
+   }
+  },
+  {
+   "day": "2026-02-22",
+   "services": {
+    "Codex CLI": 0.948
+   }
+  },
+  {
+   "day": "2026-02-23",
+   "services": {
+    "Codex CLI": 2.5024
+   }
+  },
+  {
+   "day": "2026-02-24",
+   "services": {
+    "Codex CLI": 1.6934
+   }
+  },
+  {
+   "day": "2026-02-25",
+   "services": {
+    "Codex CLI": 1.0125
+   }
+  },
+  {
+   "day": "2026-02-26",
+   "services": {
+    "Codex CLI": 0.1795
+   }
+  },
+  {
+   "day": "2026-02-27",
+   "services": {
+    "Codex CLI": 11.6394
+   }
+  },
+  {
+   "day": "2026-03-01",
+   "services": {
+    "Codex CLI": 9.8135
+   }
+  },
+  {
+   "day": "2026-03-02",
+   "services": {
+    "Codex CLI": 3.0966
+   }
+  },
+  {
+   "day": "2026-03-03",
+   "services": {
+    "Codex CLI": 1.3807
+   }
+  },
+  {
+   "day": "2026-03-04",
+   "services": {
+    "Codex CLI": 1.5872
+   }
+  },
+  {
+   "day": "2026-03-05",
+   "services": {
+    "Codex CLI": 7.4125
+   }
+  },
+  {
+   "day": "2026-03-06",
+   "services": {
+    "Codex CLI": 57.2007
+   }
+  },
+  {
+   "day": "2026-03-07",
+   "services": {
+    "Codex CLI": 27.656
+   }
+  },
+  {
+   "day": "2026-03-08",
+   "services": {
+    "Codex CLI": 72.5527
+   }
+  },
+  {
+   "day": "2026-03-09",
+   "services": {
+    "Codex CLI": 48.422
+   }
+  },
+  {
+   "day": "2026-03-10",
+   "services": {
+    "Codex CLI": 178.9224
+   }
+  },
+  {
+   "day": "2026-03-11",
+   "services": {
+    "Codex CLI": 18.4883
+   }
+  },
+  {
+   "day": "2026-03-16",
+   "services": {
+    "Codex CLI": 0.213
+   }
+  },
+  {
+   "day": "2026-03-17",
+   "services": {
+    "Codex CLI": 0.0541
+   }
+  },
+  {
+   "day": "2026-04-25",
+   "services": {
+    "Codex CLI": 0.6381
+   }
+  },
+  {
+   "day": "2026-06-04",
+   "services": {
+    "Claude Code": 0.7912
+   }
+  },
+  {
+   "day": "2026-06-05",
+   "services": {
+    "Claude Code": 7.3358
+   }
+  },
+  {
+   "day": "2026-06-06",
+   "services": {
+    "Claude Code": 3.7322
+   }
+  },
+  {
+   "day": "2026-06-07",
+   "services": {
+    "Claude Code": 1.7393
+   }
+  },
+  {
+   "day": "2026-06-08",
+   "services": {
+    "Claude Code": 1.1136
+   }
+  },
+  {
+   "day": "2026-06-09",
+   "services": {
+    "Claude Code": 6.6497
+   }
+  },
+  {
+   "day": "2026-06-10",
+   "services": {
+    "Claude Code": 12.3597
+   }
+  },
+  {
+   "day": "2026-06-12",
+   "services": {
+    "Claude Code": 4.4369
+   }
+  },
+  {
+   "day": "2026-06-14",
+   "services": {
+    "Claude Code": 4.597
+   }
+  },
+  {
+   "day": "2026-06-15",
+   "services": {
+    "Claude Code": 2.1554
+   }
+  },
+  {
+   "day": "2026-06-16",
+   "services": {
+    "Claude Code": 2.1671
+   }
+  },
+  {
+   "day": "2026-06-21",
+   "services": {
+    "Kimi Code": 0.1658
+   }
+  },
+  {
+   "day": "2026-06-23",
+   "services": {
+    "Kimi Code": 1.1989
+   }
+  },
+  {
+   "day": "2026-06-24",
+   "services": {
+    "Kimi Code": 0.3127
+   }
+  },
+  {
+   "day": "2026-06-28",
+   "services": {
+    "Kimi Code": 0.4187
+   }
+  },
+  {
+   "day": "2026-06-29",
+   "services": {
+    "Kimi Code": 0.11
+   }
+  },
+  {
+   "day": "2026-07-02",
+   "services": {
+    "Claude Code": 13.9033
+   }
+  },
+  {
+   "day": "2026-07-04",
+   "services": {
+    "Claude Code": 14.9708
+   }
+  },
+  {
+   "day": "2026-07-05",
+   "services": {
+    "Claude Code": 16.0762
+   }
+  },
+  {
+   "day": "2026-07-06",
+   "services": {
+    "Claude Code": 31.2135
+   }
+  },
+  {
+   "day": "2026-07-07",
+   "services": {
+    "Claude Code": 97.3986
+   }
+  },
+  {
+   "day": "2026-07-08",
+   "services": {
+    "Claude Code": 20.2246
+   }
+  },
+  {
+   "day": "2026-07-09",
+   "services": {
+    "Claude Code": 64.0643
+   }
+  },
+  {
+   "day": "2026-07-10",
+   "services": {
+    "Claude Code": 22.8182
+   }
+  },
+  {
+   "day": "2026-07-11",
+   "services": {
+    "Claude Code": 64.6683
+   }
+  },
+  {
+   "day": "2026-07-12",
+   "services": {
+    "Claude Code": 44.5017
+   }
+  },
+  {
+   "day": "2026-07-13",
+   "services": {
+    "Claude Code": 2.8403
+   }
+  },
+  {
+   "day": "2026-07-14",
+   "services": {
+    "Claude Code": 25.4401
+   }
+  },
+  {
+   "day": "2026-07-15",
+   "services": {
+    "Claude Code": 32.7489
+   }
+  },
+  {
+   "day": "2026-07-16",
+   "services": {
+    "Claude Code": 24.3796
+   }
+  },
+  {
+   "day": "2026-07-17",
+   "services": {
+    "Claude Code": 35.5852
+   }
+  }
+ ],
+ "by_model": [
+  {
+   "model": "claude-fable-5",
+   "cost_usd": 506.96,
+   "tokens": 179429409
+  },
+  {
+   "model": "gpt-5.4",
+   "cost_usd": 402.21,
+   "tokens": 696582443
+  },
+  {
+   "model": "gpt-5.3-codex",
+   "cost_usd": 277.02,
+   "tokens": 803980822
+  },
+  {
+   "model": "claude-opus-4-8",
+   "cost_usd": 50.96,
+   "tokens": 12334331
+  },
+  {
+   "model": "gpt-5.2-codex",
+   "cost_usd": 4.77,
+   "tokens": 10633720
+  },
+  {
+   "model": "moonshot-ai/kimi-k2.7-code-highspeed",
+   "cost_usd": 2.21,
+   "tokens": 9128112
+  },
+  {
+   "model": "gpt-5.1-codex-mini",
+   "cost_usd": 1.66,
+   "tokens": 30239314
+  }
+ ],
+ "by_bucket": [
+  {
+   "bucket": "cache-read",
+   "cost_usd": 456.67
+  },
+  {
+   "bucket": "cache-write-1h",
+   "cost_usd": 321.06
+  },
+  {
+   "bucket": "input",
+   "cost_usd": 287.52
+  },
+  {
+   "bucket": "output",
+   "cost_usd": 180.52
+  },
+  {
+   "bucket": "cache-write-5m",
+   "cost_usd": 0.0
+  }
+ ],
+ "recommendations": [
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on gpt-5.4",
+   "savings_usd": 1385.0,
+   "savings_pct": 90.0
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on claude-fable-5",
+   "savings_usd": 1333.04,
+   "savings_pct": 74.8
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on gpt-5.3-codex",
+   "savings_usd": 1178.48,
+   "savings_pct": 90.0
+  },
+  {
+   "kind": "potential",
+   "title": "Right-size claude-fable-5 → claude-opus-4-8",
+   "savings_usd": 253.48,
+   "savings_pct": 50.0
+  },
+  {
+   "kind": "potential",
+   "title": "Right-size gpt-5.4 → gpt-5.3-codex",
+   "savings_usd": 107.85,
+   "savings_pct": 26.8
+  },
+  {
+   "kind": "potential",
+   "title": "Right-size claude-opus-4-8 → claude-sonnet-5",
+   "savings_usd": 20.38,
+   "savings_pct": 40.0
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on claude-opus-4-8",
+   "savings_usd": 19.31,
+   "savings_pct": 32.6
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on gpt-5.2-codex",
+   "savings_usd": 15.5,
+   "savings_pct": 90.0
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on moonshot-ai/kimi-k2.7-code-highspeed",
+   "savings_usd": 6.7,
+   "savings_pct": 83.2
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on gpt-5.1-codex-mini",
+   "savings_usd": 5.96,
+   "savings_pct": 90.0
+  }
+ ],
+ "unpriced": {
+  "unknown": 1
+ }
+}
