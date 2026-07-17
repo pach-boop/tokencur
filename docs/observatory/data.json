@@ -1,13 +1,13 @@
 {
- "generated_at": "2026-07-17 21:43 UTC",
+ "generated_at": "2026-07-17 23:41 UTC",
  "rates_as_of": "2026-07-06",
  "kpis": {
-  "total_usd": 1245.78,
+  "total_usd": 1260.12,
   "days": 66,
-  "avg_day_usd": 18.88,
-  "messages": 16944,
-  "achieved_savings_usd": 3943.99,
-  "potential_savings_usd": 381.71
+  "avg_day_usd": 19.09,
+  "messages": 16965,
+  "achieved_savings_usd": 4045.34,
+  "potential_savings_usd": 388.89
  },
  "daily": [
   {
@@ -403,15 +403,15 @@
   {
    "day": "2026-07-17",
    "services": {
-    "Claude Code": 35.5852
+    "Claude Code": 49.9327
    }
   }
  ],
  "by_model": [
   {
    "model": "claude-fable-5",
-   "cost_usd": 506.96,
-   "tokens": 179429409
+   "cost_usd": 521.3,
+   "tokens": 190832221
   },
   {
    "model": "gpt-5.4",
@@ -447,11 +447,11 @@
  "by_bucket": [
   {
    "bucket": "cache-read",
-   "cost_usd": 456.67
+   "cost_usd": 467.98
   },
   {
    "bucket": "cache-write-1h",
-   "cost_usd": 321.06
+   "cost_usd": 322.01
   },
   {
    "bucket": "input",
@@ -459,7 +459,7 @@
   },
   {
    "bucket": "output",
-   "cost_usd": 180.52
+   "cost_usd": 182.6
   },
   {
    "bucket": "cache-write-5m",
@@ -469,15 +469,15 @@
  "recommendations": [
   {
    "kind": "achieved",
-   "title": "Prompt caching on gpt-5.4",
-   "savings_usd": 1385.0,
-   "savings_pct": 90.0
+   "title": "Prompt caching on claude-fable-5",
+   "savings_usd": 1434.39,
+   "savings_pct": 75.7
   },
   {
    "kind": "achieved",
-   "title": "Prompt caching on claude-fable-5",
-   "savings_usd": 1333.04,
-   "savings_pct": 74.8
+   "title": "Prompt caching on gpt-5.4",
+   "savings_usd": 1385.0,
+   "savings_pct": 90.0
   },
   {
    "kind": "achieved",
@@ -488,7 +488,7 @@
   {
    "kind": "potential",
    "title": "Right-size claude-fable-5 → claude-opus-4-8",
-   "savings_usd": 253.48,
+   "savings_usd": 260.65,
    "savings_pct": 50.0
   },
   {
@@ -530,5 +530,19 @@
  ],
  "unpriced": {
   "unknown": 1
+ },
+ "money": {
+  "subscriptions_monthly_usd": {
+   "Claude Code": 20.0,
+   "Codex CLI": 20.0,
+   "Kimi Code": 10.0
+  },
+  "monthly_total_usd": 50.0,
+  "window_days": 161,
+  "window_months": 5.29,
+  "estimated_outlay_usd": 264.48,
+  "api_equivalent_usd": 1260.12,
+  "leverage": 4.8,
+  "effective_discount_pct": 79.0
  }
 }
