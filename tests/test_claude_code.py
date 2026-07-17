@@ -98,6 +98,23 @@ def test_skips_synthetic_placeholder_messages(tmp_path):
     assert [r.model for r in records] == ["claude-opus-4-8"]
 
 
+def test_missing_model_falls_back_to_unknown(tmp_path):
+    """A usage-bearing record with no model field must surface as model
+    "unknown" — and therefore as unpriced downstream. It must never be
+    dropped and never silently priced. Companion to the synthetic-skip
+    rule: placeholders disappear, unknown-but-real traffic stays visible."""
+    log = tmp_path / "workspace-a" / "session.jsonl"
+    log.parent.mkdir()
+    entry = json.loads(_assistant_line("req_1", OLD_FORMAT_USAGE))
+    del entry["message"]["model"]
+    log.write_text(json.dumps(entry), encoding="utf-8")
+
+    records = list(iter_usage_records(tmp_path))
+
+    assert len(records) == 1
+    assert records[0].model == "unknown"
+
+
 def test_dedups_across_session_files(tmp_path):
     """A resumed session re-copies messages under a new session id;
     the same API request must not be double-counted."""
