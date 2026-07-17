@@ -72,23 +72,38 @@ pip install -e .[dashboard]
 streamlit run src/tokencur/dashboard.py
 ```
 
-Real output over the maintainer's own machine (16k+ messages, 280MB+ of logs, ~1.6s):
+Real output over the maintainer's own machine (16k+ messages, 280MB+ of logs, ~1.9s):
 
 ```text
 model                   msgs       input      output   cache_read  cache_write   cost USD
+claude-fable-5           553      66,950   1,144,899  166,061,055   14,262,100     509.22
 gpt-5.4                 5713  77,366,776   3,659,955  615,555,712            0     402.21
 gpt-5.3-codex           9958  51,780,897   3,961,461  748,238,464            0     277.02
-claude-fable-5           226      59,096     467,227   35,337,099    5,559,291     170.48
-claude-opus-4-8          141      56,692     501,338    7,880,429    2,859,175      45.35
+claude-opus-4-8          130      40,180     429,902    8,277,427    3,586,822      50.96
 ...
 by source:
   codex         $685.66
-  claude-code   $215.82
+  claude-code   $560.17
   kimi-code     $2.21
 
-TOTAL: $958.26
-unpriced usage (model not in rate card): <synthetic> x7, unknown x1
+TOTAL: $1,248.04
+unpriced usage (model not in rate card): unknown x1
 ```
+
+## Observatory
+
+A public, static snapshot of this repository's own AI spend — the FOCUS dataset
+rendered as a dashboard: **https://pach-boop.github.io/tokencur/observatory/**
+
+```bash
+python -m tokencur.observatory   # regenerates docs/observatory/
+```
+
+The snapshot publishes aggregates only (day × service, model and token-bucket
+totals) — workspace names, session ids and message content never enter the
+output, and the page is fully self-contained (no external requests). Like the
+pricing snapshot, it is committed deliberately: the site updates when the
+maintainer decides, not on a schedule.
 
 ## Roadmap
 

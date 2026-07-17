@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- Observatory: `python -m tokencur.observatory` renders the FOCUS
+  dataset as a self-contained static dashboard (`docs/observatory/`,
+  published via GitHub Pages) — KPIs, daily cost by service, cost by
+  model, token-type mix and measured savings. Aggregates only:
+  workspace names, session ids and content never enter the snapshot,
+  enforced by test.
+
 ### Fixed
 
 - Claude Code's synthetic placeholder messages (model `<synthetic>`,
