@@ -25,7 +25,7 @@ def test_summarize_totals_and_surfaces_unpriced():
     out = summarize(records)
 
     assert "2 assistant messages" in out
-    assert "TOTAL: $5.00" in out
+    assert "API-EQUIVALENT TOTAL (showback): $5.00" in out
     assert "2026-07-01  $5.00" in out
     # Unpriced usage is reported, never silently valued at $0.
     assert "unpriced usage" in out and "mystery-model x1" in out

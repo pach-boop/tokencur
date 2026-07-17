@@ -86,9 +86,26 @@ by source:
   claude-code   $560.17
   kimi-code     $2.21
 
-TOTAL: $1,248.04
+API-EQUIVALENT TOTAL (showback): $1,248.04
 unpriced usage (model not in rate card): unknown x1
 ```
+
+## Money concepts (read before quoting numbers)
+
+tokencur's headline figures are **not** a bill. Three money concepts, kept
+deliberately apart:
+
+- **Actual outlay** — the flat subscription fees really paid, declared in
+  [`subscriptions.json`](./subscriptions.json). The only real money here.
+- **Usage value (showback)** — what the same usage would cost at API list
+  prices. Subscriptions don't bill per token, so tokencur *values* the usage
+  instead of pretending to bill it.
+- **Counterfactuals** — cost avoided by provider caching, and what-if
+  right-sizing. Properties of the workload, not actions taken. Under a flat
+  subscription, right-sizing buys rate-limit headroom, not dollars.
+
+Divide value by outlay and you get the observatory's headline metric:
+**subscription leverage** — how many times over the flat fee pays for itself.
 
 ## Observatory
 

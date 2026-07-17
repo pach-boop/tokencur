@@ -13,6 +13,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   model, token-type mix and measured savings. Aggregates only:
   workspace names, session ids and content never enter the snapshot,
   enforced by test.
+- Subscription-aware money concepts: `subscriptions.json` declares the
+  flat fees actually paid; the observatory separates real outlay,
+  showback usage value and counterfactuals, and leads with
+  **subscription leverage** (usage value ÷ outlay over the same window).
+
+### Changed
+
+- Honest labeling throughout: the report prints `API-EQUIVALENT TOTAL
+  (showback)`, and the observatory/dashboard say "usage value", "avoided
+  by provider caching (counterfactual)" and "right-sizing headroom" —
+  none of these are money spent or saved under flat subscriptions.
 
 ### Fixed
 

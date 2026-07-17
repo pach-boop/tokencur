@@ -1,0 +1,8 @@
+{
+  "note": "Flat monthly fees the maintainer actually pays — the only real money in the observatory. See README 'Money concepts'.",
+  "monthly_usd": {
+    "Claude Code": 20.0,
+    "Codex CLI": 20.0,
+    "Kimi Code": 10.0
+  }
+}

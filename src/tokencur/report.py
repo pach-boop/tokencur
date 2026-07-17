@@ -71,7 +71,7 @@ def summarize(records: list[UsageRecord]) -> str:
     lines += ["", "daily cost (top 10 days):"]
     for day, cost in sorted(by_day.items(), key=lambda kv: -kv[1])[:10]:
         lines.append(f"  {day}  ${cost:,.2f}")
-    lines += ["", f"TOTAL: ${total_cost:,.2f}"]
+    lines += ["", f"API-EQUIVALENT TOTAL (showback): ${total_cost:,.2f}"]
     if unpriced:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(unpriced.items()))
         lines.append(f"unpriced usage (model not in rate card): {pairs}")

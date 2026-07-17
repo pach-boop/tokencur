@@ -70,7 +70,7 @@ total = focus["BilledCost"].sum()
 days = focus["ChargePeriodStart"].str[:10].nunique()
 
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("API-equivalent cost", f"${total:,.2f}")
+k1.metric("API-equiv. usage value (showback)", f"${total:,.2f}")
 k2.metric("Charge rows", f"{len(focus):,}")
 k3.metric("Days covered", days)
 k4.metric("Avg cost / day", f"${total / max(days, 1):,.2f}")
@@ -157,8 +157,8 @@ recs = recommendations(records)
 achieved = sum(r.savings_usd for r in recs if r.kind == "achieved")
 potential = sum(r.savings_usd for r in recs if r.kind == "potential")
 r1, r2 = st.columns(2)
-r1.metric("Caching savings (measured)", f"${achieved:,.2f}")
-r2.metric("Potential savings (what-if)", f"${potential:,.2f}")
+r1.metric("Avoided by caching (counterfactual)", f"${achieved:,.2f}")
+r2.metric("Right-sizing headroom (what-if)", f"${potential:,.2f}")
 st.dataframe(
     pd.DataFrame(
         {

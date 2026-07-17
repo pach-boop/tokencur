@@ -40,6 +40,35 @@ def test_snapshot_aggregates_by_day_model_and_bucket():
     assert abs(sum(b["cost_usd"] for b in snap["by_bucket"]) - total) < 0.05
 
 
+def test_money_block_scales_subscriptions_to_the_window():
+    """Leverage must compare usage value against the real outlay over the
+    same calendar window — flat fees scaled by span, not by active days."""
+    records = [_record("2026-05-01"), _record("2026-06-30")]
+
+    snap = snapshot(records, subscriptions={"Claude Code": 50.0})
+
+    money = snap["money"]
+    assert money["window_days"] == 61
+    outlay = 50.0 * (61 / (365.25 / 12))
+    assert money["estimated_outlay_usd"] == round(outlay, 2)
+    assert money["leverage"] == round(snap["kpis"]["total_usd"] / outlay, 1)
+    page = render_html(snap)
+    assert "What is actually paid" in page
+    assert "subscription leverage" in page
+
+
+def test_without_subscriptions_no_real_money_is_claimed():
+    """With no declared fees the page must not invent an outlay — only
+    the clearly-labeled showback and counterfactual sections remain."""
+    snap = snapshot([_record("2026-07-01")])
+
+    assert "money" not in snap
+    page = render_html(snap)
+    assert "What is actually paid" not in page
+    assert "showback, not money spent" in page
+    assert "Counterfactuals" in page
+
+
 def test_output_never_contains_workspace_or_session(tmp_path):
     """The observatory is public: only aggregates may survive. Workspace
     names and session ids from the source records must never appear in

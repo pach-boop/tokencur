@@ -6,6 +6,17 @@ source, aggregates the FOCUS charge rows, and writes a self-contained
 Pages). The page has no runtime dependencies: chart geometry is computed
 here; the browser only draws tooltips.
 
+Money concepts are kept apart on purpose (see README):
+
+- **Actual outlay** — the flat subscription fees the maintainer really
+  pays (``subscriptions.json``). The only real money on the page.
+- **Usage value (showback)** — what the same usage would cost at API
+  list prices. A valuation, not spend.
+- **Counterfactuals** — cost avoided by provider caching and what-if
+  right-sizing, both at list prices. Properties of the workload, not
+  actions taken; under a flat subscription, right-sizing buys rate-limit
+  headroom, not dollars.
+
 Privacy: the snapshot publishes aggregates only — day x service, model
 and token-bucket totals, and the recommendation headlines. Workspace
 names, session ids and message content never enter the output.
@@ -28,6 +39,8 @@ from tokencur.recommend import recommendations
 from tokencur.report import DEFAULT_SOURCES
 
 DEFAULT_OUTPUT = Path("docs") / "observatory"
+DEFAULT_SUBSCRIPTIONS = Path("subscriptions.json")
+DAYS_PER_MONTH = 365.25 / 12
 
 # Same entity->color mapping as the local dashboard (color follows the
 # service, never the rank). Both palettes pass the six-check validator
@@ -36,7 +49,40 @@ SERVICE_ORDER = ["Claude Code", "Codex CLI", "Kimi Code"]
 SERVICE_CLASS = {"Claude Code": "sv-claude", "Codex CLI": "sv-codex", "Kimi Code": "sv-kimi"}
 
 
-def snapshot(records: list) -> dict:
+def load_subscriptions(path: Path = DEFAULT_SUBSCRIPTIONS) -> dict | None:
+    """Read the flat monthly fees the maintainer actually pays, if declared."""
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("monthly_usd") or None
+
+
+def _money(total: float, daily: dict, subscriptions: dict | None) -> dict | None:
+    """Real-outlay block: window-scaled subscription cost vs usage value."""
+    if not subscriptions or not daily or total <= 0:
+        return None
+    monthly = round(sum(subscriptions.values()), 2)
+    if monthly <= 0:
+        return None
+    days = sorted(daily)
+    span_days = (
+        datetime.strptime(days[-1], "%Y-%m-%d") - datetime.strptime(days[0], "%Y-%m-%d")
+    ).days + 1
+    months = span_days / DAYS_PER_MONTH
+    outlay = monthly * months
+    return {
+        "subscriptions_monthly_usd": dict(sorted(subscriptions.items())),
+        "monthly_total_usd": monthly,
+        "window_days": span_days,
+        "window_months": round(months, 2),
+        "estimated_outlay_usd": round(outlay, 2),
+        "api_equivalent_usd": round(total, 2),
+        "leverage": round(total / outlay, 1),
+        "effective_discount_pct": round(100 * (1 - outlay / total), 1),
+    }
+
+
+def snapshot(records: list, subscriptions: dict | None = None) -> dict:
     """Aggregate usage records into the public snapshot dict.
 
     Reads only day, service, model, token bucket, cost and quantity from
@@ -64,7 +110,7 @@ def snapshot(records: list) -> dict:
 
     recs = recommendations(records)
     days = len(daily)
-    return {
+    snap = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "rates_as_of": AS_OF,
         "kpis": {
@@ -102,6 +148,10 @@ def snapshot(records: list) -> dict:
         ],
         "unpriced": dict(sorted(unpriced_models(records).items())),
     }
+    money = _money(total, daily, subscriptions)
+    if money:
+        snap["money"] = money
+    return snap
 
 
 def _usd(x: float) -> str:
@@ -238,14 +288,40 @@ def _kpi(label: str, value: str) -> str:
 
 def render_html(snap: dict) -> str:
     k = snap["kpis"]
-    kpis = "".join(
+    money = snap.get("money")
+    money_section = ""
+    if money:
+        subs = " + ".join(
+            f"{name} {_usd(fee)}" for name, fee in money["subscriptions_monthly_usd"].items()
+        )
+        money_section = (
+            "<h2>What is actually paid</h2>"
+            '<div class="kpis">'
+            + _kpi("subscriptions / month", _usd(money["monthly_total_usd"]))
+            + _kpi(
+                f"est. outlay over {money['window_months']:g} months",
+                _usd(money["estimated_outlay_usd"]),
+            )
+            + _kpi("subscription leverage", f"{money['leverage']:g}×")
+            + _kpi("effective discount vs API", f"{money['effective_discount_pct']:g}%")
+            + "</div>"
+            f'<p class="muted">Flat fees really paid ({html.escape(subs)}) — the only actual '
+            "money on this page. Leverage = API-equivalent usage value ÷ estimated outlay "
+            "over the same window.</p>"
+        )
+
+    showback = "".join(
         [
-            _kpi("API-equivalent cost", _usd(k["total_usd"])),
-            _kpi("days covered", str(k["days"])),
-            _kpi("avg cost / day", _usd(k["avg_day_usd"])),
+            _kpi("API-equivalent usage value", _usd(k["total_usd"])),
+            _kpi("active days", str(k["days"])),
+            _kpi("avg value / active day", _usd(k["avg_day_usd"])),
             _kpi("assistant messages", f"{k['messages']:,}"),
-            _kpi("caching savings (measured)", _usd(k["achieved_savings_usd"])),
-            _kpi("potential savings (what-if)", _usd(k["potential_savings_usd"])),
+        ]
+    )
+    counterfactuals = "".join(
+        [
+            _kpi("avoided by provider caching", _usd(k["achieved_savings_usd"])),
+            _kpi("right-sizing headroom (what-if)", _usd(k["potential_savings_usd"])),
         ]
     )
     model_bars = _bars(
@@ -257,7 +333,7 @@ def render_html(snap: dict) -> str:
     )
     model_table = _details(
         _table(
-            ["model", "cost USD", "tokens"],
+            ["model", "value USD", "tokens"],
             [[m["model"], _usd(m["cost_usd"]), f"{m['tokens']:,}"] for m in snap["by_model"]],
         )
     )
@@ -268,7 +344,7 @@ def render_html(snap: dict) -> str:
     recs = snap["recommendations"]
     rec_table = (
         _table(
-            ["kind", "recommendation", "savings USD", "% of baseline"],
+            ["kind", "recommendation", "USD (list prices)", "% of baseline"],
             [[r["kind"], r["title"], _usd(r["savings_usd"]), f"{r['savings_pct']}%"] for r in recs],
         )
         if recs
@@ -331,14 +407,24 @@ footer {{ margin-top:40px; color:var(--muted); font-size:.8rem }}
 footer a {{ color:var(--ink-2) }}
 </style></head><body>
 <h1>tokencur observatory</h1>
-<p class="sub">This project's own AI spend, measured by tokencur and published as a FOCUS-shaped
-snapshot. Aggregates only — no workspaces, no sessions, no content.</p>
-<div class="kpis">{kpis}</div>
-<h2>Daily cost by service</h2>
+<p class="sub">What the maintainer actually pays for AI subscriptions vs what the same usage
+would cost at API list prices — real fees, showback valuation and counterfactuals, kept apart.
+Aggregates only: no workspaces, no sessions, no content.</p>
+{money_section}
+<h2>Usage value — showback, not money spent</h2>
+<div class="kpis">{showback}</div>
+<p class="muted">Subscriptions bill a flat fee, not per token. These figures value the usage
+at API list prices: what this work <em>would have</em> cost on pay-per-token billing.</p>
+<h2>Counterfactuals — at API list prices</h2>
+<div class="kpis">{counterfactuals}</div>
+<p class="muted">Cost avoided by caching is a property of the provider's architecture, not an
+action taken. Under a flat subscription, right-sizing buys rate-limit headroom, not dollars —
+it would save real money only on API billing.</p>
+<h2>Daily usage value by service</h2>
 {_daily_chart(snap)}
-<h2>Cost by model</h2>
+<h2>Usage value by model</h2>
 {model_bars}{model_table}
-<h2>Where the money goes (token type)</h2>
+<h2>Where the value concentrates (token type)</h2>
 {bucket_bars}
 <h2>Recommendations</h2>
 {rec_table}
@@ -393,7 +479,7 @@ def main(argv: list[str]) -> int:
     if not records:
         print("error: no known usage-log locations found", file=sys.stderr)
         return 1
-    write_site(snapshot(records), outdir)
+    write_site(snapshot(records, load_subscriptions()), outdir)
     print(f"observatory written to {outdir} ({len(records)} records aggregated)")
     return 0
 
