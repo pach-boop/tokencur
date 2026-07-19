@@ -56,7 +56,7 @@ Requires Python 3.11+. No runtime dependencies.
 pip install -e .
 python -m tokencur report             # cost summary in your terminal
 python -m tokencur export focus.csv   # FOCUS 1.2 conformant dataset
-python -m tokencur recommend          # measured + what-if savings
+python -m tokencur recommend          # avoided cost + what-if headroom
 ```
 
 With no arguments it scans every known local source on your machine — **Claude Code**

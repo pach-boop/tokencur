@@ -72,5 +72,6 @@ def test_render_separates_achieved_from_potential():
 
     out = render(recommendations(records))
 
-    assert "ACHIEVED" in out and "POTENTIAL" in out
-    assert "Total potential savings:" in out
+    assert "AVOIDED" in out and "HEADROOM" in out
+    assert "Total what-if headroom:" in out
+    assert "Money concepts" in out  # the flat-subscription caveat ships with the output

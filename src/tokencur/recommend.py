@@ -135,8 +135,8 @@ def recommendations(records: Iterable[UsageRecord]) -> list[Recommendation]:
 
 def render(recs: list[Recommendation]) -> str:
     lines = []
-    for kind, header in (("achieved", "ACHIEVED — measured savings"),
-                         ("potential", "POTENTIAL — what-if at list rates")):
+    for kind, header in (("achieved", "AVOIDED — measured, counterfactual at list prices"),
+                         ("potential", "HEADROOM — what-if at list prices")):
         subset = [r for r in recs if r.kind == kind]
         if not subset:
             continue
@@ -147,5 +147,10 @@ def render(recs: list[Recommendation]) -> str:
             )
             lines.append(f"    {r.detail}")
     total = sum(r.savings_usd for r in recs if r.kind == "potential")
-    lines += ["", f"Total potential savings: ${total:,.2f}"]
+    lines += [
+        "",
+        f"Total what-if headroom: ${total:,.2f}",
+        "Under a flat subscription these figures are value at list prices,",
+        "not dollars saved or saveable — see README 'Money concepts'.",
+    ]
     return "\n".join(lines).lstrip("\n")

@@ -24,6 +24,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   (showback)`, and the observatory/dashboard say "usage value", "avoided
   by provider caching (counterfactual)" and "right-sizing headroom" —
   none of these are money spent or saved under flat subscriptions.
+- The recommend CLI speaks the same language: `AVOIDED` / `HEADROOM`
+  section headers, `Total what-if headroom`, and a closing
+  flat-subscription caveat (was "measured savings" / "Total potential
+  savings").
 
 ### Fixed
 
