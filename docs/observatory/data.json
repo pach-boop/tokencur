@@ -1,13 +1,13 @@
 {
- "generated_at": "2026-07-17 23:41 UTC",
+ "generated_at": "2026-07-19 00:59 UTC",
  "rates_as_of": "2026-07-06",
  "kpis": {
-  "total_usd": 1260.12,
-  "days": 66,
-  "avg_day_usd": 19.09,
-  "messages": 16965,
-  "achieved_savings_usd": 4045.34,
-  "potential_savings_usd": 388.89
+  "total_usd": 1297.73,
+  "days": 68,
+  "avg_day_usd": 19.08,
+  "messages": 16988,
+  "achieved_savings_usd": 4119.07,
+  "potential_savings_usd": 407.6
  },
  "daily": [
   {
@@ -403,15 +403,27 @@
   {
    "day": "2026-07-17",
    "services": {
-    "Claude Code": 49.9327
+    "Claude Code": 51.3594
+   }
+  },
+  {
+   "day": "2026-07-18",
+   "services": {
+    "Claude Code": 21.7137
+   }
+  },
+  {
+   "day": "2026-07-19",
+   "services": {
+    "Claude Code": 14.4623
    }
   }
  ],
  "by_model": [
   {
    "model": "claude-fable-5",
-   "cost_usd": 521.3,
-   "tokens": 190832221
+   "cost_usd": 558.05,
+   "tokens": 201767385
   },
   {
    "model": "gpt-5.4",
@@ -425,8 +437,8 @@
   },
   {
    "model": "claude-opus-4-8",
-   "cost_usd": 50.96,
-   "tokens": 12334331
+   "cost_usd": 51.81,
+   "tokens": 12498410
   },
   {
    "model": "gpt-5.2-codex",
@@ -447,11 +459,11 @@
  "by_bucket": [
   {
    "bucket": "cache-read",
-   "cost_usd": 467.98
+   "cost_usd": 477.65
   },
   {
    "bucket": "cache-write-1h",
-   "cost_usd": 322.01
+   "cost_usd": 348.51
   },
   {
    "bucket": "input",
@@ -459,7 +471,7 @@
   },
   {
    "bucket": "output",
-   "cost_usd": 182.6
+   "cost_usd": 184.05
   },
   {
    "bucket": "cache-write-5m",
@@ -470,8 +482,8 @@
   {
    "kind": "achieved",
    "title": "Prompt caching on claude-fable-5",
-   "savings_usd": 1434.39,
-   "savings_pct": 75.7
+   "savings_usd": 1508.12,
+   "savings_pct": 75.2
   },
   {
    "kind": "achieved",
@@ -488,7 +500,7 @@
   {
    "kind": "potential",
    "title": "Right-size claude-fable-5 → claude-opus-4-8",
-   "savings_usd": 260.65,
+   "savings_usd": 279.03,
    "savings_pct": 50.0
   },
   {
@@ -500,14 +512,14 @@
   {
    "kind": "potential",
    "title": "Right-size claude-opus-4-8 → claude-sonnet-5",
-   "savings_usd": 20.38,
+   "savings_usd": 20.72,
    "savings_pct": 40.0
   },
   {
    "kind": "achieved",
    "title": "Prompt caching on claude-opus-4-8",
    "savings_usd": 19.31,
-   "savings_pct": 32.6
+   "savings_pct": 32.1
   },
   {
    "kind": "achieved",
@@ -538,11 +550,11 @@
    "Kimi Code": 10.0
   },
   "monthly_total_usd": 50.0,
-  "window_days": 161,
-  "window_months": 5.29,
-  "estimated_outlay_usd": 264.48,
-  "api_equivalent_usd": 1260.12,
+  "window_days": 163,
+  "window_months": 5.36,
+  "estimated_outlay_usd": 267.76,
+  "api_equivalent_usd": 1297.73,
   "leverage": 4.8,
-  "effective_discount_pct": 79.0
+  "effective_discount_pct": 79.4
  }
 }
