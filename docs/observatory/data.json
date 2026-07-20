@@ -1,13 +1,13 @@
 {
- "generated_at": "2026-07-19 00:59 UTC",
+ "generated_at": "2026-07-20 00:23 UTC",
  "rates_as_of": "2026-07-06",
  "kpis": {
-  "total_usd": 1297.73,
-  "days": 68,
-  "avg_day_usd": 19.08,
-  "messages": 16988,
-  "achieved_savings_usd": 4119.07,
-  "potential_savings_usd": 407.6
+  "total_usd": 1330.74,
+  "days": 69,
+  "avg_day_usd": 19.29,
+  "messages": 17000,
+  "achieved_savings_usd": 4162.79,
+  "potential_savings_usd": 424.11
  },
  "daily": [
   {
@@ -415,15 +415,21 @@
   {
    "day": "2026-07-19",
    "services": {
-    "Claude Code": 14.4623
+    "Claude Code": 34.3749
+   }
+  },
+  {
+   "day": "2026-07-20",
+   "services": {
+    "Claude Code": 13.1005
    }
   }
  ],
  "by_model": [
   {
    "model": "claude-fable-5",
-   "cost_usd": 558.05,
-   "tokens": 201767385
+   "cost_usd": 591.07,
+   "tokens": 209373217
   },
   {
    "model": "gpt-5.4",
@@ -459,19 +465,19 @@
  "by_bucket": [
   {
    "bucket": "cache-read",
-   "cost_usd": 477.65
+   "cost_usd": 483.94
   },
   {
    "bucket": "cache-write-1h",
-   "cost_usd": 348.51
+   "cost_usd": 374.35
   },
   {
    "bucket": "input",
-   "cost_usd": 287.52
+   "cost_usd": 287.56
   },
   {
    "bucket": "output",
-   "cost_usd": 184.05
+   "cost_usd": 184.89
   },
   {
    "bucket": "cache-write-5m",
@@ -482,8 +488,8 @@
   {
    "kind": "achieved",
    "title": "Prompt caching on claude-fable-5",
-   "savings_usd": 1508.12,
-   "savings_pct": 75.2
+   "savings_usd": 1551.84,
+   "savings_pct": 74.6
   },
   {
    "kind": "achieved",
@@ -500,7 +506,7 @@
   {
    "kind": "potential",
    "title": "Right-size claude-fable-5 → claude-opus-4-8",
-   "savings_usd": 279.03,
+   "savings_usd": 295.53,
    "savings_pct": 50.0
   },
   {
@@ -550,11 +556,11 @@
    "Kimi Code": 10.0
   },
   "monthly_total_usd": 50.0,
-  "window_days": 163,
-  "window_months": 5.36,
-  "estimated_outlay_usd": 267.76,
-  "api_equivalent_usd": 1297.73,
-  "leverage": 4.8,
-  "effective_discount_pct": 79.4
+  "window_days": 164,
+  "window_months": 5.39,
+  "estimated_outlay_usd": 269.4,
+  "api_equivalent_usd": 1330.74,
+  "leverage": 4.9,
+  "effective_discount_pct": 79.8
  }
 }
