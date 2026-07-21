@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Price card page: `python -m tokencur.prices` renders `docs/prices/`
+  (published via GitHub Pages) — the curated Anthropic rates, the
+  community-snapshot coverage count, and a dated change log built from
+  the git history of the snapshot file. The daily price-watch action
+  commits only on a real rate move, so the timeline is that action's
+  public face. It distinguishes introduction / expansion (models added)
+  / rate move; the pure `diff_models` carries the test weight.
+
 - Observatory: `python -m tokencur.observatory` renders the FOCUS
   dataset as a self-contained static dashboard (`docs/observatory/`,
   published via GitHub Pages) — KPIs, daily cost by service, cost by

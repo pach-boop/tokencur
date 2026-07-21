@@ -122,6 +122,21 @@ output, and the page is fully self-contained (no external requests). Like the
 pricing snapshot, it is committed deliberately: the site updates when the
 maintainer decides, not on a schedule.
 
+## Price card
+
+The public list rates tokencur values usage against, and a dated change log
+built from the git history of the pricing snapshot:
+**https://pach-boop.github.io/tokencur/prices/**
+
+```bash
+python -m tokencur.prices   # regenerates docs/prices/
+```
+
+A daily [price-watch action](.github/workflows/price-watch.yml) refreshes the
+vendored snapshot and commits only when a published rate actually moves, so
+each timeline entry is a real price change — the page is that action's public
+face.
+
 ## Roadmap
 
 | Phase | Deliverable | Status |

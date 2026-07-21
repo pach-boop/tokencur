@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tokencur — price card</title>
+<style>
+:root {
+  --surface:#ffffff; --card:#f6f7f9; --ink:#1a2733; --ink-2:#51606e; --muted:#7a8794;
+  --grid:#e3e7eb; --up:#b23b3b; --down:#1baf7a; --accent:#2a78d6;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --surface:#101418; --card:#191f26; --ink:#e8edf2; --ink-2:#aab6c2; --muted:#7d8996;
+  --grid:#2a323b; --up:#e06666; --down:#199e70; --accent:#3987e5;
+} }
+* { box-sizing:border-box; margin:0 }
+body { background:var(--surface); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; padding:32px 20px 48px; max-width:840px; margin:0 auto }
+h1 { font-size:1.5rem } h2 { font-size:1.05rem; margin:34px 0 12px }
+.sub { color:var(--ink-2); margin:4px 0 22px }
+.muted { color:var(--muted); font-size:.85rem }
+.meta { display:flex; gap:22px; flex-wrap:wrap; background:var(--card); border-radius:10px; padding:14px 18px; margin-bottom:8px }
+.meta div span { display:block } .meta .n { font-size:1.2rem; font-weight:650; font-variant-numeric:tabular-nums }
+.meta .l { color:var(--ink-2); font-size:.78rem }
+table { border-collapse:collapse; width:100%; font-size:.86rem; margin-top:6px }
+th,td { text-align:left; padding:6px 12px 6px 0; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums }
+th { color:var(--muted); font-weight:500 }
+td:first-child { font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:.82rem }
+.timeline { list-style:none; padding:0; display:flex; flex-direction:column; gap:14px }
+.timeline li { display:grid; grid-template-columns:130px 1fr; gap:14px; padding-bottom:14px; border-bottom:1px solid var(--grid) }
+.when { display:flex; flex-direction:column }
+.date { font-weight:650; font-variant-numeric:tabular-nums }
+.sha { color:var(--muted); font-family:ui-monospace,monospace; font-size:.76rem }
+.row { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:2px 0 }
+.model { font-family:ui-monospace,monospace; font-size:.82rem }
+.field { color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.04em }
+.delta { font-weight:650; font-size:.82rem; font-variant-numeric:tabular-nums }
+.delta.up { color:var(--up) } .delta.down { color:var(--down) }
+.rate { color:var(--ink-2); font-size:.8rem; font-variant-numeric:tabular-nums }
+.row.added { color:var(--down); font-size:.82rem } .row.removed { color:var(--up); font-size:.82rem }
+footer { margin-top:38px; color:var(--muted); font-size:.8rem }
+footer a { color:var(--ink-2) }
+</style></head><body>
+<h1>tokencur — the price card</h1>
+<p class="sub">The public API list rates tokencur values usage against, and every time
+they moved. Prices in USD per million tokens (MTok).</p>
+
+<h2>Curated rates — Anthropic (the layer that wins)</h2>
+<p class="muted">Hand-maintained and sourced, as of 2026-07-06. Cache reads are 0.1× input;
+writes 1.25× (5-min) / 2× (1-hour).</p>
+<table><thead><tr><th>model</th><th>input</th><th>output</th><th>cache read</th></tr></thead><tbody><tr><td>claude-fable-5</td><td>$10.00</td><td>$50.00</td><td>$1.00</td></tr><tr><td>claude-opus-4-8</td><td>$5.00</td><td>$25.00</td><td>$0.50</td></tr><tr><td>claude-opus-4-7</td><td>$5.00</td><td>$25.00</td><td>$0.50</td></tr><tr><td>claude-opus-4-6</td><td>$5.00</td><td>$25.00</td><td>$0.50</td></tr><tr><td>claude-opus-4-5</td><td>$5.00</td><td>$25.00</td><td>$0.50</td></tr><tr><td>claude-opus-4-1</td><td>$15.00</td><td>$75.00</td><td>$1.50</td></tr><tr><td>claude-sonnet-5</td><td>$3.00</td><td>$15.00</td><td>$0.30</td></tr><tr><td>claude-sonnet-4-6</td><td>$3.00</td><td>$15.00</td><td>$0.30</td></tr><tr><td>claude-sonnet-4-5</td><td>$3.00</td><td>$15.00</td><td>$0.30</td></tr><tr><td>claude-haiku-4-5</td><td>$1.00</td><td>$5.00</td><td>$0.10</td></tr><tr><td>kimi-k2.7-code-highspeed</td><td>$0.95</td><td>$4.00</td><td>$0.16</td></tr></tbody></table>
+
+<h2>Extended coverage</h2>
+<div class="meta">
+  <div><span class="n">291</span><span class="l">models via community snapshot</span></div>
+  <div><span class="n">2026-07-15</span><span class="l">snapshot last fetched</span></div>
+</div>
+<p class="muted">The curated card above wins; the vendored
+<a href="https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json">LiteLLM</a> snapshot extends coverage to OpenAI, Gemini,
+DeepSeek, Kimi/Moonshot, GLM and Ollama for fallback valuation.</p>
+
+<h2>Change log — straight from the git history</h2>
+<p class="muted">A daily action refreshes the snapshot and commits only when a published
+rate actually moves, so each entry below is a real price change.</p>
+<ul class="timeline"><li><div class="when"><span class="date">2026-07-15</span><span class="sha">1d520e41a</span></div><div class="what"><div class="row added">+ added: gemini-omni-flash-preview</div></div></li><li><div class="when"><span class="date">2026-07-10</span><span class="sha">8aa3d89bd</span></div><div class="what"><div class="row added">+ added: gpt-5.6, gpt-5.6-luna, gpt-5.6-sol, gpt-5.6-terra, gpt-realtime-2.1, gpt-realtime-2.1-mini</div></div></li><li><div class="when"><span class="date">2026-07-07</span><span class="sha">2c8ceb4eb</span></div><div class="what"><div class="row added">+ added: codegeex4, codegemma, codellama, deepseek-chat, deepseek-coder, deepseek-coder-v2-base, deepseek-coder-v2-instruct, deepseek-coder-v2-lite-base, deepseek-coder-v2-lite-instruct, deepseek-r1, deepseek-reasoner, deepseek-v3, deepseek-v3.1:671b-cloud, deepseek-v3.2, deepseek-v4-flash, deepseek-v4-pro, glm-4-32b-0414-128k, glm-4.5, glm-4.5-air, glm-4.5-airx, glm-4.5-flash, glm-4.5-x, glm-4.5v, glm-4.6, glm-4.7, glm-4.7-flash, glm-5, glm-5-code, glm-5.1, gpt-oss:120b-cloud, gpt-oss:20b-cloud, internlm2_5-20b-chat, kimi-k2-0711-preview, kimi-k2-0905-preview, kimi-k2-thinking, kimi-k2-thinking-turbo, kimi-k2-turbo-preview, kimi-k2.5, kimi-k2.6, kimi-latest, kimi-latest-128k, kimi-latest-32k, kimi-latest-8k, kimi-thinking-preview, llama2, llama2-uncensored, llama2:13b, llama2:70b, llama2:7b, llama3, llama3.1, llama3:70b, llama3:8b, mistral, mistral-7B-Instruct-v0.1, mistral-7B-Instruct-v0.2, mistral-large-instruct-2407, mixtral-8x22B-Instruct-v0.1, mixtral-8x7B-Instruct-v0.1, moonshot-v1-128k, moonshot-v1-128k-0430, moonshot-v1-128k-vision-preview, moonshot-v1-32k, moonshot-v1-32k-0430, moonshot-v1-32k-vision-preview, moonshot-v1-8k, moonshot-v1-8k-0430, moonshot-v1-8k-vision-preview, moonshot-v1-auto, orca-mini, qwen3-coder:480b-cloud, vicuna</div></div></li><li><div class="when"><span class="date">2026-07-06</span><span class="sha">a382747c1</span></div><div class="what"><p class="muted">Snapshot introduced — 212 models tracked.</p></div></li></ul>
+
+<footer>Curated source: <a href="https://platform.claude.com/docs/en/pricing">Anthropic pricing</a> · generated 2026-07-21 01:37 UTC
+· <a href="https://github.com/pach-boop/tokencur">tokencur</a></footer>
+</body></html>
