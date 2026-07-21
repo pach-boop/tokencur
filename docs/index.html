@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tokencur — AI spend, FOCUS-shaped</title>
+<style>
+:root {
+  --surface:#ffffff; --card:#f6f7f9; --ink:#1a2733; --ink-2:#51606e; --muted:#7a8794;
+  --grid:#e3e7eb; --accent:#2a78d6;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --surface:#101418; --card:#191f26; --ink:#e8edf2; --ink-2:#aab6c2; --muted:#7d8996;
+  --grid:#2a323b; --accent:#3987e5;
+} }
+* { box-sizing:border-box; margin:0 }
+body { background:var(--surface); color:var(--ink); font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; padding:48px 20px 56px; max-width:760px; margin:0 auto }
+h1 { font-size:1.7rem; letter-spacing:-0.01em }
+.tag { color:var(--ink-2); margin:6px 0 32px; font-size:1.05rem }
+.cards { display:grid; gap:14px }
+a.card { display:block; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--grid); border-radius:12px; padding:20px 22px; transition:border-color .15s, transform .15s }
+a.card:hover { border-color:var(--accent); transform:translateY(-1px) }
+a.card:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
+.card h2 { font-size:1.1rem; margin-bottom:4px }
+.card p { color:var(--ink-2); font-size:.92rem }
+.card .go { color:var(--accent); font-size:.85rem; font-weight:600; margin-top:10px; display:inline-block }
+.what { margin:32px 0 8px; font-size:1.05rem }
+.what + p { color:var(--ink-2); font-size:.95rem }
+code { font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:.88em; background:var(--card); padding:1px 6px; border-radius:5px }
+footer { margin-top:40px; padding-top:18px; border-top:1px solid var(--grid); color:var(--muted); font-size:.85rem }
+footer a { color:var(--ink-2) }
+</style></head><body>
+<h1>tokencur</h1>
+<p class="tag">Your multi-provider AI spend, turned into a FOCUS-conformant dataset —
+so the standard FinOps questions have standard FinOps answers.</p>
+
+<div class="cards">
+  <a class="card" href="./observatory/">
+    <h2>Spend observatory →</h2>
+    <p>What this project's own AI usage would cost at API list prices, what the flat
+    subscriptions actually cost, and the leverage between them. Aggregates only.</p>
+    <span class="go">View the observatory</span>
+  </a>
+  <a class="card" href="./prices/">
+    <h2>Price card →</h2>
+    <p>The published list rates usage is valued against, plus a dated change log built
+    straight from the git history of the pricing snapshot.</p>
+    <span class="go">View the price card</span>
+  </a>
+</div>
+
+<h2 class="what">What it is</h2>
+<p>tokencur reads local AI agent logs (Claude Code, Codex CLI, Kimi Code), values the
+usage at published API rates as <em>showback</em> — subscriptions don't bill per token —
+and normalizes it to <a href="https://focus.finops.org/">FOCUS</a>, the FinOps billing
+standard. Run <code>python -m tokencur report</code> for the terminal summary.</p>
+
+<footer>Open source (MIT) · <a href="https://github.com/pach-boop/tokencur">github.com/pach-boop/tokencur</a></footer>
+</body></html>
