@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-07-22",
+  "fetched": "2026-07-25",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -144,6 +144,14 @@
    "output_cost_per_token": 2.5e-05
   },
   "claude-opus-4-8": {
+   "cache_creation_input_token_cost": 6.25e-06,
+   "cache_creation_input_token_cost_above_1hr": 1e-05,
+   "cache_read_input_token_cost": 5e-07,
+   "input_cost_per_token": 5e-06,
+   "litellm_provider": "anthropic",
+   "output_cost_per_token": 2.5e-05
+  },
+  "claude-opus-5": {
    "cache_creation_input_token_cost": 6.25e-06,
    "cache_creation_input_token_cost_above_1hr": 1e-05,
    "cache_read_input_token_cost": 5e-07,
