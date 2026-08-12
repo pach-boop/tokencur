@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-08-05",
+  "fetched": "2026-08-12",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -70,6 +70,22 @@
    "input_cost_per_token": 1e-06,
    "litellm_provider": "anthropic",
    "output_cost_per_token": 5e-06
+  },
+  "claude-mythos-5": {
+   "cache_creation_input_token_cost": 1.25e-05,
+   "cache_creation_input_token_cost_above_1hr": 2e-05,
+   "cache_read_input_token_cost": 1e-06,
+   "input_cost_per_token": 1e-05,
+   "litellm_provider": "anthropic",
+   "output_cost_per_token": 5e-05
+  },
+  "claude-mythos-preview": {
+   "cache_creation_input_token_cost": 1.25e-05,
+   "cache_creation_input_token_cost_above_1hr": 2e-05,
+   "cache_read_input_token_cost": 1e-06,
+   "input_cost_per_token": 1e-05,
+   "litellm_provider": "anthropic",
+   "output_cost_per_token": 5e-05
   },
   "claude-opus-4-1": {
    "cache_creation_input_token_cost": 1.875e-05,
@@ -629,6 +645,11 @@
   },
   "gemini-robotics-er-2-preview": {
    "cache_read_input_token_cost": 2e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 1e-05
+  },
+  "gemini-robotics-er-2-streaming-preview": {
    "input_cost_per_token": 2e-06,
    "litellm_provider": "gemini",
    "output_cost_per_token": 1e-05
