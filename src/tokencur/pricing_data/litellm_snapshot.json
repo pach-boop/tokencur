@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-08-14",
+  "fetched": "2026-08-16",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -536,6 +536,11 @@
    "input_cost_per_token": 7.5e-07,
    "litellm_provider": "gemini",
    "output_cost_per_token": 4.5e-06
+  },
+  "gemini-3.1-flash-tts-preview": {
+   "input_cost_per_token": 1e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 2e-05
   },
   "gemini-3.1-pro-preview": {
    "cache_read_input_token_cost": 2e-07,
