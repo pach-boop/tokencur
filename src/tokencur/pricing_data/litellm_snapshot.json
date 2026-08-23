@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-08-21",
+  "fetched": "2026-08-23",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -243,11 +243,11 @@
    "output_cost_per_token": 6e-06
   },
   "daybreak-blue-latest": {
-   "cache_creation_input_token_cost": 6.25e-06,
-   "cache_read_input_token_cost": 5e-07,
-   "input_cost_per_token": 5e-06,
+   "cache_creation_input_token_cost": 5e-06,
+   "cache_read_input_token_cost": 4e-07,
+   "input_cost_per_token": 4e-06,
    "litellm_provider": "openai",
-   "output_cost_per_token": 3e-05
+   "output_cost_per_token": 2e-05
   },
   "daybreak-red-latest": {
    "cache_creation_input_token_cost": 1.5625e-05,
@@ -1258,11 +1258,11 @@
    "output_cost_per_token": 0.00018
   },
   "gpt-5.6": {
-   "cache_creation_input_token_cost": 6.25e-06,
-   "cache_read_input_token_cost": 5e-07,
-   "input_cost_per_token": 5e-06,
+   "cache_creation_input_token_cost": 5e-06,
+   "cache_read_input_token_cost": 4e-07,
+   "input_cost_per_token": 4e-06,
    "litellm_provider": "openai",
-   "output_cost_per_token": 3e-05
+   "output_cost_per_token": 2e-05
   },
   "gpt-5.6-cyber": {
    "cache_creation_input_token_cost": 1.5625e-05,
@@ -1279,11 +1279,11 @@
    "output_cost_per_token": 1.2e-06
   },
   "gpt-5.6-sol": {
-   "cache_creation_input_token_cost": 6.25e-06,
-   "cache_read_input_token_cost": 5e-07,
-   "input_cost_per_token": 5e-06,
+   "cache_creation_input_token_cost": 5e-06,
+   "cache_read_input_token_cost": 4e-07,
+   "input_cost_per_token": 4e-06,
    "litellm_provider": "openai",
-   "output_cost_per_token": 3e-05
+   "output_cost_per_token": 2e-05
   },
   "gpt-5.6-terra": {
    "cache_creation_input_token_cost": 2.5e-06,
