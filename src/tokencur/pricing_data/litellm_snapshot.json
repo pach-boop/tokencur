@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-08-23",
+  "fetched": "2026-08-28",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -25,7 +25,7 @@
   },
   "claude-3-haiku-20240307": {
    "cache_creation_input_token_cost": 3e-07,
-   "cache_creation_input_token_cost_above_1hr": 6e-06,
+   "cache_creation_input_token_cost_above_1hr": 5e-07,
    "cache_read_input_token_cost": 3e-08,
    "input_cost_per_token": 2.5e-07,
    "litellm_provider": "anthropic",
@@ -33,7 +33,7 @@
   },
   "claude-3-opus-20240229": {
    "cache_creation_input_token_cost": 1.875e-05,
-   "cache_creation_input_token_cost_above_1hr": 6e-06,
+   "cache_creation_input_token_cost_above_1hr": 3e-05,
    "cache_read_input_token_cost": 1.5e-06,
    "input_cost_per_token": 1.5e-05,
    "litellm_provider": "anthropic",
@@ -327,6 +327,13 @@
    "litellm_provider": "deepseek",
    "output_cost_per_token": 1.32e-06
   },
+  "deepseek-v4-flash-vision-exp": {
+   "cache_creation_input_token_cost": 0.0,
+   "cache_read_input_token_cost": 1.4e-08,
+   "input_cost_per_token": 4.4e-07,
+   "litellm_provider": "deepseek",
+   "output_cost_per_token": 1.32e-06
+  },
   "deepseek-v4-pro": {
    "cache_creation_input_token_cost": 0.0,
    "cache_read_input_token_cost": 4.4e-08,
@@ -459,7 +466,7 @@
    "output_cost_per_token": 4e-07
   },
   "gemini-2.5-flash-lite-preview-06-17": {
-   "cache_read_input_token_cost": 2.5e-08,
+   "cache_read_input_token_cost": 1e-08,
    "input_cost_per_token": 1e-07,
    "litellm_provider": "gemini",
    "output_cost_per_token": 4e-07
@@ -471,30 +478,30 @@
    "output_cost_per_token": 4e-07
   },
   "gemini-2.5-flash-native-audio-latest": {
-   "input_cost_per_token": 3e-07,
+   "input_cost_per_token": 5e-07,
    "litellm_provider": "gemini",
-   "output_cost_per_token": 2.5e-06
+   "output_cost_per_token": 2e-06
   },
   "gemini-2.5-flash-native-audio-preview-09-2025": {
-   "input_cost_per_token": 3e-07,
+   "input_cost_per_token": 5e-07,
    "litellm_provider": "gemini",
-   "output_cost_per_token": 2.5e-06
+   "output_cost_per_token": 2e-06
   },
   "gemini-2.5-flash-native-audio-preview-12-2025": {
-   "input_cost_per_token": 3e-07,
+   "input_cost_per_token": 5e-07,
    "litellm_provider": "gemini",
-   "output_cost_per_token": 2.5e-06
+   "output_cost_per_token": 2e-06
   },
   "gemini-2.5-flash-preview-09-2025": {
-   "cache_read_input_token_cost": 7.5e-08,
+   "cache_read_input_token_cost": 3e-08,
    "input_cost_per_token": 3e-07,
    "litellm_provider": "gemini",
    "output_cost_per_token": 2.5e-06
   },
   "gemini-2.5-flash-preview-tts": {
-   "input_cost_per_token": 3e-07,
+   "input_cost_per_token": 5e-07,
    "litellm_provider": "gemini",
-   "output_cost_per_token": 2.5e-06
+   "output_cost_per_token": 1e-05
   },
   "gemini-2.5-pro": {
    "cache_read_input_token_cost": 1.25e-07,
@@ -504,9 +511,9 @@
   },
   "gemini-2.5-pro-preview-tts": {
    "cache_read_input_token_cost": 1.25e-07,
-   "input_cost_per_token": 1.25e-06,
+   "input_cost_per_token": 1e-06,
    "litellm_provider": "gemini",
-   "output_cost_per_token": 1e-05
+   "output_cost_per_token": 2e-05
   },
   "gemini-3-flash-preview": {
    "cache_read_input_token_cost": 5e-08,
@@ -596,6 +603,16 @@
    "litellm_provider": "gemini",
    "output_cost_per_token": 2.1e-05
   },
+  "gemini-3.5-transcribe": {
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 1.2e-05
+  },
+  "gemini-3.5-transcribe-live": {
+   "input_cost_per_token": 3.5e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 2.1e-05
+  },
   "gemini-3.6-flash": {
    "cache_read_input_token_cost": 7.5e-08,
    "input_cost_per_token": 7.5e-07,
@@ -658,7 +675,7 @@
   },
   "gemini-live-2.5-flash-preview-native-audio-09-2025": {
    "cache_read_input_token_cost": 7.5e-08,
-   "input_cost_per_token": 3e-07,
+   "input_cost_per_token": 5e-07,
    "litellm_provider": "gemini",
    "output_cost_per_token": 2e-06
   },
@@ -771,6 +788,13 @@
    "output_cost_per_token": 5e-06
   },
   "glm-5.1": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 2.6e-07,
+   "input_cost_per_token": 1.4e-06,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 4.4e-06
+  },
+  "glm-5.3": {
    "cache_creation_input_token_cost": 0,
    "cache_read_input_token_cost": 2.6e-07,
    "input_cost_per_token": 1.4e-06,
