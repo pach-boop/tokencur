@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-08-28",
+  "fetched": "2026-08-30",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -679,6 +679,11 @@
    "litellm_provider": "gemini",
    "output_cost_per_token": 2e-06
   },
+  "gemini-omni-1.1-flash": {
+   "input_cost_per_token": 1.5e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 9e-06
+  },
   "gemini-omni-flash-preview": {
    "input_cost_per_token": 1.5e-06,
    "litellm_provider": "gemini",
@@ -716,6 +721,16 @@
    "input_cost_per_token": 0,
    "litellm_provider": "gemini",
    "output_cost_per_token": 0
+  },
+  "gemma-4-26b-a4b-it": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 0.0
+  },
+  "gemma-4-31b-it": {
+   "input_cost_per_token": 0.0,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 0.0
   },
   "glm-4-32b-0414-128k": {
    "input_cost_per_token": 1e-07,
@@ -800,6 +815,13 @@
    "input_cost_per_token": 1.4e-06,
    "litellm_provider": "zai",
    "output_cost_per_token": 4.4e-06
+  },
+  "glm-5.3-flash": {
+   "cache_creation_input_token_cost": 0,
+   "cache_read_input_token_cost": 3e-08,
+   "input_cost_per_token": 1.5e-07,
+   "litellm_provider": "zai",
+   "output_cost_per_token": 5e-07
   },
   "gpt-3.5-turbo": {
    "input_cost_per_token": 5e-07,
@@ -1480,6 +1502,12 @@
    "litellm_provider": "moonshot",
    "output_cost_per_token": 4e-06
   },
+  "kimi-k2.7-code": {
+   "cache_read_input_token_cost": 1.9e-07,
+   "input_cost_per_token": 9.5e-07,
+   "litellm_provider": "moonshot",
+   "output_cost_per_token": 4e-06
+  },
   "kimi-k3": {
    "cache_read_input_token_cost": 3e-07,
    "input_cost_per_token": 3e-06,
@@ -1655,6 +1683,11 @@
    "input_cost_per_token": 2e-06,
    "litellm_provider": "moonshot",
    "output_cost_per_token": 5e-06
+  },
+  "nano-banana-pro-preview": {
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 1.2e-05
   },
   "o1": {
    "cache_read_input_token_cost": 7.5e-06,
