@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-09-17",
+  "fetched": "2026-09-22",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -295,6 +295,7 @@
    "output_cost_per_token": 4.2e-07
   },
   "deepseek-coder": {
+   "cache_read_input_token_cost": 1.4e-08,
    "input_cost_per_token": 1.4e-07,
    "litellm_provider": "deepseek",
    "output_cost_per_token": 2.8e-07
@@ -327,6 +328,7 @@
    "output_cost_per_token": 1.2e-06
   },
   "deepseek-r1": {
+   "cache_read_input_token_cost": 1.4e-07,
    "input_cost_per_token": 5.5e-07,
    "litellm_provider": "deepseek",
    "output_cost_per_token": 2.19e-06
@@ -350,6 +352,7 @@
    "output_cost_per_token": 0.0
   },
   "deepseek-v3.2": {
+   "cache_read_input_token_cost": 2.8e-08,
    "input_cost_per_token": 2.8e-07,
    "litellm_provider": "deepseek",
    "output_cost_per_token": 4e-07
