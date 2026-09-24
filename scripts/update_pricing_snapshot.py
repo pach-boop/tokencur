@@ -42,10 +42,15 @@ FIELDS = (
 TARGET = Path(__file__).parent.parent / "src/tokencur/pricing_data/litellm_snapshot.json"
 
 
-def main() -> None:
-    with urllib.request.urlopen(SOURCE, timeout=60) as resp:
-        full = json.load(resp)
+def build_snapshot(full: dict, previous: dict | None) -> dict[str, dict]:
+    """Filter the upstream database down to tokencur's providers.
 
+    Models that upstream drops (LiteLLM prunes retired ones) are kept
+    at their last known rate and flagged ``retired_upstream``: old
+    usage logs still name them, and losing the rate would silently turn
+    historical spend into unpriced usage. Pure — no IO — so it carries
+    the test weight.
+    """
     snapshot: dict[str, dict] = {}
     for key in sorted(full):
         entry = full[key]
@@ -61,14 +66,27 @@ def main() -> None:
             continue  # first (sorted) entry wins, deterministically
         snapshot[bare] = {f: entry[f] for f in FIELDS if f in entry}
 
+    for name, entry in (previous or {}).items():
+        if name not in snapshot:
+            snapshot[name] = {**entry, "retired_upstream": True}
+    return dict(sorted(snapshot.items()))
+
+
+def main() -> None:
+    with urllib.request.urlopen(SOURCE, timeout=60) as resp:
+        full = json.load(resp)
+
+    previous = None
+    if TARGET.exists():
+        previous = json.loads(TARGET.read_text(encoding="utf-8")).get("models")
+    snapshot = build_snapshot(full, previous)
+
     # Only touch the file when rates actually changed, so automated
     # refreshes produce commits with meaning (a dated price-change log),
     # not daily noise from the fetched-at stamp.
-    if TARGET.exists():
-        previous = json.loads(TARGET.read_text(encoding="utf-8")).get("models")
-        if previous == snapshot:
-            print(f"no price changes; snapshot untouched ({len(snapshot)} models)")
-            return
+    if previous == snapshot:
+        print(f"no price changes; snapshot untouched ({len(snapshot)} models)")
+        return
 
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_text(

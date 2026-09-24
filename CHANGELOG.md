@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- Pricing snapshot no longer loses models that LiteLLM prunes upstream.
+  Retired models keep their last known rate, flagged
+  `retired_upstream`, so historical usage stays priced; 56 models
+  dropped by earlier daily refreshes were restored from git history.
+  Before this, `main` had two failing tests while the badge stayed
+  green: the price-watch bot pushes with `GITHUB_TOKEN`, which does not
+  trigger CI. The price-watch job now runs the test suite before it
+  commits.
+
 ### Added
 
 - Price card page: `python -m tokencur.prices` renders `docs/prices/`
