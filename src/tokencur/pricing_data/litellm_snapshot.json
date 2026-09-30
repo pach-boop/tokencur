@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-09-29",
+  "fetched": "2026-09-30",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -938,6 +938,11 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 1e-05
   },
+  "gpt-4o-mini-tts-2025-03-20": {
+   "input_cost_per_token": 6e-07,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 1e-05
+  },
   "gpt-4o-mini-tts-2025-12-15": {
    "input_cost_per_token": 6e-07,
    "litellm_provider": "openai",
@@ -1243,6 +1248,13 @@
   "gpt-6-sol": {
    "cache_creation_input_token_cost": 2.5e-06,
    "cache_read_input_token_cost": 2e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 1e-05
+  },
+  "gpt-6.1-sol": {
+   "cache_creation_input_token_cost": 2.5e-06,
+   "cache_read_input_token_cost": 1e-07,
    "input_cost_per_token": 2e-06,
    "litellm_provider": "openai",
    "output_cost_per_token": 1e-05
