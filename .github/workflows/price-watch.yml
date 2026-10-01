@@ -19,6 +19,9 @@ jobs:
         with:
           python-version: "3.13"
       - run: python scripts/update_pricing_snapshot.py
+      # Pushes made with GITHUB_TOKEN don't trigger the ci workflow, so
+      # the refreshed snapshot must pass the suite here before it lands.
+      - run: pip install -e .[dev] && pytest -q
       - name: Commit price changes, if any
         run: |
           if git diff --quiet; then
