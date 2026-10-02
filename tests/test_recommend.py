@@ -88,3 +88,22 @@ def test_render_separates_achieved_from_potential():
     assert "AVOIDED" in out and "HEADROOM" in out
     assert "Total what-if headroom:" in out
     assert "Money concepts" in out  # the flat-subscription caveat ships with the output
+
+
+def test_recommendations_accepts_a_one_shot_iterable():
+    """Both analyses walk the records. Handed a generator, the second walk
+    used to see nothing, so right-sizing vanished without a word."""
+    records = [
+        _record(
+            "claude-opus-4-8",
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_tokens=10_000_000,
+        )
+    ]
+
+    from_list = recommendations(records)
+    from_generator = recommendations(r for r in records)
+
+    assert {r.kind for r in from_list} == {"achieved", "potential"}
+    assert from_generator == from_list

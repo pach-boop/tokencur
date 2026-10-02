@@ -135,6 +135,10 @@ def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
 
 
 def recommendations(records: Iterable[UsageRecord]) -> list[Recommendation]:
+    """Every recommendation, largest first."""
+    # Both analyses walk the records: materialize once, or a generator
+    # would be spent by the first and right-sizing would come back empty.
+    records = list(records)
     recs = caching_roi(records) + model_rightsizing(records)
     return sorted(recs, key=lambda r: -r.savings_usd)
 
