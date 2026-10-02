@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- `scripts/benchmark.py`: a reproducible benchmark that times scan,
+  ledger write, rescan, ledger read, report and FOCUS export on N
+  synthetic messages. One million messages: linear time, 6.3 s to
+  scan, 56 s to export 4M FOCUS rows; numbers in the README.
 - Architecture decision records in `docs/adr`: showback and the three
   money concepts, the two pricing layers, FOCUS 1.2 behind the
   Foundation's validator, the ledger and its audited corrections,
