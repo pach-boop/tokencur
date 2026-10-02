@@ -219,3 +219,16 @@ def test_price_modifiers_come_from_the_logged_request_options(tmp_path):
     records = {r.record_id: r.price_modifiers for r in iter_usage_records(tmp_path)}
 
     assert records == {"r1:r1": "", "r2:r2": "fast+us", "r3:r3": "batch"}
+
+
+def test_subagent_logs_belong_to_their_project(tmp_path):
+    """Claude Code nests subagent transcripts under
+    <project>/<session>/subagents/; their usage is the project's, not a
+    workspace called "subagents"."""
+    nested = tmp_path / "-home-dev-acme-api" / "sess_1" / "subagents" / "agent-x.jsonl"
+    nested.parent.mkdir(parents=True)
+    nested.write_text(_assistant_line("req_sub", NEW_FORMAT_USAGE), encoding="utf-8")
+
+    (record,) = iter_usage_records(tmp_path)
+
+    assert record.workspace == "-home-dev-acme-api"
