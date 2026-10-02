@@ -138,3 +138,79 @@ def test_curated_card_is_in_mtok_units():
     # Opus 4.8 lists at $5 input / $25 output per MTok.
     assert rows["claude-opus-4-8"]["input"] == 5.0
     assert rows["claude-opus-4-8"]["output"] == 25.0
+
+
+class TestWhatTheBotSays:
+    """The price-watch bot used to title every refresh "rates changed
+    upstream"; in the real history 17 of 28 refreshes only added or
+    removed models. These pin the words to what actually moved."""
+
+    def test_cache_rate_moves_are_rate_moves(self):
+        before = {"m": {**_entry(1e-6, 2e-6), "cache_read_input_token_cost": 1e-7}}
+        after = {"m": {**_entry(1e-6, 2e-6), "cache_read_input_token_cost": 5e-8}}
+
+        _, _, changed = diff_models(before, after)
+
+        assert [(d.field, round(d.old, 3), round(d.new, 3)) for d in changed] == [
+            ("cache read", 0.1, 0.05)
+        ]
+
+    def test_retirement_and_return_are_told_apart(self):
+        from tokencur.prices import retirements
+
+        before = {
+            "old": _entry(1e-6, 2e-6),
+            "back": {**_entry(1e-6, 2e-6), "retired_upstream": True},
+        }
+        after = {
+            "old": {**_entry(1e-6, 2e-6), "retired_upstream": True},
+            "back": _entry(1e-6, 2e-6),
+        }
+
+        assert retirements(before, after) == (["old"], ["back"])
+
+    def test_commit_message_names_each_kind_of_change(self):
+        from tokencur.prices import commit_message
+
+        before = {"m": _entry(1e-6, 2e-6), "gone": _entry(1e-6, 1e-6)}
+        after = {
+            "m": _entry(1.25e-6, 2e-6),
+            "gone": {**_entry(1e-6, 1e-6), "retired_upstream": True},
+            "new-a": _entry(1e-6, 1e-6),
+            "new-b": _entry(1e-6, 1e-6),
+        }
+
+        subject, _, body = commit_message(before, after).partition("\n\n")
+
+        assert (
+            subject == "chore(prices): 1 rate move, 2 models added, 1 retired upstream"
+        )
+        assert "- m input: 1 -> 1.25 USD/MTok" in body
+        assert "Added: new-a, new-b" in body
+        assert "Retired upstream, kept at their last rate: gone" in body
+
+    def test_an_additions_only_refresh_does_not_claim_a_rate_move(self):
+        from tokencur.prices import commit_message
+
+        message = commit_message(
+            {"m": _entry(1e-6, 2e-6)},
+            {"m": _entry(1e-6, 2e-6), "n": _entry(1e-6, 2e-6)},
+        )
+
+        assert message.splitlines()[0] == "chore(prices): 1 model added"
+        assert "rate" not in message.splitlines()[0]
+
+    def test_a_retirement_only_commit_is_a_timeline_event(self, tmp_path):
+        _run(tmp_path, "init", "-b", "main")
+        rel = "snap.json"
+        _commit(tmp_path, rel, {"m": _entry(1e-6, 2e-6)}, "2026-07-01T00:00:00Z")
+        _commit(
+            tmp_path,
+            rel,
+            {"m": {**_entry(1e-6, 2e-6), "retired_upstream": True}},
+            "2026-07-05T00:00:00Z",
+        )
+
+        latest, _ = price_changes(tmp_path, rel)
+
+        assert latest.retired == ["m"] and latest.changed == [] and latest.added == []

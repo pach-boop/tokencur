@@ -7,9 +7,10 @@
 - **Coverage** — how many models the vendored LiteLLM snapshot extends
   the card to, and when it was last fetched.
 - **The change log** — a dated timeline built from the git history of
-  the snapshot file. The daily price-watch action commits only when
-  rates actually move, so each commit is a real price-change event;
-  this page is that action's public face.
+  the snapshot file. The daily price-watch action commits whenever the
+  snapshot changes (a rate moves, a model appears, or one is retired
+  upstream and kept at its last rate) and names which in the commit
+  message (``commit_message``); this page is that action's public face.
 
 No runtime dependencies and no external requests: the git walk happens
 at generation time, the rendered page is self-contained.
@@ -20,7 +21,8 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from dataclasses import dataclass
+import textwrap
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib import resources
 from pathlib import Path
@@ -36,7 +38,7 @@ class ModelDelta:
     """One model's rate movement between two snapshot revisions."""
 
     model: str
-    field: str  # "input" | "output"
+    field: str  # a label from _FIELDS, e.g. "input" or "cache read"
     old: float  # USD per MTok
     new: float
 
@@ -51,6 +53,8 @@ class PriceChange:
     removed: list[str]
     changed: list[ModelDelta]
     introduced: bool = False  # the root commit that first created the file
+    retired: list[str] = field(default_factory=list)  # dropped upstream, kept
+    returned: list[str] = field(default_factory=list)  # back upstream
 
     @property
     def is_introduction(self) -> bool:
@@ -58,7 +62,13 @@ class PriceChange:
 
 
 _PER_TOKEN_TO_MTOK = 1_000_000
-_FIELDS = (("input", "input_cost_per_token"), ("output", "output_cost_per_token"))
+_FIELDS = (
+    ("input", "input_cost_per_token"),
+    ("output", "output_cost_per_token"),
+    ("cache read", "cache_read_input_token_cost"),
+    ("cache write 5m", "cache_creation_input_token_cost"),
+    ("cache write 1h", "cache_creation_input_token_cost_above_1hr"),
+)
 
 
 def diff_models(
@@ -66,29 +76,88 @@ def diff_models(
 ) -> tuple[list[str], list[str], list[ModelDelta]]:
     """Diff two ``{model: entry}`` price maps.
 
-    Returns (added, removed, changed). A change is any movement in the
-    input or output per-token cost, surfaced in USD/MTok. Pure — no git,
-    no IO — so it carries the test weight; the git walk around it stays
-    thin.
+    Returns (added, removed, changed). A change is any movement in a
+    per-token rate (input, output, cache read or write), surfaced in
+    USD/MTok. Pure — no git, no IO — so it carries the test weight; the
+    git walk around it stays thin.
     """
     added = sorted(set(after) - set(before))
     removed = sorted(set(before) - set(after))
     changed: list[ModelDelta] = []
     for model in sorted(set(before) & set(after)):
         b, a = before[model], after[model]
-        for field, key in _FIELDS:
+        for label, key in _FIELDS:
             old = b.get(key)
             new = a.get(key)
             if old != new and old is not None and new is not None:
                 changed.append(
                     ModelDelta(
                         model=model,
-                        field=field,
+                        field=label,
                         old=old * _PER_TOKEN_TO_MTOK,
                         new=new * _PER_TOKEN_TO_MTOK,
                     )
                 )
     return added, removed, changed
+
+
+def retirements(before: dict, after: dict) -> tuple[list[str], list[str]]:
+    """Models newly flagged ``retired_upstream``, and models back upstream.
+
+    The snapshot keeps a model LiteLLM drops, at its last rate, so old
+    usage stays priced (see ``scripts/update_pricing_snapshot.py``); the
+    flag is the only trace of the retirement.
+    """
+    retired, returned = [], []
+    for model in sorted(set(before) & set(after)):
+        was = before[model].get("retired_upstream", False)
+        now = after[model].get("retired_upstream", False)
+        if now and not was:
+            retired.append(model)
+        elif was and not now:
+            returned.append(model)
+    return retired, returned
+
+
+def commit_message(before: dict, after: dict) -> str:
+    """The price-watch commit message for one refresh: what actually moved.
+
+    The subject counts each kind of change ("1 rate move, 2 models
+    added"); the body lists them, rates in USD per MTok.
+    """
+    added, removed, changed = diff_models(before, after)
+    retired, returned = retirements(before, after)
+
+    def count(n: int, noun: str) -> str:
+        return f"{n} {noun}{'s' * (n != 1)}"
+
+    parts = [
+        count(len(changed), "rate move") if changed else "",
+        f"{count(len(added), 'model')} added" if added else "",
+        f"{len(retired)} retired upstream" if retired else "",
+        f"{len(returned)} back upstream" if returned else "",
+        f"{count(len(removed), 'model')} removed" if removed else "",
+    ]
+    subject = "chore(prices): " + (
+        ", ".join(p for p in parts if p) or "snapshot refresh"
+    )
+    body = [f"- {d.model} {d.field}: {d.old:g} -> {d.new:g} USD/MTok" for d in changed]
+    for label, models in (
+        ("Added", added),
+        ("Retired upstream, kept at their last rate", retired),
+        ("Back upstream", returned),
+        ("Removed", removed),
+    ):
+        if models:
+            body.append(
+                textwrap.fill(
+                    f"{label}: {', '.join(models)}",
+                    width=72,
+                    break_on_hyphens=False,  # model ids stay whole
+                    break_long_words=False,
+                )
+            )
+    return subject + ("\n\n" + "\n".join(body) if body else "") + "\n"
 
 
 def _git(repo_root: Path, *args: str) -> str | None:
@@ -142,7 +211,8 @@ def price_changes(
         parent = _models_at(repo_root, f"{sha}^", rel_path)
         introduced = not parent  # no parent blob = the file's root commit
         added, removed, changed = diff_models(parent or {}, after)
-        if not (added or removed or changed):
+        retired, returned = retirements(parent or {}, after)
+        if not (added or removed or changed or retired or returned):
             continue
         changes.append(
             PriceChange(
@@ -152,6 +222,8 @@ def price_changes(
                 removed=removed,
                 changed=changed,
                 introduced=introduced,
+                retired=retired,
+                returned=returned,
             )
         )
     return changes
@@ -233,6 +305,15 @@ def _timeline(changes: list[PriceChange]) -> str:
                 parts.append(
                     f'<div class="row removed">− removed: {", ".join(c.removed)}</div>'
                 )
+            if c.retired:
+                parts.append(
+                    '<div class="row removed">− retired upstream, kept at last rate: '
+                    f"{', '.join(c.retired)}</div>"
+                )
+            if c.returned:
+                parts.append(
+                    f'<div class="row added">+ back upstream: {", ".join(c.returned)}</div>'
+                )
             detail = "".join(parts)
         items.append(
             f'<li><div class="when"><span class="date">{c.date}</span>'
@@ -303,8 +384,9 @@ they moved. Prices in USD per million tokens (MTok).</p>
 DeepSeek, Kimi/Moonshot, GLM and Ollama for fallback valuation.</p>
 
 <h2>Change log — straight from the git history</h2>
-<p class="muted">A daily action refreshes the snapshot and commits only when a published
-rate actually moves, so each entry below is a real price change.</p>
+<p class="muted">A daily action refreshes the snapshot and commits whenever it changes: a
+rate moves, a model appears, or one is retired upstream and kept at its last rate.
+Each entry says which.</p>
 {_timeline(changes)}
 
 <footer>Curated source: <a href="{SOURCE}">Anthropic pricing</a> · generated {generated}
