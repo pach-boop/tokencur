@@ -87,6 +87,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
+- The price-watch bot says what moved. Its commit subject counts
+  rate moves, models added, retired upstream or back ("chore(prices):
+  1 rate move, 2 models added") and the body lists them; it used to
+  title every refresh "rates changed upstream", though 17 of 28 only
+  added or removed models. Rate moves now include cache read and
+  write rates, retirements show on the price card, and the bot
+  regenerates the card after each refresh (it had been frozen since
+  July), from a full-history checkout. README and page no longer
+  claim the bot commits only on rate moves.
 - Right-sizing knows the current Claude lineup: Fable 5.1 → Opus 5.5,
   Opus 5.5 → Sonnet 5.5, Sonnet 5.5 → Haiku 4.5 and Opus 5 → Sonnet 5
   join the curated pairs, so the heaviest current usage gets a what-if.

@@ -1,8 +1,9 @@
 name: price-watch
 
 # Daily refresh of the vendored LiteLLM pricing snapshot. Commits only
-# when rates actually changed, so the git history doubles as a dated
-# log of AI price changes.
+# when the snapshot changes, with a message that says what moved (rate
+# moves, models added, retired upstream), then regenerates the public
+# price card, whose change log is that git history.
 on:
   schedule:
     - cron: "17 6 * * *"
@@ -16,24 +17,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write # the refreshed snapshot is committed back
+      contents: write # the refreshed snapshot and price card are committed back
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the price card's change log walks the full history
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - run: python scripts/update_pricing_snapshot.py
+      - run: python scripts/update_pricing_snapshot.py --commit-message "$RUNNER_TEMP/message.txt"
       # Pushes made with GITHUB_TOKEN don't trigger the ci workflow, so
       # the refreshed snapshot must pass the suite here before it lands.
       - run: pip install -e .[dev] && pytest -q
-      - name: Commit price changes, if any
+      - name: Commit the refresh and the regenerated price card, if anything moved
         run: |
           if git diff --quiet; then
-            echo "No price changes today."
+            echo "No price changes today." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          { echo '```'; cat "$RUNNER_TEMP/message.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           git config user.name "price-watch bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/tokencur/pricing_data/litellm_snapshot.json
-          git commit -m "chore(prices): LiteLLM snapshot refresh — rates changed upstream"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          # Rendered after the commit, so the page's timeline includes it.
+          tokencur prices
+          git add docs/prices
+          git commit -m "docs(prices): regenerate the price card"
           git push

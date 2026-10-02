@@ -6,15 +6,25 @@ package. Run deliberately; commit the diff so pricing changes are
 reviewable, reproducible and offline.
 
 Usage:
-    python scripts/update_pricing_snapshot.py
+    python scripts/update_pricing_snapshot.py [--commit-message FILE]
+
+With ``--commit-message``, a refresh that changes the snapshot also
+writes the commit message for it, naming what moved (rate moves, models
+added, retired upstream...); the price-watch action commits with it.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 import urllib.request
 from datetime import date
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from tokencur.prices import commit_message
 
 SOURCE = (
     "https://raw.githubusercontent.com/BerriAI/litellm/main/"
@@ -74,7 +84,16 @@ def build_snapshot(full: dict, previous: dict | None) -> dict[str, dict]:
     return dict(sorted(snapshot.items()))
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--commit-message",
+        type=Path,
+        metavar="FILE",
+        help="on a change, write the commit message describing it here",
+    )
+    args = parser.parse_args(argv)
+
     with urllib.request.urlopen(SOURCE, timeout=60) as resp:
         full = json.load(resp)
 
@@ -104,6 +123,10 @@ def main() -> None:
         encoding="utf-8",
     )
     print(f"wrote {len(snapshot)} models to {TARGET}")
+    message = commit_message(previous or {}, snapshot)
+    print(message)
+    if args.commit_message:
+        args.commit_message.write_text(message, encoding="utf-8")
 
 
 if __name__ == "__main__":

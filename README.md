@@ -190,9 +190,9 @@ tokencur prices   # regenerates docs/prices/
 ```
 
 A daily [price-watch action](.github/workflows/price-watch.yml) refreshes the
-vendored snapshot and commits only when a published rate actually moves, so
-each timeline entry is a real price change — the page is that action's public
-face.
+vendored snapshot and commits whenever it changes, with a message that names
+what moved (rate moves, models added, models retired upstream and kept at their
+last rate), then regenerates this page from that history.
 
 ## Roadmap
 
