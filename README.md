@@ -62,7 +62,9 @@ python -m tokencur recommend          # avoided cost + what-if headroom
 With no arguments it scans every known local source on your machine — **Claude Code**
 (`~/.claude/projects`), **Codex CLI** (`~/.codex/sessions`) and **Kimi Code**
 (`~/.kimi-code/sessions`) — and prints per-model, per-source and per-day
-API-equivalent cost, including provider-correct cache economics.
+API-equivalent cost, including provider-correct cache economics. Each scan
+is also kept in a local [ledger](#ledger), so history survives when the
+agents delete their old logs.
 
 For the visual version — daily trend, cost by model, token-type mix and unit
 economics, each view exposing the DuckDB SQL behind it:
@@ -89,6 +91,28 @@ by source:
 API-EQUIVALENT TOTAL (showback): $1,248.04
 unpriced usage (model not in rate card): unknown x1
 ```
+
+## Ledger
+
+Coding agents treat their logs as disposable: Claude Code deletes session
+transcripts after `cleanupPeriodDays` (30 days by default). Computed from the
+logs alone, totals would *shrink* as history disappears. So every command —
+`report`, `export`, `recommend`, the observatory and the dashboard — first
+keeps what it scans in a local SQLite ledger, then reports the ledger's full
+history:
+
+- **Deduplicated per usage event** — re-running adds nothing, and a resumed
+  session's copied messages count once.
+- **Nothing is forgotten** — events whose logs are gone keep their last known
+  values; events still on disk are refreshed from the latest parse.
+- **Metadata only** — token counts, models, timestamps, workspace and session
+  ids, in a file readable by its owner only.
+- **Location** — `~/.local/share/tokencur/ledger.sqlite3` (honours
+  `$XDG_DATA_HOME`), or wherever `$TOKENCUR_LEDGER` points.
+
+The ledger keeps only what it has seen: usage deleted before the first run is
+gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
+never stored.
 
 ## Money concepts (read before quoting numbers)
 
@@ -153,6 +177,9 @@ face.
 
 - Local-log sources only so far (Claude Code, Codex CLI, Kimi Code); billed-cost
   admin-API ingesters are pending.
+- The ledger can only keep usage it has seen. Run tokencur more often than
+  Claude Code's `cleanupPeriodDays`, or raise that setting in
+  `~/.claude/settings.json`.
 - Codex records are taken from `token_count` events as reported, with only a
   consecutive-duplicate guard — no cross-file dedup yet.
 - Costs are list-price showback, not invoices. Subscription plans bill differently.

@@ -4,7 +4,8 @@ Usage:
     pip install -e .[dashboard]
     streamlit run src/tokencur/dashboard.py
 
-Scans every known local source, normalizes to FOCUS charge rows and
+Loads the full usage history (every known local source, through the
+ledger — see ``tokencur.sources``), normalizes to FOCUS charge rows and
 lets DuckDB run the analytics — the same SQL any FinOps analyst would
 write over a FOCUS dataset. Every view exposes its SQL and its table
 (the table doubles as the accessibility fallback for chart colors).
@@ -18,7 +19,7 @@ import streamlit as st
 
 from tokencur.focus import to_focus_rows, unpriced_models
 from tokencur.recommend import recommendations
-from tokencur.report import DEFAULT_SOURCES
+from tokencur.sources import load_records
 
 # Fixed service→color mapping (color follows the entity, never the
 # rank). Both palettes validated for their surface; see the dataviz
@@ -40,10 +41,7 @@ def _mode() -> str:
 
 @st.cache_data(show_spinner="Scanning local usage logs…")
 def load() -> tuple[pd.DataFrame, dict[str, int], list]:
-    records = []
-    for root, iter_records in DEFAULT_SOURCES:
-        if root.exists():
-            records.extend(iter_records(root))
+    records = load_records()
     return pd.DataFrame(to_focus_rows(records)), unpriced_models(records), records
 
 

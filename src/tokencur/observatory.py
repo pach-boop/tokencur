@@ -1,10 +1,11 @@
 """Static public snapshot of the FOCUS dataset — the observatory.
 
-``python -m tokencur.observatory [output_dir]`` scans every known local
-source, aggregates the FOCUS charge rows, and writes a self-contained
-``index.html`` + ``data.json`` suitable for static hosting (GitHub
-Pages). The page has no runtime dependencies: chart geometry is computed
-here; the browser only draws tooltips.
+``python -m tokencur.observatory [output_dir]`` loads the full usage
+history (every known local source, through the ledger — see
+``tokencur.sources``), aggregates the FOCUS charge rows, and writes a
+self-contained ``index.html`` + ``data.json`` suitable for static
+hosting (GitHub Pages). The page has no runtime dependencies: chart
+geometry is computed here; the browser only draws tooltips.
 
 Money concepts are kept apart on purpose (see README):
 
@@ -36,7 +37,7 @@ from pathlib import Path
 from tokencur.focus import to_focus_rows, unpriced_models
 from tokencur.pricing import AS_OF
 from tokencur.recommend import recommendations
-from tokencur.report import DEFAULT_SOURCES
+from tokencur.sources import load_records
 
 DEFAULT_OUTPUT = Path("docs") / "observatory"
 DEFAULT_SUBSCRIPTIONS = Path("subscriptions.json")
@@ -472,12 +473,10 @@ def write_site(snap: dict, outdir: Path) -> None:
 
 def main(argv: list[str]) -> int:
     outdir = Path(argv[1]) if len(argv) > 1 else DEFAULT_OUTPUT
-    records: list = []
-    for root, iter_records in DEFAULT_SOURCES:
-        if root.exists():
-            records.extend(iter_records(root))
+    records = load_records()
     if not records:
-        print("error: no known usage-log locations found", file=sys.stderr)
+        print("error: no usage in known log locations or the ledger",
+              file=sys.stderr)
         return 1
     write_site(snapshot(records, load_subscriptions()), outdir)
     print(f"observatory written to {outdir} ({len(records)} records aggregated)")
