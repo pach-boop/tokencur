@@ -1,6 +1,6 @@
 import pytest
 
-from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, unpriced_models
+from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, undated_count, unpriced_models
 from tokencur.pricing import record_cost_usd
 from tokencur.records import UsageRecord
 
@@ -84,3 +84,17 @@ def test_provider_mapping_per_source():
     )
     providers = {r["ProviderName"] for r in rows}
     assert providers == {"OpenAI", "Moonshot AI"}
+
+
+@pytest.mark.parametrize("timestamp", ["", "not-a-timestamp", "2026-13-45T99:00:00Z"])
+def test_undated_records_are_skipped_and_counted(timestamp):
+    """No date is ever invented. A missing timestamp used to land on
+    1970-01-01 and a malformed one crashed the export; both are now
+    skipped and counted, like unpriced usage."""
+    records = [_record(timestamp=timestamp), _record()]
+
+    rows = list(to_focus_rows(records))
+
+    assert rows
+    assert all(r["ChargePeriodStart"].startswith("2026-07-01") for r in rows)
+    assert undated_count(records) == 1

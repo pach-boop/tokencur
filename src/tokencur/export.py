@@ -5,8 +5,9 @@ Usage:
 
 With no ROOT, the full history is exported: every known local source is
 scanned into the ledger, same as the report. An explicit ROOT is read as
-Claude Code logs and never stored. Unpriced usage is skipped and
-reported on stderr — never exported as $0.
+Claude Code logs and never stored. Unpriced and undated usage is
+skipped and reported on stderr — never exported as $0 or under an
+invented date.
 """
 
 from __future__ import annotations
@@ -15,7 +16,12 @@ import csv
 import sys
 from pathlib import Path
 
-from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, unpriced_models
+from tokencur.focus import (
+    FOCUS_COLUMNS,
+    to_focus_rows,
+    undated_count,
+    unpriced_models,
+)
 from tokencur.ingest import claude_code
 from tokencur.records import UsageRecord
 from tokencur.sources import load_records
@@ -50,6 +56,12 @@ def main(argv: list[str]) -> int:
     if skipped:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(skipped.items()))
         print(f"skipped unpriced usage: {pairs}", file=sys.stderr)
+    undated = undated_count(records)
+    if undated:
+        print(
+            f"skipped undated usage: {undated} records (no parseable timestamp)",
+            file=sys.stderr,
+        )
     return 0
 
 

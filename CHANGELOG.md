@@ -84,6 +84,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- Undated usage is never given a date. A record with no timestamp
+  was exported to FOCUS on 1970-01-01, which would also stretch the
+  observatory's daily chart back to 1970, and a malformed timestamp
+  crashed the whole export. Both are now skipped by the FOCUS
+  normalizer and counted on stderr, like unpriced usage; the report
+  keeps their cost in the total under an `undated` day.
 - `recommendations()` walked its input twice, so a generator (any
   one-shot iterable) silently lost every right-sizing result. It now
   materializes the records once; a regression test feeds it a
