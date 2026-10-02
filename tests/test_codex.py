@@ -194,3 +194,53 @@ def test_reports_without_billable_tokens_are_not_calls(tmp_path):
     records = list(iter_usage_records(tmp_path))
 
     assert [r.timestamp for r in records] == ["2026-02-11T19:09:12.000Z"]
+
+
+def _rollout(path, session: str, reports: list[tuple[str, dict, dict]]) -> None:
+    """A rollout file for ``session`` holding (timestamp, last, total) reports."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    meta = json.dumps({"type": "session_meta", "payload": {"id": session}})
+    path.write_text(
+        "\n".join([meta, *(_report(ts, last, total) for ts, last, total in reports)]),
+        encoding="utf-8",
+    )
+
+
+def _forked_sessions(tmp_path):
+    """An original session and a fork that re-copies its two calls, then
+    makes one call of its own."""
+    a, b, c = _usage(1000, 800, 50), _usage(3000, 2500, 70), _usage(500, 0, 9)
+    after_a, after_b = a, _usage(4000, 3300, 120)
+    original = [
+        ("2026-02-06T22:43:51.000Z", a, after_a),
+        ("2026-02-06T22:44:10.000Z", b, after_b),
+    ]
+    fork = [*original, ("2026-02-07T09:00:00.000Z", c, _usage(4500, 3300, 129))]
+    _rollout(tmp_path / "2026/02/06/rollout-original.jsonl", "sess-original", original)
+    _rollout(tmp_path / "2026/02/07/rollout-fork.jsonl", "sess-fork", fork)
+
+
+def test_a_fork_does_not_recount_the_calls_it_copied(tmp_path):
+    _forked_sessions(tmp_path)
+
+    records = list(iter_usage_records(tmp_path))
+
+    assert [(r.session_id, r.timestamp) for r in records] == [
+        ("sess-original", "2026-02-06T22:43:51.000Z"),
+        ("sess-original", "2026-02-06T22:44:10.000Z"),
+        ("sess-fork", "2026-02-07T09:00:00.000Z"),
+    ]
+
+
+def test_the_ledger_recognises_a_copy_after_the_original_log_is_gone(tmp_path):
+    from tokencur import ledger
+
+    _forked_sessions(tmp_path / "logs")
+    path = tmp_path / "ledger.sqlite3"
+    ledger.record(iter_usage_records(tmp_path / "logs"), path)
+    (tmp_path / "logs/2026/02/06/rollout-original.jsonl").unlink()
+
+    added = ledger.record(iter_usage_records(tmp_path / "logs"), path)
+
+    assert added == 0  # the fork's copies are the original's calls
+    assert len(ledger.read(path)) == 3

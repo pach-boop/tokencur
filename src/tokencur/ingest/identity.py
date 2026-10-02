@@ -24,3 +24,15 @@ def fingerprint(raw: dict) -> str:
     """
     canonical = json.dumps(raw, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
+#: Sources whose record ids read ``<session>@<timestamp>#<usage fingerprint>``
+#: and whose logs can copy a call into another session (a forked Codex
+#: session). Such a copy keeps everything after the ``@``; the scan and the
+#: ledger use that content key to count the call once.
+COPYABLE_SOURCES = frozenset({"codex"})
+
+
+def content_key(record_id: str) -> str:
+    """The session-independent part of a record id (after the last ``@``)."""
+    return record_id.rsplit("@", 1)[-1]

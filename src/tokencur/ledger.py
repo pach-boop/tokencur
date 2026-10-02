@@ -35,7 +35,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tokencur.ingest.identity import fingerprint
+from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
 from tokencur.records import UsageRecord
 
 SCHEMA_VERSION = 2
@@ -107,6 +107,7 @@ def record(records: Iterable[UsageRecord], path: Path | None = None) -> int:
     if not rows:
         return 0  # nothing to keep: don't create an empty ledger
     with closing(_connect(path or default_path())) as conn, conn:
+        rows = _without_copies(conn, rows)
         before = conn.execute("SELECT COUNT(*) FROM usage").fetchone()[0]
         conn.executemany(_UPSERT, rows)
         after = conn.execute("SELECT COUNT(*) FROM usage").fetchone()[0]
@@ -124,6 +125,34 @@ def read(path: Path | None = None) -> list[UsageRecord]:
             "ORDER BY timestamp, source, record_id"
         )
         return [UsageRecord(**dict(zip(_FIELDS, row, strict=True))) for row in cursor]
+
+
+def _without_copies(conn: sqlite3.Connection, rows: list[tuple]) -> list[tuple]:
+    """Drop rows that copy a call already on record under another session.
+
+    A forked Codex session can re-copy earlier calls under its own session
+    id, so the same call arrives with a new record id. The scan already
+    skips copies whose original log is still on disk (see
+    ``tokencur.ingest.codex``); this catches the case where the original
+    log is gone and only the fork remains.
+    """
+    marks = ", ".join("?" * len(COPYABLE_SOURCES))
+    owners = {
+        (source, content_key(record_id)): record_id
+        for source, record_id in conn.execute(
+            f"SELECT source, record_id FROM usage WHERE source IN ({marks})",
+            sorted(COPYABLE_SOURCES),
+        )
+    }
+    kept = []
+    for row in rows:
+        source, record_id = row[0], row[1]
+        if source in COPYABLE_SOURCES:
+            key = (source, content_key(record_id))
+            if owners.setdefault(key, record_id) != record_id:
+                continue  # a copy of a call already on record
+        kept.append(row)
+    return kept
 
 
 def _key_fields(r: UsageRecord) -> tuple:

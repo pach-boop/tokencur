@@ -159,6 +159,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- Codex calls copied into a forked session are counted once. The scan
+  skips a call whose timestamp and raw usage it already saw in an
+  earlier rollout, and the ledger does the same against what it
+  stores, so a copy is still recognized after the original log is
+  deleted. This was the review's "no cross-file dedup yet".
 - A malformed or corrupted log could crash a whole scan. Fuzz tests
   found it in all three ingesters: a JSON line that is not an object,
   invalid UTF-8 bytes, text where a count belongs, an out-of-range
