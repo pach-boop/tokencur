@@ -2,11 +2,12 @@
 
 [![ci](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml/badge.svg)](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml)
 
-**The CUR for your tokens** — an open-source pipeline that converts multi-provider AI/LLM
-usage data (Anthropic, OpenAI, Gemini, coding agents, local models) into
+**The CUR for your tokens** — an open-source pipeline that turns AI usage into
 [FOCUS](https://focus.finops.org)-conformant cost datasets, validated in CI by the
-FinOps Foundation's own validator. Unit economics and a savings-recommendation engine
-are next on the roadmap.
+FinOps Foundation's own validator. Today it reads the local logs of three coding
+agents — Claude Code, Codex CLI and Kimi Code — prices them against 290+ models, and
+adds unit economics, savings recommendations and a local ledger that keeps the history
+after the agents delete their logs.
 
 > A FinOps tool that practices FinOps on itself: the first dataset is my own real AI spend.
 
@@ -40,13 +41,31 @@ are next on the roadmap.
    computed as *API-equivalent list cost*. Pricing has two layers: a curated, dated
    Anthropic rate card ([`pricing.py`](src/tokencur/pricing.py)) that always wins, and a
    vendored snapshot of the community-maintained
-   [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (284 models
-   across Anthropic, OpenAI, Gemini, DeepSeek, Kimi/Moonshot, GLM/Z.ai and Ollama,
-   refreshed deliberately via
-   [`scripts/update_pricing_snapshot.py`](scripts/update_pricing_snapshot.py)). Unknown
-   models surface as *unpriced usage* rather than silently costing $0.
+   [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (290+ live
+   models across Anthropic, OpenAI, Gemini, DeepSeek, Kimi/Moonshot, GLM/Z.ai and
+   Ollama, refreshed daily by the [price-watch action](.github/workflows/price-watch.yml);
+   models LiteLLM retires keep their last known rate, so historical usage stays priced).
+   Unknown models surface as *unpriced usage* rather than silently costing $0.
 4. **Explainable over clever** — every line that ships is one the maintainer fully
    understands and can defend.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["Claude Code · Codex CLI · Kimi Code<br/>local logs"] -->|"ingesters<br/>(metadata only)"| L[("Ledger<br/>SQLite")]
+    L --> P["Pricing<br/>curated card + LiteLLM snapshot"]
+    W["price-watch action<br/>(daily)"] -.->|refreshes| P
+    P --> R["report · recommend"]
+    P --> F["FOCUS 1.2 normalizer"]
+    F --> E["export: FOCUS CSV<br/>(validated in CI)"]
+    F --> O["observatory · dashboard"]
+```
+
+One module per layer — [`ingest/`](src/tokencur/ingest) (one adapter per source),
+[`ledger`](src/tokencur/ledger.py), [`pricing`](src/tokencur/pricing.py),
+[`focus`](src/tokencur/focus.py) — with the commands on top. Every command loads
+records through one function, [`sources.load_records()`](src/tokencur/sources.py).
 
 ## Quickstart
 
@@ -170,7 +189,7 @@ face.
 | 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
-| 6 | Serverless AWS deployment, documented — "operating this costs $0.40/month" | ⏳ |
+| 6 | Serverless AWS deployment, documented, with its own measured running cost | ⏳ |
 | 7 | PR to `focus_converters` + bilingual (EN/ES) case study | ⏳ |
 
 ## Limitations (honest)
@@ -187,9 +206,11 @@ face.
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
   land on the next UTC day.
-- The export passes the Foundation's `focus-validator` (spec 1.2) in CI and is
-  cross-checked against the Foundation's official sample data (which targets FOCUS 1.0;
-  the tests assert convention compatibility, not column equality).
+- Targets FOCUS 1.2: the newest spec version the Foundation's `focus-validator` can
+  check (2.2.1 ships 1.2 rules only), so newer spec versions will follow the validator.
+  The export passes it in CI and is cross-checked against the Foundation's official
+  sample data (which targets FOCUS 1.0; the tests assert convention compatibility, not
+  column equality).
 
 ## Transparency
 
