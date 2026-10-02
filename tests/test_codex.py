@@ -66,3 +66,27 @@ def test_parses_rollout_and_splits_cached_input(tmp_path):
     assert (first.input_tokens, first.cache_read_tokens) == (200, 800)
     assert first.output_tokens == 50
     assert (first.cache_write_5m_tokens, first.cache_write_1h_tokens) == (0, 0)
+
+
+def test_record_ids_are_stable_and_distinct(tmp_path):
+    """Ids come from the session, the event timestamp and the raw usage as
+    logged: stable across scans, and two reports in the same millisecond
+    with different usage never share one."""
+    log = tmp_path / "rollout-x.jsonl"
+    log.write_text(
+        "\n".join(
+            [
+                json.dumps({"type": "session_meta", "payload": {"id": "sess-1"}}),
+                _token_count("2026-02-06T22:43:51.000Z", 1000, 800, 50),
+                _token_count("2026-02-06T22:43:51.000Z", 1000, 800, 60),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    first_scan = [r.record_id for r in iter_usage_records(tmp_path)]
+    second_scan = [r.record_id for r in iter_usage_records(tmp_path)]
+
+    assert first_scan == second_scan
+    assert len(set(first_scan)) == 2
+    assert all(rid.startswith("sess-1@2026-02-06T22:43:51.000Z#") for rid in first_scan)

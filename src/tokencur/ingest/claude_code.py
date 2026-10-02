@@ -35,6 +35,10 @@ class UsageRecord:
     cache_write_5m_tokens: int
     cache_write_1h_tokens: int
     source: str = "claude-code"  # which ingester produced the record
+    #: Identity of the usage event across scans, built by each ingester
+    #: from raw source fields (see ``tokencur.ingest.identity``). The
+    #: ledger deduplicates on (source, record_id).
+    record_id: str = ""
 
     @property
     def date(self) -> str:
@@ -96,6 +100,8 @@ def _parse_line(
         cache_read_tokens=usage.get("cache_read_input_tokens", 0) or 0,
         cache_write_5m_tokens=write_5m,
         cache_write_1h_tokens=write_1h,
+        # The dedup key above is already the API request's identity.
+        record_id=f"{key[0]}:{key[1]}",
     )
 
 
