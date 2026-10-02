@@ -65,6 +65,9 @@ flowchart LR
     F --> O["observatory · dashboard"]
 ```
 
+Each design decision, with its context and its cost, is recorded as an
+[architecture decision record](docs/adr/README.md).
+
 One module per layer — [`ingest/`](src/tokencur/ingest) (one adapter per source),
 [`ledger`](src/tokencur/ledger.py), [`pricing`](src/tokencur/pricing.py),
 [`focus`](src/tokencur/focus.py) — with the commands on top. Every command loads
@@ -219,6 +222,9 @@ last rate), then regenerates this page from that history.
   copied earlier reports into a new rollout would count them again; none of
   those 94 rollouts share an event.
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
+- Rates are current, not point-in-time: when a provider moves a list price, past
+  usage is revalued at the new rate, so a published total is reproducible only
+  with the rates date the report prints ([ADR 0007](docs/adr/0007-current-list-rates-not-point-in-time.md)).
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
