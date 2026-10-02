@@ -110,6 +110,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- A Claude Code message streamed over several log lines kept its
+  first line's counts, which can hold a partial output count. Each
+  token count is now the largest across the message's lines (streamed
+  counts only grow); the first line still names session and
+  workspace. On the maintainer's logs: 1 of 2,641 messages, +1,624
+  output tokens. The ledger corrects itself on the next scan, since
+  record ids do not change.
 - The dashboard test read the real logs of whoever ran it and found
   the app by a relative path, which newer Streamlit resolves against
   the test file; it had never run in CI. It now renders synthetic

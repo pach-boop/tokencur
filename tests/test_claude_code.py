@@ -162,3 +162,35 @@ def test_usage_record_keeps_its_original_import_path():
     from tokencur.records import UsageRecord
 
     assert legacy is UsageRecord
+
+
+def test_a_streamed_message_keeps_its_final_counts(tmp_path):
+    """Streaming can log one message over several lines whose counts only
+    grow (seen in real logs: output 7, then 1,631). Some of those lines even
+    carry zeros. The record must hold each field's final, largest value."""
+    usage = dict(NEW_FORMAT_USAGE, input_tokens=2, cache_read_input_tokens=623_839)
+    partial = dict(usage, output_tokens=7)
+    final = dict(usage, output_tokens=1631)
+    trailing_zeros = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 500,
+        },
+    }
+    log = tmp_path / "workspace" / "session.jsonl"
+    log.parent.mkdir()
+    log.write_text(
+        "\n".join(
+            _assistant_line("req_1", u) for u in (partial, final, trailing_zeros)
+        ),
+        encoding="utf-8",
+    )
+
+    (record,) = iter_usage_records(tmp_path)
+
+    assert (record.input_tokens, record.output_tokens) == (2, 1631)
+    assert record.cache_read_tokens == 623_839
+    assert (record.cache_write_5m_tokens, record.cache_write_1h_tokens) == (200, 500)

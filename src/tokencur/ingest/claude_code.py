@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
@@ -30,23 +31,45 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
     Records are deduplicated on (request id, message id): streaming can
     log one message across several lines, and resuming a session can
     re-copy past messages into a new file under a new session id — the
-    same API request must never be counted twice.
+    same API request must never be counted twice. The first line seen
+    names the session and workspace; the token counts are each field's
+    largest value across the message's lines, because streamed counts
+    only grow and an early line can hold a partial output count.
     Lines that are not valid JSON or carry no usage data are skipped,
     as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``).
     """
-    seen: set[tuple[str, str]] = set()
+    messages: dict[str, UsageRecord] = {}
     for path in sorted(root.rglob("*.jsonl")):
         workspace = path.parent.name
         with path.open(encoding="utf-8") as fh:
             for line in fh:
-                record = _parse_line(line, workspace, seen)
-                if record is not None:
-                    yield record
+                record = _parse_line(line, workspace)
+                if record is None:
+                    continue
+                first = messages.get(record.record_id)
+                messages[record.record_id] = (
+                    record if first is None else _final_counts(first, record)
+                )
+    yield from messages.values()
 
 
-def _parse_line(
-    line: str, workspace: str, seen: set[tuple[str, str]]
-) -> UsageRecord | None:
+_COUNTS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_read_tokens",
+    "cache_write_5m_tokens",
+    "cache_write_1h_tokens",
+)
+
+
+def _final_counts(first: UsageRecord, later: UsageRecord) -> UsageRecord:
+    """``first``, with each token count raised to ``later``'s if larger."""
+    return replace(
+        first, **{f: max(getattr(first, f), getattr(later, f)) for f in _COUNTS}
+    )
+
+
+def _parse_line(line: str, workspace: str) -> UsageRecord | None:
     try:
         entry = json.loads(line)
     except json.JSONDecodeError:
@@ -64,10 +87,6 @@ def _parse_line(
         entry.get("requestId", ""),
         message.get("id") or entry.get("uuid", ""),
     )
-    if key in seen:
-        return None
-    seen.add(key)
-
     write_5m, write_1h = _cache_writes(usage)
     return UsageRecord(
         timestamp=entry.get("timestamp", ""),
