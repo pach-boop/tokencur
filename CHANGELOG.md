@@ -113,6 +113,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
+- **Point-in-time list rates** (ADR 0008, supersedes 0007): each call
+  is valued at the rate in force on its UTC day, in cost, the FOCUS
+  export and the recommendations. The snapshot keeps a `history` per
+  model, rebuilt from its own git history (40 moves across 38 models
+  since 2026-07-06) and extended by the price-watch bot on the day it
+  sees a move; the curated card has `RATE_CARD_HISTORY`. A price move
+  no longer revalues the past. The maintainer's figures are unchanged:
+  none of the models in use had moved.
 - FOCUS export about 40% faster (100k messages: 9.3 s → 5.6 s): the
   columns shared by a record's rows are built once, and rows are
   written with `csv.writer` and `itemgetter` instead of

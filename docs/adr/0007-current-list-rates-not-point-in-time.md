@@ -1,6 +1,6 @@
 # 0007. Value history at current list rates, not point-in-time rates
 
-- Status: Accepted, to revisit
+- Status: Superseded by [ADR 0008](0008-point-in-time-list-rates.md) on 2026-10-02
 - Date: 2026-10-02
 
 ## Context

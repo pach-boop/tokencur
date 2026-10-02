@@ -132,3 +132,40 @@ def test_curated_card_agrees_with_the_community_snapshot():
             )
 
     assert not disagreements, "\n".join(disagreements)
+
+
+def test_a_call_is_valued_at_the_rate_in_force_on_its_day():
+    """Point-in-time pricing, on a move the snapshot really recorded: the
+    price-watch bot saw this model's input rate fall from $2 to $1 per
+    MTok on 2026-09-23."""
+    from datetime import date
+
+    model = "gemini-robotics-er-2-streaming-preview"
+
+    assert rates_for(model, on=date(2026, 9, 22)).input == pytest.approx(2.0)
+    assert rates_for(model, on=date(2026, 9, 23)).input == pytest.approx(1.0)
+    assert rates_for(model).input == pytest.approx(1.0)  # no date: current
+
+
+def test_history_is_revalued_through_record_cost():
+    from dataclasses import replace
+
+    record = replace(
+        _record("gemini-robotics-er-2-streaming-preview"),
+        output_tokens=0,
+        cache_read_tokens=0,
+        cache_write_5m_tokens=0,
+        cache_write_1h_tokens=0,
+    )
+    before = replace(record, timestamp="2026-09-22T23:59:59.000Z")
+    after = replace(record, timestamp="2026-09-23T00:00:00.000Z")
+
+    assert record_cost_usd(before) == pytest.approx(2.0)  # 1M input at $2
+    assert record_cost_usd(after) == pytest.approx(1.0)
+
+
+def test_models_without_history_cost_the_same_on_any_day():
+    from datetime import date
+
+    for day in (date(2024, 1, 1), date(2026, 7, 6), date(2030, 12, 31)):
+        assert rates_for("claude-opus-5-5", on=day) is rates_for("claude-opus-5-5")

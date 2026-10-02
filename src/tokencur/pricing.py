@@ -23,10 +23,11 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from datetime import date
 from functools import lru_cache
 from importlib import resources
 
-from tokencur.records import UsageRecord
+from tokencur.records import UsageRecord, parse_timestamp
 
 AS_OF = "2026-10-02"
 SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing"
@@ -97,38 +98,57 @@ RATE_CARD: dict[str, ModelRates] = {
     ),
 }
 
+#: Rates the curated card held before a price move, per model, oldest
+#: first: ``(until, rates)`` where ``until`` is the first day (UTC,
+#: ``YYYY-MM-DD``) the card's current rate applied. Empty until Anthropic
+#: moves a curated price; then the old rate goes here, not away.
+RATE_CARD_HISTORY: dict[str, tuple[tuple[str, ModelRates], ...]] = {}
+
 _DATE_SUFFIX = re.compile(r"-20\d{6}$")
 _PER_TOKEN_TO_MTOK = 1_000_000
 
+History = tuple[tuple[str, ModelRates], ...]
 
-@lru_cache(maxsize=1)
-def _snapshot_rates() -> dict[str, ModelRates]:
-    """Rates from the vendored LiteLLM snapshot (per-token → per-MTok).
+
+def _from_entry(entry: dict) -> ModelRates:
+    """Snapshot fields (USD per token) as rates per MTok.
 
     A missing cache field means the source doesn't price that dimension;
     the 1h write rate falls back to the 5m rate when absent (slight,
     documented underestimate — mirrors the ingest-side assumption).
     """
+    write_5m = entry.get("cache_creation_input_token_cost", 0.0)
+    return ModelRates(
+        input=entry["input_cost_per_token"] * _PER_TOKEN_TO_MTOK,
+        output=entry["output_cost_per_token"] * _PER_TOKEN_TO_MTOK,
+        cache_read=entry.get("cache_read_input_token_cost", 0.0) * _PER_TOKEN_TO_MTOK,
+        cache_write_5m=write_5m * _PER_TOKEN_TO_MTOK,
+        cache_write_1h=entry.get("cache_creation_input_token_cost_above_1hr", write_5m)
+        * _PER_TOKEN_TO_MTOK,
+    )
+
+
+@lru_cache(maxsize=1)
+def _snapshot() -> tuple[dict[str, ModelRates], dict[str, History]]:
+    """Current rates and rate history from the vendored LiteLLM snapshot."""
     path = resources.files("tokencur").joinpath("pricing_data/litellm_snapshot.json")
     models = json.loads(path.read_text(encoding="utf-8"))["models"]
-    rates: dict[str, ModelRates] = {}
-    for name, entry in models.items():
-        write_5m = entry.get("cache_creation_input_token_cost", 0.0)
-        rates[name] = ModelRates(
-            input=entry["input_cost_per_token"] * _PER_TOKEN_TO_MTOK,
-            output=entry["output_cost_per_token"] * _PER_TOKEN_TO_MTOK,
-            cache_read=entry.get("cache_read_input_token_cost", 0.0)
-            * _PER_TOKEN_TO_MTOK,
-            cache_write_5m=write_5m * _PER_TOKEN_TO_MTOK,
-            cache_write_1h=entry.get(
-                "cache_creation_input_token_cost_above_1hr", write_5m
-            )
-            * _PER_TOKEN_TO_MTOK,
-        )
-    return rates
+    rates = {name: _from_entry(entry) for name, entry in models.items()}
+    history = {
+        name: tuple((item["until"], _from_entry(item)) for item in entry["history"])
+        for name, entry in models.items()
+        if entry.get("history")
+    }
+    return rates, history
 
 
-def rates_for(model: str) -> ModelRates | None:
+def _snapshot_rates() -> dict[str, ModelRates]:
+    """Current rates from the vendored LiteLLM snapshot (per MTok)."""
+    return _snapshot()[0]
+
+
+@lru_cache(maxsize=8192)
+def rates_for(model: str, on: date | None = None) -> ModelRates | None:
     """Resolve a model id to its rates; None if the model is unpriced.
 
     Vendor prefixes (``moonshot-ai/kimi-k2``) are stripped, matching
@@ -138,16 +158,42 @@ def rates_for(model: str) -> ModelRates | None:
     curated card wins over the community snapshot. Unknown models
     return None so callers can surface unpriced usage instead of
     silently valuing it at zero.
+
+    ``on`` asks for the rate in force on that UTC day (point-in-time
+    list price): a model whose price moved is valued at the rate it had
+    then. Without ``on``, or for a model with no recorded move, the
+    current rate.
     """
     bare = model.split("/")[-1]
     base = _DATE_SUFFIX.sub("", bare)
-    snapshot = _snapshot_rates()
-    return RATE_CARD.get(base) or snapshot.get(base) or snapshot.get(bare)
+    if base in RATE_CARD:
+        return _in_force(RATE_CARD[base], RATE_CARD_HISTORY.get(base, ()), on)
+    rates, history = _snapshot()
+    for key in (base, bare):
+        if key in rates:
+            return _in_force(rates[key], history.get(key, ()), on)
+    return None
+
+
+def _in_force(current: ModelRates, history: History, on: date | None) -> ModelRates:
+    if on is not None:
+        day = on.isoformat()
+        for until, rates in history:  # oldest first
+            if day < until:
+                return rates
+    return current
+
+
+def record_day(record: UsageRecord) -> date | None:
+    """The UTC day a record's call happened, or None when undated."""
+    moment = parse_timestamp(record.timestamp)
+    return moment.date() if moment else None
 
 
 def record_cost_usd(record: UsageRecord) -> float | None:
-    """API-equivalent list cost of one usage record; None if unpriced."""
-    rates = rates_for(record.model)
+    """API-equivalent list cost of one usage record, at the rate in force
+    on its day; None if unpriced."""
+    rates = rates_for(record.model, record_day(record))
     if rates is None:
         return None
     return (

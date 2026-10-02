@@ -13,4 +13,5 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0004](0004-local-ledger-with-audited-corrections.md) | A local SQLite ledger keyed on stable ids, with audited corrections | Accepted |
 | [0005](0005-reconcile-with-the-sources-own-counters.md) | Reconcile with a source's own counters wherever it keeps them | Accepted |
 | [0006](0006-metadata-only-and-no-runtime-dependencies.md) | Read metadata only, depend on nothing at runtime | Accepted |
-| [0007](0007-current-list-rates-not-point-in-time.md) | Value history at current list rates, not point-in-time rates | Accepted, to revisit |
+| [0007](0007-current-list-rates-not-point-in-time.md) | Value history at current list rates, not point-in-time rates | Superseded by 0008 |
+| [0008](0008-point-in-time-list-rates.md) | Value each call at the list rate in force on its day | Accepted |

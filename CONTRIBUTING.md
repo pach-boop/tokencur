@@ -87,7 +87,9 @@ One module per source under `src/tokencur/ingest/`, exposing
 
 The curated card in [`pricing.py`](src/tokencur/pricing.py) wins over the
 LiteLLM snapshot. Edit it only with a public source and a date in the
-comment. The snapshot is refreshed by the price-watch action; do not
+comment. When a curated price moves, do not overwrite it: add the old rate
+to `RATE_CARD_HISTORY` with the first day of the new price, so past calls
+keep the rate they had. The snapshot is refreshed by the price-watch action; do not
 hand-edit `litellm_snapshot.json`, run `scripts/update_pricing_snapshot.py`.
 
 ## Pull requests
