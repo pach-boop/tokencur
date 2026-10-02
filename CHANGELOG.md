@@ -182,6 +182,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- Claude Code subagent transcripts, nested under
+  `<project>/<session>/subagents/`, were attributed to a workspace
+  called `subagents`. They now belong to their project (the first
+  directory under the logs root); the ledger corrects stored rows on
+  the next scan.
 - Codex calls copied into a forked session are counted once. The scan
   skips a call whose timestamp and raw usage it already saw in an
   earlier rollout, and the ledger does the same against what it

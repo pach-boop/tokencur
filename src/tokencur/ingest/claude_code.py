@@ -47,7 +47,7 @@ def iter_usage_records(
     messages: dict[str, UsageRecord] = {}
     for path in sorted(root.rglob("*.jsonl")):
         stats.files += 1
-        workspace = path.parent.name
+        workspace = _workspace(root, path)
         # errors="replace": a corrupted byte spoils one line, not the scan.
         with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
@@ -63,6 +63,14 @@ def iter_usage_records(
                     record if first is None else _final_counts(first, record)
                 )
     yield from messages.values()
+
+
+def _workspace(root: Path, path: Path) -> str:
+    """The project a transcript belongs to: the first directory under
+    ``root``. Subagent transcripts sit deeper
+    (``<project>/<session>/subagents/agent-*.jsonl``) and belong to it too."""
+    parts = path.relative_to(root).parts
+    return parts[0] if len(parts) > 1 else path.parent.name
 
 
 _COUNTS = (
