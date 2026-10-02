@@ -1,0 +1,10 @@
+# Optional for contributors: `pip install pre-commit && pre-commit install`
+# runs the same ruff checks as CI before each commit. Keep the rev equal to
+# the ruff pin in pyproject.toml.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

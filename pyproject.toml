@@ -12,7 +12,12 @@ dependencies = []
 tokencur = "tokencur.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=7",
+    # Pinned: formatter output must be identical on every machine and in CI.
+    "ruff==0.16.10",
+]
 dashboard = ["streamlit>=1.35", "duckdb>=1.0"]
 
 [build-system]
@@ -52,6 +57,20 @@ allow-dict-calls-with-keyword-arguments = true
 [tool.ruff.lint.isort]
 known-first-party = ["tokencur"]
 
+[tool.coverage.run]
+source = ["tokencur"]
+branch = true
+# Streamlit's AppTest runs the dashboard where coverage cannot trace it;
+# tests/test_dashboard.py still executes it whenever the extra is installed.
+omit = ["*/tokencur/dashboard.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+# A leaked file or database handle fails the suite instead of passing
+# with a warning nobody reads.
+filterwarnings = ["error::ResourceWarning", "error::pytest.PytestUnraisableExceptionWarning"]

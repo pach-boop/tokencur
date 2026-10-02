@@ -111,3 +111,74 @@ def test_malformed_or_empty_ranges_are_usage_errors(args, capsys):
 
     assert exit_.value.code == 2
     assert "error" in capsys.readouterr().err
+
+
+def test_an_explicit_root_is_read_but_never_stored(tmp_path, capsys):
+    root = tmp_path / "elsewhere" / "workspace"
+    _session(root / "x.jsonl", "req_x", "2026-09-15T12:00:00.000Z")
+
+    assert cli.main(["report", str(root.parent)]) == 0
+    assert "$5.00" in capsys.readouterr().out
+    assert cli.main(["report", "--until", "2026-09-15", str(root.parent)]) == 1
+    assert "no usage before 2026-09-15" in capsys.readouterr().err
+    assert cli.main(["report", str(tmp_path / "missing")]) == 1
+    assert "does not exist" in capsys.readouterr().err
+
+
+def test_export_reports_what_it_skipped(tmp_path, capsys):
+    root = tmp_path / "logs" / "workspace"
+    _session(root / "ok.jsonl", "req_ok", "2026-09-15T12:00:00.000Z")
+    _session(root / "undated.jsonl", "req_undated", "")
+    unpriced = root / "unpriced.jsonl"
+    _session(unpriced, "req_unpriced", "2026-09-15T12:00:00.000Z")
+    unpriced.write_text(
+        unpriced.read_text(encoding="utf-8").replace(
+            "claude-opus-4-8", "mystery-model"
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["export", str(tmp_path / "out.csv"), str(root.parent)]) == 0
+
+    err = capsys.readouterr().err
+    assert "wrote 1 FOCUS charge rows" in err
+    assert "skipped unpriced usage: mystery-model x1" in err
+    assert "skipped undated usage: 1 records" in err
+
+
+@pytest.mark.usefixtures("logs")
+def test_recommend_runs_through_the_cli_and_its_old_entry_point(capsys):
+    from tokencur import recommend_cli
+
+    assert cli.main(["recommend"]) == 0
+    assert "Total what-if headroom" in capsys.readouterr().out
+    assert recommend_cli.main(["recommend_cli", "--since", "2030-01-01"]) == 1
+    assert "no usage since 2030-01-01" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("logs")
+def test_the_static_pages_render_where_asked(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)  # no subscriptions.json, no git history here
+
+    assert cli.main(["observatory", "site/observatory"]) == 0
+    assert cli.main(["prices", "site/prices"]) == 0
+
+    assert (tmp_path / "site/observatory/index.html").exists()
+    assert (tmp_path / "site/observatory/data.json").exists()
+    assert (tmp_path / "site/prices/index.html").exists()
+    out = capsys.readouterr().out
+    assert "observatory written to site/observatory" in out.replace("\\", "/")
+    assert "prices page written to site/prices (0 events" in out.replace("\\", "/")
+
+
+def test_python_dash_m_runs_the_same_cli():
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "tokencur", "--version"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == f"tokencur {__version__}"

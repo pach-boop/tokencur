@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Quality gates in CI: a ruff lint and format job (ruff pinned in the
+  dev extra, with a matching pre-commit hook), the suite on macOS and
+  Windows besides Linux 3.11 to 3.13, branch coverage measured with
+  every extra installed and a 90% floor (94% today), and a package
+  job that builds the sdist and wheel, runs `twine check`, and proves
+  the installed wheel carries the console script and the pricing
+  snapshot. Test connections to SQLite are now closed, and pytest
+  turns any leaked handle into a failure.
 - A real command line: `tokencur` is installed as a console script
   (`python -m tokencur` still works), with `--help` and `--version`
   on one argparse parser for `report`, `export`, `recommend`,
