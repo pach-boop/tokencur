@@ -96,22 +96,24 @@ pip install -e .[dashboard]
 streamlit run src/tokencur/dashboard.py
 ```
 
-Real output over the maintainer's own machine (16k+ messages, 280MB+ of logs, ~1.9s):
+Real output over the maintainer's own machine on 2026-10-02 (10.7k model calls
+from ~400 MB of logs, 1.8 s), trimmed:
 
 ```text
-model                   msgs       input      output   cache_read  cache_write   cost USD
-claude-fable-5           553      66,950   1,144,899  166,061,055   14,262,100     509.22
-gpt-5.4                 5713  77,366,776   3,659,955  615,555,712            0     402.21
-gpt-5.3-codex           9958  51,780,897   3,961,461  748,238,464            0     277.02
-claude-opus-4-8          130      40,180     429,902    8,277,427    3,586,822      50.96
+model                                 calls       input     output     cache_read  cache_write  cost USD
+claude-opus-5-5                       2,545       5,230  4,453,008  1,039,768,719   21,810,960    471.43
+gpt-5.4                               2,790  34,683,046  1,807,104    304,527,488            0    189.95
+gpt-5.3-codex                         5,010  26,148,134  1,997,552    377,040,128            0    139.71
+claude-fable-5-1                         14         418     64,013      1,732,662      185,892      7.36
+gpt-5.2-codex                           139     347,399     71,796      4,995,072            0      2.49
 ...
-by source:
-  codex         $685.66
-  claude-code   $560.17
-  kimi-code     $2.21
 
-API-EQUIVALENT TOTAL (showback): $1,248.04
-unpriced usage (model not in rate card): unknown x1
+by source:
+  claude-code   $482.51
+  codex         $332.95
+  kimi-code     $2.44
+
+API-EQUIVALENT TOTAL (showback): $817.90
 ```
 
 ## Ledger

@@ -39,7 +39,7 @@ def summarize(records: list[UsageRecord]) -> str:
             continue
         by_source[r.source] += cost
         agg = by_model[r.model]
-        agg["messages"] += 1
+        agg["calls"] += 1
         agg["input"] += r.input_tokens
         agg["output"] += r.output_tokens
         agg["cache_read"] += r.cache_read_tokens
@@ -48,19 +48,33 @@ def summarize(records: list[UsageRecord]) -> str:
         by_day[r.date if parse_timestamp(r.timestamp) else "undated"] += cost
         total_cost += cost
 
+    header = (
+        "model",
+        "calls",
+        "input",
+        "output",
+        "cache_read",
+        "cache_write",
+        "cost USD",
+    )
+    rows = [
+        (
+            model,
+            f"{agg['calls']:,.0f}",
+            f"{agg['input']:,.0f}",
+            f"{agg['output']:,.0f}",
+            f"{agg['cache_read']:,.0f}",
+            f"{agg['cache_write']:,.0f}",
+            f"{agg['cost']:,.2f}",
+        )
+        for model, agg in sorted(by_model.items(), key=lambda kv: -kv[1]["cost"])
+    ]
     lines = [
-        f"tokencur report — {len(records)} assistant messages, "
+        f"tokencur report — {len(records)} model calls, "
         f"rates as of {AS_OF} (API-equivalent list cost)",
         "",
-        f"{'model':<22}{'msgs':>6}{'input':>12}{'output':>12}"
-        f"{'cache_read':>13}{'cache_write':>13}{'cost USD':>11}",
+        *_table(header, rows),
     ]
-    for model, agg in sorted(by_model.items(), key=lambda kv: -kv[1]["cost"]):
-        lines.append(
-            f"{model:<22}{agg['messages']:>6.0f}{agg['input']:>12,.0f}"
-            f"{agg['output']:>12,.0f}{agg['cache_read']:>13,.0f}"
-            f"{agg['cache_write']:>13,.0f}{agg['cost']:>11,.2f}"
-        )
     if len(by_source) > 1:
         lines += ["", "by source:"]
         for source, cost in sorted(by_source.items(), key=lambda kv: -kv[1]):
@@ -73,6 +87,26 @@ def summarize(records: list[UsageRecord]) -> str:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(unpriced.items()))
         lines.append(f"unpriced usage (model not in rate card): {pairs}")
     return "\n".join(lines)
+
+
+def _table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
+    """Columns as wide as their widest cell: model left, numbers right.
+
+    Fixed widths broke once real totals passed a billion tokens or a
+    model id ran long, and adjacent columns ran together.
+    """
+    widths = [
+        max(len(cell) for cell in column) for column in zip(header, *rows, strict=True)
+    ]
+
+    def line(cells: tuple[str, ...]) -> str:
+        first = cells[0].ljust(widths[0])
+        rest = (
+            cell.rjust(width) for cell, width in zip(cells[1:], widths[1:], strict=True)
+        )
+        return "  ".join((first, *rest)).rstrip()
+
+    return [line(header), *(line(row) for row in rows)]
 
 
 def main(argv: list[str]) -> int:
