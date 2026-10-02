@@ -182,3 +182,55 @@ def test_python_dash_m_runs_the_same_cli():
         check=True,
     )
     assert result.stdout.strip() == f"tokencur {__version__}"
+
+
+@pytest.mark.usefixtures("logs")
+def test_report_shows_the_contracted_total_under_a_discount(tmp_path, capsys):
+    discounts = tmp_path / "discounts.json"
+    discounts.write_text(
+        json.dumps({"discounts": {"Anthropic": 0.2}}), encoding="utf-8"
+    )
+
+    assert cli.main(["report", "--discounts", str(discounts)]) == 0
+
+    out = capsys.readouterr().out
+    assert "API-EQUIVALENT TOTAL (showback): $15.00" in out
+    assert "CONTRACTED TOTAL (after negotiated discounts): $12.00" in out
+
+
+@pytest.mark.usefixtures("logs")
+def test_report_converts_totals_at_a_rate_you_give(capsys):
+    assert cli.main(["report", "--currency", "MXN", "--fx-rate", "18.37"]) == 0
+
+    assert "= MXN 275.55 at 18.37 MXN per USD (rate given)" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ('{"discounts": {"Anthropic": 1.5}}', "between 0 and 1"),
+        ('{"discounts": {"Anthropic": "10%"}}', "between 0 and 1"),
+        ("not json", "not valid JSON"),
+    ],
+)
+def test_a_bad_discounts_file_is_a_clear_error(tmp_path, capsys, content, message):
+    bad = tmp_path / "discounts.json"
+    bad.write_text(content, encoding="utf-8")
+
+    assert cli.main(["report", "--discounts", str(bad)]) == 1
+    assert message in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--currency", "MXN"],
+        ["--fx-rate", "18.37"],
+        ["--currency", "pesos", "--fx-rate", "18"],
+        ["--currency", "MXN", "--fx-rate", "-1"],
+    ],
+)
+def test_currency_needs_a_code_and_a_positive_rate(args):
+    with pytest.raises(SystemExit) as exit_:
+        cli.main(["report", *args])
+    assert exit_.value.code == 2

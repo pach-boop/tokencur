@@ -26,6 +26,7 @@ from dataclasses import dataclass, fields
 from datetime import date
 from functools import lru_cache
 from importlib import resources
+from pathlib import Path
 
 from tokencur.records import UsageRecord, parse_timestamp
 
@@ -230,3 +231,30 @@ def record_cost_usd(record: UsageRecord) -> float | None:
         + record.cache_write_5m_tokens * rates.cache_write_5m
         + record.cache_write_1h_tokens * rates.cache_write_1h
     ) / 1_000_000
+
+
+class ConfigError(ValueError):
+    """A configuration file tokencur cannot use, with a readable reason."""
+
+
+def load_discounts(path: Path) -> dict[str, float]:
+    """Negotiated discounts off list price, by FOCUS provider name.
+
+    The file is ``{"discounts": {"Anthropic": 0.15, "OpenAI": 0.1}}``:
+    each value is the fraction taken off list, from 0 up to (not
+    including) 1. Raises ConfigError with a readable message otherwise.
+    """
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except ValueError as exc:
+        raise ConfigError(f"{path} is not valid JSON ({exc})") from None
+    discounts = data.get("discounts") if isinstance(data, dict) else None
+    if not isinstance(discounts, dict):
+        raise ConfigError(f'{path} needs a "discounts" object of provider: fraction')
+    for provider, fraction in discounts.items():
+        if type(fraction) not in (int, float) or not 0 <= fraction < 1:
+            raise ConfigError(
+                f"{path}: the discount for {provider!r} must be a fraction "
+                f"between 0 and 1 (0.15 = 15% off list), not {fraction!r}"
+            )
+    return {provider: float(fraction) for provider, fraction in discounts.items()}

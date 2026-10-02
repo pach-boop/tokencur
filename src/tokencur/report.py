@@ -18,16 +18,26 @@ from __future__ import annotations
 import sys
 from collections import defaultdict
 
+from tokencur.focus import provider_for
 from tokencur.pricing import AS_OF, record_cost_usd
 from tokencur.records import UsageRecord, parse_timestamp
 
 
-def summarize(records: list[UsageRecord], period: str | None = None) -> str:
+def summarize(
+    records: list[UsageRecord],
+    period: str | None = None,
+    discounts: dict[str, float] | None = None,
+    fx: tuple[str, float] | None = None,
+) -> str:
+    """The terminal report. ``discounts`` (provider -> fraction off list)
+    add a contracted total; ``fx`` (currency, units per USD, given by the
+    user) adds the totals converted at that rate."""
     by_model: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     by_day: dict[str, float] = defaultdict(float)
     by_source: dict[str, float] = defaultdict(float)
     unpriced: dict[str, int] = defaultdict(int)
     total_cost = 0.0
+    contracted = 0.0
 
     for r in records:
         cost = record_cost_usd(r)
@@ -44,6 +54,7 @@ def summarize(records: list[UsageRecord], period: str | None = None) -> str:
         agg["cost"] += cost
         by_day[r.date if parse_timestamp(r.timestamp) else "undated"] += cost
         total_cost += cost
+        contracted += cost * (1.0 - (discounts or {}).get(provider_for(r.source), 0.0))
 
     header = (
         "model",
@@ -82,10 +93,25 @@ def summarize(records: list[UsageRecord], period: str | None = None) -> str:
     for day, cost in sorted(by_day.items(), key=lambda kv: -kv[1])[:10]:
         lines.append(f"  {day:<10}  ${cost:,.2f}")
     lines += ["", f"API-EQUIVALENT TOTAL (showback): ${total_cost:,.2f}"]
+    if fx:
+        lines.append(_converted(total_cost, fx))
+    if discounts:
+        lines.append(
+            f"CONTRACTED TOTAL (after negotiated discounts): ${contracted:,.2f}"
+        )
+        if fx:
+            lines.append(_converted(contracted, fx))
     if unpriced:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(unpriced.items()))
         lines.append(f"unpriced usage (model not in rate card): {pairs}")
     return "\n".join(lines)
+
+
+def _converted(usd: float, fx: tuple[str, float]) -> str:
+    currency, rate = fx
+    return (
+        f"  = {currency} {usd * rate:,.2f} at {rate:g} {currency} per USD (rate given)"
+    )
 
 
 def _table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
