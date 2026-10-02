@@ -2,10 +2,10 @@ name: release
 
 # On a version tag (vX.Y.Z): build the sdist and wheel, attest their
 # build provenance, and open a draft GitHub release with them attached;
-# the maintainer writes the notes and publishes it. PyPI publishing is
-# wired for trusted publishing (no stored token) and stays off until
-# the repository variable PUBLISH_TO_PYPI is "true" and PyPI trusts
-# this workflow; see CONTRIBUTING.md, "Releasing".
+# the maintainer writes the notes and publishes it. The same tag
+# publishes to PyPI through trusted publishing (no stored token) while
+# the repository variable PUBLISH_TO_PYPI is "true"; see
+# CONTRIBUTING.md, "Releasing".
 on:
   push:
     tags: ["v*.*.*"]

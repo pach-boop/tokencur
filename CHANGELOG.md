@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-02
+
 ### Added
 
 - **Subscription plans with dates.** `subscriptions.json` can list each
@@ -14,6 +16,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   plans in words with any assumption behind their dates, and reports the
   fees paid on the window's last day as "subscriptions / month now". A
   flat `monthly_usd` fee still reads as one plan across the whole window.
+
+### Changed
+
+- **On PyPI:** `pip install tokencur`. Each version tag now publishes to
+  PyPI through trusted publishing, with no stored token; 0.3.0 was the
+  first. The package declares its license as an SPDX expression, with
+  project links and classifiers, and the README's links are absolute so
+  they also work on PyPI.
 
 ### Fixed
 
