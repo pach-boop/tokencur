@@ -42,7 +42,6 @@ from pathlib import Path
 from tokencur.focus import to_focus_rows, unpriced_models
 from tokencur.pricing import AS_OF
 from tokencur.recommend import recommendations
-from tokencur.sources import load_records
 
 DEFAULT_OUTPUT = Path("docs") / "observatory"
 DEFAULT_SUBSCRIPTIONS = Path("subscriptions.json")
@@ -559,14 +558,10 @@ def write_site(snap: dict, outdir: Path) -> None:
 
 
 def main(argv: list[str]) -> int:
-    outdir = Path(argv[1]) if len(argv) > 1 else DEFAULT_OUTPUT
-    records = load_records()
-    if not records:
-        print("error: no usage in known log locations or the ledger", file=sys.stderr)
-        return 1
-    write_site(snapshot(records, load_subscriptions()), outdir)
-    print(f"observatory written to {outdir} ({len(records)} records aggregated)")
-    return 0
+    """``python -m tokencur.observatory [DIR]`` — kept; see ``tokencur.cli``."""
+    from tokencur.cli import main as cli
+
+    return cli(["observatory", *argv[1:]])
 
 
 if __name__ == "__main__":

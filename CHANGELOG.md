@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- A real command line: `tokencur` is installed as a console script
+  (`python -m tokencur` still works), with `--help` and `--version`
+  on one argparse parser for `report`, `export`, `recommend`,
+  `observatory` and `prices`. `report`, `export` and `recommend` take
+  `--since` / `--until` (UTC days, end excluded, as billing periods
+  are cut), so one month exports as its own FOCUS file. The old
+  module entry points (`python -m tokencur.report`...) delegate to it.
 - Project governance: `CONTRIBUTING.md` (ground rules, how to add a
   source), `SECURITY.md` (what tokencur reads and writes, private
   vulnerability reporting), a Contributor Covenant code of conduct,

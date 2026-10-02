@@ -8,6 +8,9 @@ authors = [{ name = "Pedro Aguayo Chávez", email = "aguayochavezpedro@gmail.com
 requires-python = ">=3.11"
 dependencies = []
 
+[project.scripts]
+tokencur = "tokencur.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 dashboard = ["streamlit>=1.35", "duckdb>=1.0"]

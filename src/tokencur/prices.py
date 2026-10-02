@@ -321,16 +321,10 @@ def write_site(outdir: Path, changes: list[PriceChange]) -> None:
 
 
 def main(argv: list[str]) -> int:
-    outdir = Path(argv[1]) if len(argv) > 1 else DEFAULT_OUTPUT
-    changes = price_changes()
-    write_site(outdir, changes)
-    moved = sum(len(c.changed) for c in changes)
-    gained = sum(len(c.added) for c in changes if not c.introduced)
-    print(
-        f"prices page written to {outdir} "
-        f"({len(changes)} events: {moved} rate moves, {gained} models added)"
-    )
-    return 0
+    """``python -m tokencur.prices [DIR]`` — kept; see ``tokencur.cli``."""
+    from tokencur.cli import main as cli
+
+    return cli(["prices", *argv[1:]])
 
 
 if __name__ == "__main__":
