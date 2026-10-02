@@ -232,6 +232,7 @@ def _fail(message: str) -> None:
 
 
 def _report(args: argparse.Namespace) -> int:
+    discounts = _discounts(args)  # a bad file fails before any scan
     records = _records(args)
     if records is None:
         return 1
@@ -243,7 +244,7 @@ def _report(args: argparse.Namespace) -> int:
         summarize(
             records,
             period=_period(args),
-            discounts=_discounts(args),
+            discounts=discounts,
             fx=fx,
             charges=_charges(args),
         )
@@ -252,10 +253,11 @@ def _report(args: argparse.Namespace) -> int:
 
 
 def _export(args: argparse.Namespace) -> int:
+    discounts = _discounts(args)  # a bad file fails before any scan
     records = _records(args)
     if records is None:
         return 1
-    rows = export_csv(records, args.output, _discounts(args), _charges(args))
+    rows = export_csv(records, args.output, discounts, _charges(args))
     print(f"wrote {rows} FOCUS charge rows to {args.output}", file=sys.stderr)
     skipped = unpriced_models(records)
     if skipped:
