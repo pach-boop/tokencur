@@ -168,3 +168,31 @@ def test_corrections_to_published_figures_are_disclosed():
     assert snap["corrections"][0]["date"] == "2026-10-02"
     assert "Correction · 2026-10-02" in html
     assert "$685.66" in html and "$332.95" in html
+
+
+def test_billed_charges_are_shown_as_real_money_without_resource_ids():
+    from tokencur.records import BilledCharge
+
+    charge = BilledCharge(
+        source="runpod",
+        record_id="SECRET-pod@2026-09-30T00:00:00Z",
+        period_start="2026-09-30T00:00:00Z",
+        period_end="2026-10-01T00:00:00Z",
+        provider="RunPod",
+        service="RunPod Pods",
+        resource_id="SECRET-pod",
+        resource_type="GPU pod",
+        quantity=2.5,
+        unit="Hours",
+        amount_usd=1.05,
+    )
+    snap = snapshot([_record("2026-09-30")], None, [charge])
+    html = render_html(snap)
+
+    assert snap["billed"] == {
+        "total_usd": 1.05,
+        "by_service": {"RunPod Pods": 1.05},
+        "charges": 1,
+    }
+    assert "billed by providers" in html and "stay out of subscription leverage" in html
+    assert "SECRET" not in html and "SECRET" not in json.dumps(snap)

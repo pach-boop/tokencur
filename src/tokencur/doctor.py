@@ -49,6 +49,8 @@ class LedgerCheck:
     schema: int = 0
     records: dict[str, int] = field(default_factory=dict)
     retired: int = 0
+    charges: int = 0
+    billed_usd: float = 0.0
     integrity: str = ""
     unpriced: dict[str, int] = field(default_factory=dict)
     error: str = ""
@@ -132,6 +134,11 @@ def _check_ledger(path: Path) -> LedgerCheck:
                 ):
                     if rates_for(model) is None:
                         check.unpriced[model] = n
+            if "charges" in tables:
+                check.charges, billed = conn.execute(
+                    "SELECT COUNT(*), COALESCE(SUM(amount_usd), 0) FROM charges"
+                ).fetchone()
+                check.billed_usd = float(billed)
             if "superseded" in tables:
                 check.retired = conn.execute(
                     "SELECT COUNT(*) FROM superseded"
@@ -204,6 +211,8 @@ def render(d: Diagnosis) -> str:
             f"  schema {k.schema}{upgrade} · {sum(k.records.values()):,} records"
             f" ({per_source or 'none'}) · {k.retired:,} retired · integrity {k.integrity}"
         )
+        if k.charges:
+            lines.append(f"  {k.charges:,} billed charges, ${k.billed_usd:,.2f}")
         unpriced = ", ".join(f"{m} x{n}" for m, n in sorted(k.unpriced.items()))
         lines.append(f"  unpriced models: {unpriced or 'none'}")
     lines += [

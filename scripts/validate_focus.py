@@ -10,6 +10,8 @@ against spec 1.2:
   real logs redacted to usage metadata (``tests/fixtures/logs-real``),
   so the validator checks what tokencur produces from the formats agents
   actually write, not only what a test author typed;
+- billed RunPod charges from the billing fixture (real money: Compute
+  rows, including a storage-only charge with no unit price);
 - the hand-built records again under negotiated discounts, so rows where
   ContractedCost, EffectiveCost and BilledCost sit below ListCost pass too. Passes when every
 composite column rule passes; the only tolerated raw failure is
@@ -33,7 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from tokencur.export import export_csv
-from tokencur.ingest import claude_code, codex, kimi_code
+from tokencur.ingest import claude_code, codex, kimi_code, runpod
 from tokencur.records import UsageRecord
 
 TOLERATED_OR_BRANCHES = {"InvoiceId-C-005-C"}
@@ -97,14 +99,15 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         data_file = Path(tmp) / "focus_sample.csv"
         records = _synthetic_records() + _fixture_records()
-        rows = export_csv(records, data_file)
+        charges = runpod.iter_charges(FIXTURES / "billing" / "runpod-billing-pods.json")
+        rows = export_csv(records, data_file, charges=charges)
         discounted = Path(tmp) / "discounted.csv"
         rows += export_csv(_synthetic_records(), discounted, DISCOUNTS)
         with data_file.open("a", encoding="utf-8", newline="") as out:
             out.writelines(discounted.read_text(encoding="utf-8").splitlines(True)[1:])
         print(
             f"exported {rows} FOCUS rows: hand-built, fixture logs (synthetic and "
-            "real) and hand-built under negotiated discounts"
+            "real), RunPod billed charges, and hand-built under negotiated discounts"
         )
 
         # The validator resolves its rule files relative to the CWD.

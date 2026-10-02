@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- **Billed cost, starting with RunPod** (ADR 0009, closes the RunPod
+  half of the "API billing exports" gap). `scripts/fetch_runpod_billing.py`
+  saves the billing history from RunPod's REST API (it replaces the
+  GraphQL probe, whose `dailyCharges` query came back empty);
+  `tokencur import runpod FILE` keeps it in a new ledger table
+  (schema 4) as `BilledCharge` records. Reports show a separate
+  "BILLED (real money, from provider bills)" total; the FOCUS export
+  adds Compute rows whose `BilledCost` is the billed amount (validated
+  in CI); the observatory shows provider bills as actual money, outside
+  subscription leverage; `doctor` counts them. On the maintainer's
+  account: 20 charges, $2.69.
 - Negotiated discounts: `--discounts FILE` on `report` and `export`
   (`{"discounts": {"Anthropic": 0.15}}`, a fraction off list per FOCUS
   provider). The FOCUS export keeps the public price in `ListCost` and

@@ -20,7 +20,7 @@ from collections import defaultdict
 
 from tokencur.focus import provider_for
 from tokencur.pricing import AS_OF, record_cost_usd
-from tokencur.records import UsageRecord, parse_timestamp
+from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 
 
 def summarize(
@@ -28,10 +28,12 @@ def summarize(
     period: str | None = None,
     discounts: dict[str, float] | None = None,
     fx: tuple[str, float] | None = None,
+    charges: list[BilledCharge] | tuple = (),
 ) -> str:
     """The terminal report. ``discounts`` (provider -> fraction off list)
     add a contracted total; ``fx`` (currency, units per USD, given by the
-    user) adds the totals converted at that rate."""
+    user) adds the totals converted at that rate. ``charges`` (billed by
+    providers: real money) get their own total, never added to showback."""
     by_model: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     by_day: dict[str, float] = defaultdict(float)
     by_source: dict[str, float] = defaultdict(float)
@@ -101,6 +103,18 @@ def summarize(
         )
         if fx:
             lines.append(_converted(contracted, fx))
+    if charges:
+        billed = sum(c.amount_usd for c in charges)
+        lines += ["", f"BILLED (real money, from provider bills): ${billed:,.2f}"]
+        by_service: dict[str, list[float]] = {}
+        for c in charges:
+            acc = by_service.setdefault(c.service, [0.0, 0])
+            acc[0] += c.amount_usd
+            acc[1] += 1
+        for service, (amount, n) in sorted(by_service.items()):
+            lines.append(f"  {service:<14}${amount:,.2f}  ({n} charge{'s' * (n != 1)})")
+        if fx:
+            lines.append(_converted(billed, fx))
     if unpriced:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(unpriced.items()))
         lines.append(f"unpriced usage (model not in rate card): {pairs}")

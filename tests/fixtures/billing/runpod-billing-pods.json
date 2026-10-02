@@ -1,0 +1,11 @@
+{
+ "captured_at": "20261001T234709Z",
+ "request_url": "https://rest.runpod.io/v1/billing/pods?bucketSize=day&startTime=2026-09-01T00%3A00%3A00Z&endTime=2026-10-02T00%3A00%3A00Z",
+ "response": [
+  {"amount": 0.42, "timeBilledMs": 3600000, "diskSpaceBilledGB": 50, "podId": "pod-alpha", "time": "2026-09-27 00:00:00"},
+  {"amount": 1.05, "timeBilledMs": 9000000, "diskSpaceBilledGB": 50, "podId": "pod-alpha", "time": "2026-09-30 00:00:00"},
+  {"amount": 0.0125, "timeBilledMs": 0, "diskSpaceBilledGB": 20, "podId": "pod-beta", "time": "2026-09-30 00:00:00"},
+  {"amount": 0.33, "timeBilledMs": 1800000, "diskSpaceBilledGB": 20, "podId": "pod-beta", "time": "2026-10-01 00:00:00"},
+  {"amount": "0.20", "timeBilledMs": 60000, "diskSpaceBilledGB": 5, "podId": "pod-gamma", "time": "2026-10-01 00:00:00"}
+ ]
+}

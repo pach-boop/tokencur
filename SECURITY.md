@@ -11,9 +11,13 @@
 - **Writes** one file: the ledger at `~/.local/share/tokencur/ledger.sqlite3`
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`).
-- **Network**: none at runtime. The one network call in the repository is
-  `scripts/update_pricing_snapshot.py`, which downloads the LiteLLM price
-  database when run deliberately or by the daily price-watch action. The
+- **Network**: none at runtime. Two scripts go online when you run them:
+  `scripts/update_pricing_snapshot.py` downloads the LiteLLM price database
+  (also run by the daily price-watch action), and
+  `scripts/fetch_runpod_billing.py` downloads your RunPod billing history,
+  sending the API key only in the Authorization header and never writing it.
+- **Billing exports** saved by that script stay in
+  `~/.local/share/tokencur/raw/`, readable by their owner only. The
   published pages make no external requests.
 - **Dependencies**: none at runtime. Optional extras and dev tools are
   tracked by Dependabot; GitHub Actions are pinned to commit SHAs and run

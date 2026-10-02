@@ -22,7 +22,7 @@ from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
 
 from tokencur.pricing import ModelRates, rates_for, rates_for_record
-from tokencur.records import UsageRecord, parse_timestamp
+from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 
 FOCUS_VERSION = "1.2"
 
@@ -119,6 +119,61 @@ def to_focus_rows(
             continue  # surfaced by callers: never $0, never a made-up date
         off = (discounts or {}).get(provider_for(record.source), 0.0)
         yield from _record_rows(record, rates, charge_start, 1.0 - off)
+
+
+def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
+    """FOCUS rows for billed charges: real money, not showback.
+
+    BilledCost is what the provider took. No list price is published per
+    charge, so ListCost, ContractedCost and EffectiveCost equal it. A
+    charge with no billed time (storage only) has no unit price: there is
+    no quantity to divide by, and FOCUS wants an explicit null then.
+    """
+    for c in charges:
+        start = parse_timestamp(c.period_start)
+        if start is None:
+            continue
+        period_start = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        unit = c.unit.lower()
+        detail = f", {c.detail}" if c.detail else ""
+        yield {
+            "BilledCost": c.amount_usd,
+            "EffectiveCost": c.amount_usd,
+            "ContractedCost": c.amount_usd,
+            "ListCost": c.amount_usd,
+            "BillingAccountId": f"tokencur-{c.source}",
+            "BillingAccountName": f"{c.provider} account",
+            "BillingCurrency": "USD",
+            "BillingPeriodStart": _fmt(period_start),
+            "BillingPeriodEnd": _fmt(_next_month(period_start)),
+            "ChargeCategory": "Usage",
+            "ChargeClass": None,
+            "ChargeDescription": f"{c.service} {c.resource_id}: {c.quantity:.2f} {unit}{detail}",
+            "ChargeFrequency": "Usage-Based",
+            "ChargePeriodStart": c.period_start,
+            "ChargePeriodEnd": c.period_end,
+            "ConsumedQuantity": float(c.quantity),
+            "ConsumedUnit": c.unit,
+            # Prepaid credits: the provider issues no invoice per charge.
+            "InvoiceId": None,
+            "InvoiceIssuerName": c.provider,
+            "ListUnitPrice": c.amount_usd / c.quantity if c.quantity else None,
+            "PricingCategory": "Standard",
+            "PricingQuantity": float(c.quantity),
+            "PricingUnit": c.unit,
+            "ProviderName": c.provider,
+            "PublisherName": c.provider,
+            "ResourceId": c.resource_id,
+            "ResourceName": c.resource_id,
+            "ResourceType": c.resource_type,
+            "ServiceCategory": "Compute",
+            "ServiceName": c.service,
+            "ServiceSubcategory": "Containers",
+            "SkuId": f"{c.source}/{unit}",
+            "SkuPriceId": f"{c.source}/{unit}",
+            "SubAccountId": None,
+            "SubAccountName": None,
+        }
 
 
 def unpriced_models(records: Iterable[UsageRecord]) -> dict[str, int]:
