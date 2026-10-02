@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Architecture decision records in `docs/adr`: showback and the three
+  money concepts, the two pricing layers, FOCUS 1.2 behind the
+  Foundation's validator, the ledger and its audited corrections,
+  reconciling with a source's own counters, metadata only with no
+  runtime dependencies, and current rather than point-in-time rates.
 - Property-based tests (Hypothesis, dev extra): generated records,
   histories and log files check the promises the numbers rest on.
   FOCUS rows add up to the record's cost; every row is internally

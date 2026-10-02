@@ -22,6 +22,9 @@ it that way.
    are counterfactuals. Keep them apart in code, docs and output (see the
    README's "Money concepts").
 
+Decisions behind these rules are recorded in [docs/adr](docs/adr/README.md).
+A change that reverses one adds a new record that supersedes it.
+
 ## Set up
 
 Python 3.11 or newer.
