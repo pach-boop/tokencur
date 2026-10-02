@@ -50,3 +50,4 @@ def test_parses_turn_usage_records(tmp_path):
     assert (r.input_tokens, r.output_tokens) == (2390, 280)
     assert (r.cache_read_tokens, r.cache_write_5m_tokens) == (14336, 7)
     assert r.date == "2026-06-21"
+    assert r.record_id.startswith("session_s1/main@1782024520201#")

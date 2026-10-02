@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Iterator
 
 from tokencur.ingest.claude_code import UsageRecord
+from tokencur.ingest.identity import fingerprint
 
 _INTERESTING = ('"token_count"', '"session_meta"', '"turn_context"')
 
@@ -61,8 +62,9 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                 if not usage:
                     continue  # rate-limit-only updates carry no usage
                 cached = usage.get("cached_input_tokens", 0) or 0
+                timestamp = entry.get("timestamp", "")
                 record = UsageRecord(
-                    timestamp=entry.get("timestamp", ""),
+                    timestamp=timestamp,
                     workspace=workspace,
                     session_id=session_id,
                     model=model,
@@ -72,6 +74,9 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                     cache_write_5m_tokens=0,
                     cache_write_1h_tokens=0,
                     source="codex",
+                    # token_count events carry no request id: the session
+                    # plus the event timestamp identify the call.
+                    record_id=f"{session_id}@{timestamp}#{fingerprint(usage)}",
                 )
                 # Defensive: skip consecutive identical reports.
                 key = (record.timestamp, record.input_tokens,

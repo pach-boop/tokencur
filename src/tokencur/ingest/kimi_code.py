@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Iterator
 
 from tokencur.ingest.claude_code import UsageRecord
+from tokencur.ingest.identity import fingerprint
 
 
 def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
@@ -27,6 +28,7 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
         session_id = next(
             (part for part in path.parts if part.startswith("session_")), ""
         )
+        agent = path.parent.name  # .../agents/<agent>/wire.jsonl
         with path.open(encoding="utf-8") as fh:
             for line in fh:
                 if '"usage.record"' not in line:
@@ -53,6 +55,10 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
                     cache_write_5m_tokens=usage.get("inputCacheCreation", 0) or 0,
                     cache_write_1h_tokens=0,
                     source="kimi-code",
+                    record_id=(
+                        f"{session_id}/{agent}@{entry.get('time')}"
+                        f"#{fingerprint(usage)}"
+                    ),
                 )
 
 

@@ -130,3 +130,26 @@ def test_dedups_across_session_files(tmp_path):
     )
 
     assert len(list(iter_usage_records(tmp_path))) == 1
+
+
+def test_record_id_survives_the_original_file(tmp_path):
+    """The ledger dedups across scans on record_id, so a request must keep
+    its id when only the resumed copy is left — e.g. after Claude Code's
+    transcript cleanup deletes the original session file."""
+    workspace = tmp_path / "workspace-a"
+    workspace.mkdir()
+    original = workspace / "original.jsonl"
+    original.write_text(
+        _assistant_line("req_1", NEW_FORMAT_USAGE, session_id="sess_1"),
+        encoding="utf-8",
+    )
+    (workspace / "resumed.jsonl").write_text(
+        _assistant_line("req_1", NEW_FORMAT_USAGE, session_id="sess_2"),
+        encoding="utf-8",
+    )
+    [before] = iter_usage_records(tmp_path)
+    original.unlink()
+    [after] = iter_usage_records(tmp_path)
+
+    assert before.record_id == after.record_id == "req_1:msg_1"
+    assert before.session_id != after.session_id
