@@ -45,6 +45,18 @@ from tokencur.recommend import recommendations
 
 DEFAULT_OUTPUT = Path("docs") / "observatory"
 DEFAULT_SUBSCRIPTIONS = Path("subscriptions.json")
+
+# Figures this page once published and later found wrong, newest first.
+# Each entry stays for good: the page says what changed and by how much.
+CORRECTIONS: tuple[dict[str, str], ...] = (
+    {
+        "date": "2026-10-02",
+        "what": "Codex usage was counted about twice: Codex re-sends each usage "
+        "report, and earlier snapshots counted every copy. Codex usage value "
+        "went from $685.66 to $332.95; every Codex session now reconciles with "
+        "Codex's own running total. Details in the changelog.",
+    },
+)
 DAYS_PER_MONTH = 365.25 / 12
 
 # Same entity->color mapping as the local dashboard (color follows the
@@ -206,6 +218,7 @@ def snapshot(records: list, subscriptions: dict | None = None) -> dict:
     gaps = _history_gaps(daily, subscriptions)
     if gaps:
         snap["history_gaps"] = gaps
+    snap["corrections"] = list(CORRECTIONS)
     money = _money(total, daily, subscriptions, gaps)
     if money:
         snap["money"] = money
@@ -385,6 +398,13 @@ def render_html(snap: dict) -> str:
         for g in snap.get("history_gaps", [])
     )
 
+    correction_note = "".join(
+        '<p class="note">'
+        f"<strong>Correction · {html.escape(c['date'])}</strong> — {html.escape(c['what'])}"
+        "</p>"
+        for c in snap.get("corrections", [])
+    )
+
     showback = "".join(
         [
             _kpi("API-equivalent usage value", _usd(k["total_usd"])),
@@ -497,7 +517,7 @@ footer a {{ color:var(--ink-2) }}
 <p class="sub">What the maintainer actually pays for AI subscriptions vs what the same usage
 would cost at API list prices — real fees, showback valuation and counterfactuals, kept apart.
 Aggregates only: no workspaces, no sessions, no content.</p>
-{gap_note}{money_section}
+{gap_note}{correction_note}{money_section}
 <h2>Usage value — showback, not money spent</h2>
 <div class="kpis">{showback}</div>
 <p class="muted">Subscriptions bill a flat fee, not per token. These figures value the usage
