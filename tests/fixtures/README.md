@@ -22,7 +22,7 @@ The files collect the cases that broke, or nearly broke, an ingester:
 
 | Source | Cases |
 |---|---|
-| Claude Code | a message streamed over two lines with a partial first count; a resumed session re-copying a message; a `<synthetic>` stub; the old cache format without a TTL breakdown; an unpriced model; a malformed line |
+| Claude Code | a message streamed over two lines with a partial first count; a resumed session re-copying a message; a `<synthetic>` stub; the old cache format without a TTL breakdown; a fast-mode call with US-only inference; an unpriced model; a malformed line |
 | Codex CLI | a rate-limits-only event; a report re-sent with the running total unchanged; a model switch mid-session; a report with no billable tokens; a malformed line |
 | Kimi Code | per-turn records; a cumulative `session` record that must not count; a non-usage line; a malformed line |
 

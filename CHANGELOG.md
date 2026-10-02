@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Request options that change a call's price, as Claude Code logs them:
+  fast mode (2x: Opus 5.5 $8/$40), US-only inference (1.1x on every
+  category) and the Batch API (0.5x), cache multipliers stacked on top.
+  Records carry `price_modifiers`; the FOCUS export gives each option
+  its own `SkuPriceId` and `ListUnitPrice`; right-sizing prices the
+  cheaper model with the same region and batch options at standard
+  speed. Ledger schema 3 adds the column; stored rows read as
+  standard. None of the maintainer's calls used an option.
 - `tokencur doctor`: a read-only health check. Per log source it
   reports files, usage lines, records, unreadable lines and the agent
   versions the logs name, and flags a likely format change; it checks

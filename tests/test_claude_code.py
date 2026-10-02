@@ -194,3 +194,28 @@ def test_a_streamed_message_keeps_its_final_counts(tmp_path):
     assert (record.input_tokens, record.output_tokens) == (2, 1631)
     assert record.cache_read_tokens == 623_839
     assert (record.cache_write_5m_tokens, record.cache_write_1h_tokens) == (200, 500)
+
+
+def test_price_modifiers_come_from_the_logged_request_options(tmp_path):
+    """Fast mode, US-only inference and the Batch API change the price;
+    Claude Code logs which one each call used."""
+    standard = {
+        **NEW_FORMAT_USAGE,
+        "speed": "standard",
+        "inference_geo": "not_available",
+    }
+    fast_us = {**NEW_FORMAT_USAGE, "speed": "fast", "inference_geo": "us"}
+    batch = {**NEW_FORMAT_USAGE, "service_tier": "batch"}
+    log = tmp_path / "workspace" / "session.jsonl"
+    log.parent.mkdir()
+    log.write_text(
+        "\n".join(
+            _assistant_line(rid, usage, message_id=rid)
+            for rid, usage in (("r1", standard), ("r2", fast_us), ("r3", batch))
+        ),
+        encoding="utf-8",
+    )
+
+    records = {r.record_id: r.price_modifiers for r in iter_usage_records(tmp_path)}
+
+    assert records == {"r1:r1": "", "r2:r2": "fast+us", "r3:r3": "batch"}

@@ -169,3 +169,19 @@ def test_models_without_history_cost_the_same_on_any_day():
 
     for day in (date(2024, 1, 1), date(2026, 7, 6), date(2030, 12, 31)):
         assert rates_for("claude-opus-5-5", on=day) is rates_for("claude-opus-5-5")
+
+
+@pytest.mark.parametrize(
+    ("modifiers", "factor"),
+    [("", 1.0), ("fast", 2.0), ("us", 1.1), ("batch", 0.5), ("fast+us", 2.2)],
+)
+def test_request_options_scale_every_rate(modifiers, factor):
+    """Anthropic's published multipliers: fast mode 2x (Opus 5.5 $8/$40),
+    US-only inference 1.1x on every category, Batch API 0.5x; cache
+    multipliers stack on top of them."""
+    from dataclasses import replace
+
+    record = replace(_record("claude-opus-5-5"), price_modifiers=modifiers)
+    standard = 4 + 20 + 0.20 + 5 + 8  # 1M tokens of each kind at list
+
+    assert record_cost_usd(record) == pytest.approx(standard * factor)

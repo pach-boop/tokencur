@@ -36,6 +36,11 @@ class UsageRecord:
     #: from raw source fields (see ``tokencur.ingest.identity``). The
     #: ledger deduplicates on (source, record_id).
     record_id: str = ""
+    #: Request options that change the call's price, "+"-joined in
+    #: alphabetical order: "batch" (Batch API), "fast" (fast mode), "us"
+    #: (US-only inference). Empty for a standard call. See
+    #: ``tokencur.pricing.MODIFIER_FACTORS``.
+    price_modifiers: str = ""
 
     @property
     def date(self) -> str:
