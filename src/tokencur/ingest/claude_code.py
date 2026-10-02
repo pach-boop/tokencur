@@ -10,13 +10,13 @@ timestamps). It never extracts message content.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
 # ``tokencur.records`` and stays importable from here.
+from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.records import UsageRecord
 
 #: Claude Code logs client-side placeholder messages (API-error stubs,
@@ -36,14 +36,19 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
     largest value across the message's lines, because streamed counts
     only grow and an early line can hold a partial output count.
     Lines that are not valid JSON or carry no usage data are skipped,
-    as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``).
+    as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``) and
+    malformed usage (see ``tokencur.ingest.fields``).
     """
     messages: dict[str, UsageRecord] = {}
     for path in sorted(root.rglob("*.jsonl")):
         workspace = path.parent.name
-        with path.open(encoding="utf-8") as fh:
+        # errors="replace": a corrupted byte spoils one line, not the scan.
+        with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
-                record = _parse_line(line, workspace)
+                try:
+                    record = _parse_line(line, workspace)
+                except Malformed:
+                    continue
                 if record is None:
                     continue
                 first = messages.get(record.record_id)
@@ -70,32 +75,31 @@ def _final_counts(first: UsageRecord, later: UsageRecord) -> UsageRecord:
 
 
 def _parse_line(line: str, workspace: str) -> UsageRecord | None:
-    try:
-        entry = json.loads(line)
-    except json.JSONDecodeError:
+    line_entry = entry(line)
+    if line_entry.get("type") != "assistant":
         return None
-    if entry.get("type") != "assistant":
-        return None
-    message = entry.get("message") or {}
+    message = obj(line_entry.get("message"))
     if message.get("model") == SYNTHETIC_MODEL:
         return None
     usage = message.get("usage")
     if not usage:
         return None
+    if not isinstance(usage, dict):
+        raise Malformed("usage is not an object")
 
     key = (
-        entry.get("requestId", ""),
-        message.get("id") or entry.get("uuid", ""),
+        text(line_entry.get("requestId")),
+        text(message.get("id")) or text(line_entry.get("uuid")),
     )
     write_5m, write_1h = _cache_writes(usage)
     return UsageRecord(
-        timestamp=entry.get("timestamp", ""),
+        timestamp=text(line_entry.get("timestamp")),
         workspace=workspace,
-        session_id=entry.get("sessionId", ""),
-        model=message.get("model", "unknown"),
-        input_tokens=usage.get("input_tokens", 0) or 0,
-        output_tokens=usage.get("output_tokens", 0) or 0,
-        cache_read_tokens=usage.get("cache_read_input_tokens", 0) or 0,
+        session_id=text(line_entry.get("sessionId")),
+        model=text(message.get("model"), "unknown"),
+        input_tokens=count(usage.get("input_tokens")),
+        output_tokens=count(usage.get("output_tokens")),
+        cache_read_tokens=count(usage.get("cache_read_input_tokens")),
         cache_write_5m_tokens=write_5m,
         cache_write_1h_tokens=write_1h,
         source="claude-code",
@@ -111,10 +115,10 @@ def _cache_writes(usage: dict) -> tuple[int, int]:
     Those are attributed to the 5-minute tier — Claude Code's default TTL —
     which slightly underestimates cost when 1h writes were present.
     """
-    breakdown = usage.get("cache_creation")
+    breakdown = obj(usage.get("cache_creation"))
     if breakdown:
         return (
-            breakdown.get("ephemeral_5m_input_tokens", 0) or 0,
-            breakdown.get("ephemeral_1h_input_tokens", 0) or 0,
+            count(breakdown.get("ephemeral_5m_input_tokens")),
+            count(breakdown.get("ephemeral_1h_input_tokens")),
         )
-    return usage.get("cache_creation_input_tokens", 0) or 0, 0
+    return count(usage.get("cache_creation_input_tokens")), 0

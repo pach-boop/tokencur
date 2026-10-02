@@ -23,10 +23,10 @@ Mapping notes:
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from pathlib import Path
 
+from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.ingest.identity import fingerprint
 from tokencur.records import UsageRecord
 
@@ -44,56 +44,56 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
     session_id = ""
     model = "unknown"
     previous: object = None  # last running total (or report) seen
-    with path.open(encoding="utf-8") as fh:
+    # errors="replace": a corrupted byte spoils one line, not the scan.
+    with path.open(encoding="utf-8", errors="replace") as fh:
         for line in fh:
             if not any(marker in line for marker in _INTERESTING):
                 continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            payload = entry.get("payload") or {}
+            line_entry = entry(line)
+            payload = line_entry.get("payload")
             if not isinstance(payload, dict):
                 continue
 
-            if entry.get("type") == "session_meta":
-                session_id = payload.get("id", "")
-                cwd = payload.get("cwd") or ""
+            if line_entry.get("type") == "session_meta":
+                session_id = text(payload.get("id"))
+                cwd = text(payload.get("cwd"))
                 workspace = Path(cwd).name if cwd else path.parent.name
-                model = payload.get("model") or model
-            elif entry.get("type") == "turn_context":
-                model = payload.get("model") or model
+                model = text(payload.get("model")) or model
+            elif line_entry.get("type") == "turn_context":
+                model = text(payload.get("model")) or model
             elif payload.get("type") == "token_count":
-                info = payload.get("info") or {}
+                info = obj(payload.get("info"))
                 usage = info.get("last_token_usage")
                 if not usage:
                     continue  # rate-limit-only updates carry no usage
+                if not isinstance(usage, dict):
+                    continue  # malformed: not a usage object
                 # A re-sent report leaves the running total where it was.
                 # Logs without a total fall back to skipping a consecutive
                 # report that is identical, timestamp included.
                 total = info.get("total_token_usage")
-                marker = total if total is not None else (entry.get("timestamp"), usage)
+                marker = (
+                    total if total is not None else (line_entry.get("timestamp"), usage)
+                )
                 if marker == previous:
                     continue
                 previous = marker
-                if not any(
-                    usage.get(field)
-                    for field in (
-                        "input_tokens",
-                        "cached_input_tokens",
-                        "output_tokens",
-                    )
-                ):
+                try:
+                    input_total = count(usage.get("input_tokens"))
+                    cached = count(usage.get("cached_input_tokens"))
+                    output = count(usage.get("output_tokens"))
+                except Malformed:
+                    continue
+                if not (input_total or cached or output):
                     continue  # moved only total_tokens: no billable call
-                cached = usage.get("cached_input_tokens", 0) or 0
-                timestamp = entry.get("timestamp", "")
+                timestamp = text(line_entry.get("timestamp"))
                 record = UsageRecord(
                     timestamp=timestamp,
                     workspace=workspace,
                     session_id=session_id,
                     model=model,
-                    input_tokens=max((usage.get("input_tokens", 0) or 0) - cached, 0),
-                    output_tokens=usage.get("output_tokens", 0) or 0,
+                    input_tokens=max(input_total - cached, 0),
+                    output_tokens=output,
                     cache_read_tokens=cached,
                     cache_write_5m_tokens=0,
                     cache_write_1h_tokens=0,
