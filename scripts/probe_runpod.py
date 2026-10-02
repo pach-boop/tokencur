@@ -36,7 +36,7 @@ def _api_key() -> str:
     env = os.environ.get("RUNPOD_API_KEY")
     if env:
         return env.strip()
-    return (Path.home() / ".config/runpod/api_key").read_text().strip()
+    return (Path.home() / ".config/runpod/api_key").read_text(encoding="utf-8").strip()
 
 
 def main() -> int:

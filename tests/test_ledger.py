@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from contextlib import closing
 from dataclasses import fields
 
 import pytest
@@ -63,14 +64,14 @@ def test_history_survives_when_logs_disappear(tmp_path):
 def test_present_events_are_refreshed_and_keep_first_seen(tmp_path):
     path = tmp_path / "ledger.sqlite3"
     ledger.record([_record("req_1:msg_1", output_tokens=50)], path)
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         conn.execute("UPDATE usage SET first_seen = '2026-07-01T00:00:00Z'")
 
     ledger.record([_record("req_1:msg_1", output_tokens=75)], path)
 
     [stored] = ledger.read(path)
     assert stored.output_tokens == 75
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         first_seen = conn.execute("SELECT first_seen FROM usage").fetchone()[0]
     assert first_seen == "2026-07-01T00:00:00Z"
 
@@ -92,6 +93,7 @@ def test_an_empty_scan_creates_nothing(tmp_path):
     assert not path.exists()
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX file modes")
 def test_ledger_file_is_private(tmp_path):
     path = tmp_path / "data" / "ledger.sqlite3"
 
@@ -102,7 +104,7 @@ def test_ledger_file_is_private(tmp_path):
 
 def test_newer_schema_is_refused(tmp_path):
     path = tmp_path / "ledger.sqlite3"
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         conn.execute(f"PRAGMA user_version = {ledger.SCHEMA_VERSION + 1}")
 
     with pytest.raises(RuntimeError, match="Upgrade tokencur"):
@@ -120,7 +122,7 @@ def test_default_path_honours_overrides(tmp_path, monkeypatch):
 
 def _v1_ledger(path, rows):
     """A ledger as tokencur 0.2 left it: schema 1, no superseded table."""
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         conn.execute(ledger._CREATE_USAGE)
         conn.execute("PRAGMA user_version = 1")
         conn.executemany(
@@ -161,7 +163,7 @@ def test_schema_1_ledger_retires_codex_resends_with_an_audit_trail(tmp_path, cap
     history = ledger.read(path)
 
     assert sorted(r.record_id for r in history) == sorted(r.record_id for r in kept)
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
         retired = conn.execute(
             "SELECT record_id, reason FROM superseded ORDER BY record_id"
@@ -169,10 +171,11 @@ def test_schema_1_ledger_retires_codex_resends_with_an_audit_trail(tmp_path, cap
     assert [rid for rid, _ in retired] == ["s1@t2#aaaa", "s1@t4#cccc"]
     assert all("re-sent" in reason for _, reason in retired)
     backup = tmp_path / "ledger.sqlite3.schema-1.bak"
-    with sqlite3.connect(backup) as conn:
+    with closing(sqlite3.connect(backup)) as conn, conn:
         assert conn.execute("SELECT COUNT(*) FROM usage").fetchone()[0] == 6
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
-    assert os.stat(backup).st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert os.stat(backup).st_mode & 0o777 == 0o600
     assert "retired 2 re-sent Codex reports" in capsys.readouterr().err
 
 
@@ -190,7 +193,7 @@ def test_new_ledger_starts_at_the_current_schema(tmp_path):
     path = tmp_path / "ledger.sqlite3"
     ledger.record([_record("req_1:msg_1")], path)
 
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         assert (
             conn.execute("PRAGMA user_version").fetchone()[0] == ledger.SCHEMA_VERSION
         )

@@ -34,6 +34,18 @@ pip install -e .[dev]
 pytest -q
 ```
 
+Lint and format with the pinned ruff (CI runs the same two commands), and
+optionally let pre-commit run them before every commit:
+
+```bash
+ruff check . && ruff format --check .
+pip install pre-commit && pre-commit install   # optional
+```
+
+CI also measures branch coverage with every optional extra installed and
+fails under 90%, runs the suite on Linux, macOS and Windows, and builds
+and installs the wheel. Leaked file or database handles fail the suite.
+
 The FOCUS conformance gate runs the FinOps Foundation's own validator
 (Python 3.12+):
 
