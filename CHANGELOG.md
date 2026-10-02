@@ -92,6 +92,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
+- FOCUS export about 40% faster (100k messages: 9.3 s → 5.6 s): the
+  columns shared by a record's rows are built once, and rows are
+  written with `csv.writer` and `itemgetter` instead of
+  `csv.DictWriter`. Output is byte-identical (golden test), and a
+  property test checks every row has exactly the FOCUS columns.
 - The price-watch bot says what moved. Its commit subject counts
   rate moves, models added, retired upstream or back ("chore(prices):
   1 rate move, 2 models added") and the body lists them; it used to

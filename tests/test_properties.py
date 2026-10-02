@@ -16,7 +16,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tokencur import ledger
-from tokencur.focus import to_focus_rows
+from tokencur.focus import FOCUS_COLUMNS, to_focus_rows
 from tokencur.ingest import claude_code, codex
 from tokencur.ingest.identity import fingerprint
 from tokencur.pricing import RATE_CARD, rates_for, record_cost_usd
@@ -88,6 +88,7 @@ def test_focus_rows_add_up_to_the_record_cost(record):
 @given(records)
 def test_every_charge_row_is_internally_consistent(record):
     for row in to_focus_rows([record]):
+        assert set(row) == set(FOCUS_COLUMNS)  # exactly the FOCUS columns
         start, end = _moment(row["ChargePeriodStart"]), _moment(row["ChargePeriodEnd"])
         period_start = _moment(row["BillingPeriodStart"])
         period_end = _moment(row["BillingPeriodEnd"])

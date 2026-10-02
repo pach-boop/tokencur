@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import sys
+from operator import itemgetter
 from pathlib import Path
 
 from tokencur.focus import (
@@ -25,12 +26,16 @@ from tokencur.records import UsageRecord
 
 def export_csv(records: list[UsageRecord], output: Path) -> int:
     """Write FOCUS rows to ``output``; return the number of rows."""
+    # itemgetter pulls a row's values in column order in C; a row missing
+    # a column raises KeyError. (csv.DictWriter checked each row in Python
+    # and was most of an export's time.)
+    values = itemgetter(*FOCUS_COLUMNS)
     rows = 0
     with output.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=FOCUS_COLUMNS)
-        writer.writeheader()
+        writer = csv.writer(fh)
+        writer.writerow(FOCUS_COLUMNS)
         for row in to_focus_rows(records):
-            writer.writerow(row)
+            writer.writerow(values(row))
             rows += 1
     return rows
 
