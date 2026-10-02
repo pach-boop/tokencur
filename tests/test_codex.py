@@ -244,3 +244,33 @@ def test_the_ledger_recognises_a_copy_after_the_original_log_is_gone(tmp_path):
 
     assert added == 0  # the fork's copies are the original's calls
     assert len(ledger.read(path)) == 3
+
+
+def test_calls_keep_the_working_directory_of_their_turn(tmp_path):
+    """session_meta names where the session started; a turn_context that
+    names another directory moves the calls after it."""
+    first, second = _usage(1000, 800, 50), _usage(3000, 2500, 70)
+    log = tmp_path / "rollout-x.jsonl"
+    log.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "session_meta",
+                        "payload": {"id": "sess-1", "cwd": "/home/dev/app"},
+                    }
+                ),
+                _report("2026-02-06T22:43:51.000Z", first, first),
+                json.dumps(
+                    {"type": "turn_context", "payload": {"cwd": "/home/dev/lib"}}
+                ),
+                _report("2026-02-06T22:44:10.000Z", second, _usage(4000, 3300, 120)),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    records = list(iter_usage_records(tmp_path))
+
+    assert [r.cwd for r in records] == ["/home/dev/app", "/home/dev/lib"]
+    assert {r.workspace for r in records} == {"app"}  # where the session began

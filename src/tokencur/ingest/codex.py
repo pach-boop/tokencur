@@ -4,7 +4,8 @@ Codex writes one rollout JSONL per session under
 ``~/.codex/sessions/<yyyy>/<mm>/<dd>/rollout-*.jsonl``. Token usage
 arrives as ``event_msg`` lines with a ``token_count`` payload whose
 ``info.last_token_usage`` reports the most recent model call; the
-active model comes from ``session_meta`` / ``turn_context`` lines.
+active model and working directory come from ``session_meta`` /
+``turn_context`` lines.
 Only usage metadata is read — never message content.
 
 Mapping notes:
@@ -59,6 +60,7 @@ def iter_usage_records(
 
 def _parse_file(path: Path, stats: ScanStats) -> Iterator[UsageRecord]:
     workspace = ""
+    cwd = ""
     session_id = ""
     model = "unknown"
     previous: object = None  # last running total (or report) seen
@@ -80,6 +82,7 @@ def _parse_file(path: Path, stats: ScanStats) -> Iterator[UsageRecord]:
                 stats.saw_version(text(payload.get("cli_version")))
             elif line_entry.get("type") == "turn_context":
                 model = text(payload.get("model")) or model
+                cwd = text(payload.get("cwd")) or cwd
             elif payload.get("type") == "token_count":
                 info = obj(payload.get("info"))
                 usage = info.get("last_token_usage")
@@ -123,5 +126,6 @@ def _parse_file(path: Path, stats: ScanStats) -> Iterator[UsageRecord]:
                     # token_count events carry no request id: the session
                     # plus the event timestamp identify the call.
                     record_id=f"{session_id}@{timestamp}#{fingerprint(usage)}",
+                    cwd=cwd,
                 )
                 yield record

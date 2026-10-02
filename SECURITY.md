@@ -5,9 +5,12 @@
 - **Reads**, read-only, the local logs of coding agents
   (`~/.claude/projects`, `~/.codex/sessions`, `~/.kimi-code/sessions`) and
   only their usage metadata: token counts, model ids, timestamps,
-  workspace and session ids. Message content is never parsed, stored or
-  logged. A test asserts that none of it reaches the public observatory
-  output.
+  workspace and session ids, and the directory each call ran in. Message
+  content is never parsed, stored or logged. A test asserts that none of
+  it reaches the public observatory output, and working directories stay
+  in the ledger: never in the FOCUS export or the observatory.
+- **Runs git**, read-only, for `tokencur outcomes`: `git log` and
+  `git config user.email` in the repositories the agents worked in.
 - **Writes** one file: the ledger at `~/.local/share/tokencur/ledger.sqlite3`
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`).

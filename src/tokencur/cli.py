@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from tokencur import __version__, doctor, ledger, observatory, prices
+from tokencur import __version__, doctor, ledger, observatory, outcomes, prices
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
 from tokencur.ingest import claude_code, runpod
@@ -87,6 +87,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     recommend.set_defaults(handler=_recommend)
 
+    unit = commands.add_parser(
+        "outcomes",
+        parents=[period],
+        help="usage value per commit, repository by repository",
+    )
+    unit.add_argument(
+        "repos",
+        nargs="*",
+        type=Path,
+        metavar="REPO",
+        help="git repositories to measure (default: every one the agents worked in)",
+    )
+    unit.add_argument(
+        "--all-authors",
+        action="store_true",
+        help="count every author's commits, not only your git user.email's",
+    )
+    unit.set_defaults(handler=_outcomes)
+
     obs = commands.add_parser(
         "observatory", help="render the static spend dashboard (aggregates only)"
     )
@@ -139,7 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--currency and --fx-rate go together")
     try:
         return args.handler(args)
-    except (ledger.LedgerError, ConfigError) as exc:
+    except (ledger.LedgerError, ConfigError, outcomes.OutcomesError) as exc:
         _fail(str(exc))
     except sqlite3.DatabaseError as exc:
         _fail(f"the ledger looks damaged ({exc}); run `tokencur doctor`")
@@ -258,6 +277,22 @@ def _recommend(args: argparse.Namespace) -> int:
             _fail(f"no usage {_period(args)}")
         return 1
     print(render(recommendations(records)))
+    return 0
+
+
+def _outcomes(args: argparse.Namespace) -> int:
+    records = _records(args)
+    if records is None:
+        return 1
+    result = outcomes.outcomes(
+        records,
+        repos=args.repos,
+        since=args.since,
+        until=args.until,
+        all_authors=args.all_authors,
+        period=_period(args),
+    )
+    print(outcomes.render(result))
     return 0
 
 

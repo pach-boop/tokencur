@@ -89,6 +89,7 @@ tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 tokencur doctor                # read-only health check: log formats, ledger, pricing
 tokencur import runpod FILE    # billed cost: a RunPod billing export
+tokencur outcomes [REPO...]    # usage value per commit, repository by repository
 ```
 
 `tokencur --help` lists every command, and `python -m tokencur` works the same.
@@ -171,7 +172,7 @@ history:
 - **Nothing is forgotten** — events whose logs are gone keep their last known
   values; events still on disk are refreshed from the latest parse.
 - **Metadata only** — token counts, models, timestamps, workspace and session
-  ids, in a file readable by its owner only.
+  ids, the directory each call ran in, in a file readable by its owner only.
 - **Location** — `~/.local/share/tokencur/ledger.sqlite3` (honours
   `$XDG_DATA_HOME`), or wherever `$TOKENCUR_LEDGER` points.
 - **Corrections are audited, not erased** — the schema is versioned and
@@ -179,7 +180,8 @@ history:
   `ledger.sqlite3.schema-N.bak`, and rows a later version finds were not
   usage move to a `superseded` table with when and why. Schema 2 retired the
   Codex re-sent reports earlier versions double counted (see the changelog);
-  schema 3 records each call's price-changing request options.
+  schema 3 records each call's price-changing request options, schema 4 billed
+  charges, and schema 5 the directory each call ran in.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -195,6 +197,31 @@ it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
 export gains Compute rows whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
 ([ADR 0009](docs/adr/0009-billed-charges-next-to-showback.md)).
+
+## Unit economics: usage value per commit
+
+Cost alone does not say whether usage paid off. `tokencur outcomes` sets it
+against the commits it went into, per git repository:
+
+```
+repository                              days  calls  usage value  commits  agent   lines  per commit
+~/Proyectos/tokencur  2026-09-24..2026-10-02    424       $70.78       40     40  10,824       $1.77
+```
+
+- **Attribution by where each call ran.** Agents log the working directory of
+  every call, and the call belongs to the git repository that holds it. Usage
+  outside any repository, or in a directory since deleted, is reported as
+  unattributed, never spread.
+- **Your commits in the days with usage.** Non-merge commits by your
+  `user.email` (or `--all-authors`), within `--since`/`--until` or else the
+  repository's days with agent usage. Agent-signed commits and lines changed
+  are shown as context.
+- **Read-only and local.** git runs on your repositories; nothing is sent.
+
+A commit is a coarse unit: it measures output, not quality. The useful
+comparison is a repository with itself over time. Quality, latency and
+reliability are the next layers
+([ADR 0010](docs/adr/0010-usage-value-per-commit.md)).
 
 ## When an agent changes its logs
 
@@ -283,6 +310,9 @@ last rate), then regenerates this page from that history.
   gone: a copy is recognized by its timestamp and raw usage, so two distinct
   calls identical to the millisecond would also count once (never observed).
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
+- Usage value per commit counts commits on the checked-out branch, and a commit
+  says nothing about size or quality. Usage logged before tokencur 0.3 kept no
+  working directory; it is attributed only if its log is still on disk.
 - Rates are point-in-time: each call is valued at the list rate in force on its
   UTC day ([ADR 0008](docs/adr/0008-point-in-time-list-rates.md)). Rate history
   starts with the snapshot on 2026-07-06, so earlier usage is valued at the first

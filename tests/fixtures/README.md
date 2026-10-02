@@ -24,7 +24,7 @@ The files collect the cases that broke, or nearly broke, an ingester:
 |---|---|
 | Claude Code | a message streamed over two lines with a partial first count; a resumed session re-copying a message; a `<synthetic>` stub; the old cache format without a TTL breakdown; a fast-mode call with US-only inference; an unpriced model; a malformed line |
 | Codex CLI | a rate-limits-only event; a report re-sent with the running total unchanged; a model switch mid-session; a report with no billable tokens; a malformed line |
-| Kimi Code | per-turn records; a cumulative `session` record that must not count; a non-usage line; a malformed line |
+| Kimi Code | per-turn records; a cumulative `session` record that must not count; a non-usage line; a malformed line; a `state.json` naming the session's directory |
 
 `golden/` holds what tokencur must produce from them: `records.json`
 (every parsed record) and `focus.csv` (the FOCUS export).
@@ -41,9 +41,9 @@ TOKENCUR_UPDATE_GOLDEN=1 pytest tests/test_golden.py
 Real logs of the maintainer's agents, made safe to publish by
 `scripts/redact_log.py`: from the lines that carry usage it keeps only
 an allowlist (usage numbers, model, request options, line types, agent
-version), turns every id into a stable pseudonym, every path into
-`/home/dev/<pseudonym>`, shifts timestamps (intervals kept) and drops
-all content. The script refuses to write unless the ingester reads
+version, working directory), turns every id into a stable pseudonym, every
+path into `/home/dev/<pseudonym>`, shifts timestamps (intervals kept) and
+drops all content. The script refuses to write unless the ingester reads
 exactly the same usage from the redacted file as from the original, and
 `tests/test_fixture_privacy.py` fails on any string that is not an
 allowed shape.

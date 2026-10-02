@@ -41,6 +41,11 @@ class UsageRecord:
     #: (US-only inference). Empty for a standard call. See
     #: ``tokencur.pricing.MODIFIER_FACTORS``.
     price_modifiers: str = ""
+    #: The directory the agent was working in when it made the call, as
+    #: logged (an absolute path), or "" when the log does not say. It
+    #: attributes usage to a repository (see ``tokencur.outcomes``); it is
+    #: kept in the local ledger only, never exported or published.
+    cwd: str = ""
 
     @property
     def date(self) -> str:

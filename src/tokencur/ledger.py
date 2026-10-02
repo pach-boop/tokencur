@@ -11,8 +11,8 @@ every usage record tokencur has ever seen:
 - Upserted: an event still on disk is refreshed from the latest parse;
   an event whose log is gone keeps its last known values.
 - Metadata only, like the logs it mirrors: token counts, models,
-  timestamps, workspace and session ids — never message content. The
-  file is created readable by its owner only.
+  timestamps, workspace and session ids, working directories — never
+  message content. The file is created readable by its owner only.
 
 Location: ``$TOKENCUR_LEDGER`` if set, else
 ``$XDG_DATA_HOME/tokencur/ledger.sqlite3`` (``~/.local/share/...``).
@@ -38,7 +38,7 @@ from pathlib import Path
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
 from tokencur.records import BilledCharge, UsageRecord
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 class LedgerError(RuntimeError):
@@ -60,6 +60,7 @@ _FIELDS = (
     "cache_write_5m_tokens",
     "cache_write_1h_tokens",
     "price_modifiers",
+    "cwd",
 )
 
 # Each schema's DDL is frozen as of its version: a migration must build
@@ -119,11 +120,15 @@ _UPSERT_CHARGE = (
     + ", ".join(f"{f} = excluded.{f}" for f in _CHARGE_FIELDS[2:])
 )
 
+# A rescan refreshes a stored row from the latest parse, except that a
+# working directory, once known, is never forgotten by a parse that
+# cannot see it.
 _UPSERT = (
     f"INSERT INTO usage ({', '.join(_FIELDS)}, first_seen) "
     f"VALUES ({', '.join('?' * (len(_FIELDS) + 1))}) "
     "ON CONFLICT (source, record_id) DO UPDATE SET "
-    + ", ".join(f"{f} = excluded.{f}" for f in _FIELDS[2:])
+    + ", ".join(f"{f} = excluded.{f}" for f in _FIELDS[2:] if f != "cwd")
+    + ", cwd = COALESCE(NULLIF(excluded.cwd, ''), cwd)"
 )
 
 
@@ -235,6 +240,7 @@ def _key_fields(r: UsageRecord) -> tuple:
         r.cache_write_5m_tokens,
         r.cache_write_1h_tokens,
         r.price_modifiers,
+        r.cwd,
     )
 
 
@@ -243,8 +249,11 @@ def _content_id(r: UsageRecord) -> str:
 
     A field added after schema 1 joins the hash only when it is set, so a
     record's content id never changes just because the dataclass grew.
+    The working directory never joins it: it says where a call ran, not
+    which call it was.
     """
     fields = asdict(r)
+    del fields["cwd"]
     if not fields["price_modifiers"]:
         del fields["price_modifiers"]
     return fingerprint(fields)
@@ -381,8 +390,22 @@ def _v3_to_v4(conn: sqlite3.Connection) -> str:
     return "added the charges table for billed costs"
 
 
+def _v4_to_v5(conn: sqlite3.Connection) -> str:
+    """Schema 5: ``cwd``, the directory each call ran in, which attributes
+    usage to a repository (``tokencur outcomes``). Stored rows have none
+    until a rescan of logs still on disk fills it in."""
+    with conn:
+        for table in ("usage", "superseded"):
+            _add_column(conn, table, "cwd TEXT NOT NULL DEFAULT ''")
+        conn.execute("PRAGMA user_version = 5")
+    return (
+        "added cwd (the directory each call ran in, for cost per commit); "
+        "rows whose logs are still on disk get it on the next scan"
+    )
+
+
 # Step from version N to N + 1, keyed by N.
-_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
+_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
 
 
 def _utc_now() -> str:

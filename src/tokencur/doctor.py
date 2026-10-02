@@ -6,7 +6,8 @@ ledger):
 
 - each log source: files, usage lines, records, malformed lines and the
   agent versions the logs name, flagging what looks like a format change;
-- the ledger: schema, records per source, retired rows, SQLite integrity;
+- the ledger: schema, records per source, retired rows, SQLite integrity,
+  how many records name the directory they ran in (cost per commit);
 - pricing: the curated card's date, the snapshot's fetch date and its
   SHA-256 (compare it with the attested release asset), unpriced models.
 
@@ -26,6 +27,7 @@ from tokencur import ledger
 from tokencur.ingest.stats import ScanStats
 from tokencur.pricing import AS_OF, rates_for
 from tokencur.sources import DEFAULT_SOURCES, Source
+from tokencur.terminal import home_relative
 
 #: Share of unreadable usage lines above which a source is flagged.
 MALFORMED_ALERT = 0.01
@@ -49,6 +51,7 @@ class LedgerCheck:
     schema: int = 0
     records: dict[str, int] = field(default_factory=dict)
     retired: int = 0
+    with_cwd: int = 0  # records that name their working directory
     charges: int = 0
     billed_usd: float = 0.0
     integrity: str = ""
@@ -129,6 +132,11 @@ def _check_ledger(path: Path) -> LedgerCheck:
                 check.records = dict(
                     conn.execute("SELECT source, COUNT(*) FROM usage GROUP BY source")
                 )
+                columns = {row[1] for row in conn.execute("PRAGMA table_info(usage)")}
+                if "cwd" in columns:
+                    check.with_cwd = conn.execute(
+                        "SELECT COUNT(*) FROM usage WHERE cwd != ''"
+                    ).fetchone()[0]
                 for model, n in conn.execute(
                     "SELECT model, COUNT(*) FROM usage GROUP BY model"
                 ):
@@ -172,18 +180,12 @@ def _version_key(version: str) -> tuple:
     return tuple(int(p) if p.isdigit() else -1 for p in version.split("."))
 
 
-def _home(path: Path) -> str:
-    text = str(path)
-    home = str(Path.home())
-    return "~" + text[len(home) :] if text.startswith(home) else text
-
-
 def render(d: Diagnosis) -> str:
     lines = ["tokencur doctor", "", "log sources"]
     width = max(len(c.name) for c in d.sources) if d.sources else 0
     for c in d.sources:
         s = c.stats
-        head = f"  {c.name:<{width}}  {_home(c.root)}"
+        head = f"  {c.name:<{width}}  {home_relative(c.root)}"
         if not c.present:
             lines.append(f"{head}  (not found)")
             continue
@@ -197,7 +199,7 @@ def render(d: Diagnosis) -> str:
             f"{c.records:,} records · {s.malformed:,} malformed{versions}"
         )
     k = d.ledger
-    lines += ["", "ledger", f"  {_home(k.path)}"]
+    lines += ["", "ledger", f"  {home_relative(k.path)}"]
     if not k.present:
         lines.append("  not created yet: the first report or export creates it")
     elif not k.error:
@@ -211,6 +213,12 @@ def render(d: Diagnosis) -> str:
             f"  schema {k.schema}{upgrade} · {sum(k.records.values()):,} records"
             f" ({per_source or 'none'}) · {k.retired:,} retired · integrity {k.integrity}"
         )
+        total = sum(k.records.values())
+        if total:
+            lines.append(
+                f"  {k.with_cwd:,} of {total:,} records name their working "
+                "directory (`tokencur outcomes` attributes those)"
+            )
         if k.charges:
             lines.append(f"  {k.charges:,} billed charges, ${k.billed_usd:,.2f}")
         unpriced = ", ".join(f"{m} x{n}" for m, n in sorted(k.unpriced.items()))

@@ -11,7 +11,8 @@
   "cache_write_1h_tokens": 2208,
   "source": "claude-code",
   "record_id": "req_011A:msg_011A",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-09-15T10:02:41.500Z",
@@ -25,7 +26,8 @@
   "cache_write_1h_tokens": 0,
   "source": "claude-code",
   "record_id": "req_011B:msg_011B",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-09-15T23:59:59.999Z",
@@ -39,7 +41,8 @@
   "cache_write_1h_tokens": 0,
   "source": "claude-code",
   "record_id": "req_011C:msg_011C",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-10-01T00:00:00.000Z",
@@ -53,7 +56,8 @@
   "cache_write_1h_tokens": 0,
   "source": "claude-code",
   "record_id": "req_011D:msg_011D",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-10-01T00:05:00.000Z",
@@ -67,7 +71,8 @@
   "cache_write_1h_tokens": 0,
   "source": "claude-code",
   "record_id": "req_011E:msg_011E",
-  "price_modifiers": "fast+us"
+  "price_modifiers": "fast+us",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-09-15T10:00:09.204Z",
@@ -81,7 +86,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "019c9b83-2221-76e0-a1b2-c3d4e5f60718@2026-09-15T10:00:09.204Z#24bb3e56f28cc419",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-09-15T10:05:12.010Z",
@@ -95,7 +101,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "019c9b83-2221-76e0-a1b2-c3d4e5f60718@2026-09-15T10:05:12.010Z#1815c5bad2fa3701",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-09-15T10:00:05.250000+00:00",
@@ -109,7 +116,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_7c21e0/main@1789466405250#d8452d2bf41cddde",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  },
  {
   "timestamp": "2026-09-15T10:01:01.900000+00:00",
@@ -123,6 +131,7 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_7c21e0/main@1789466461900#d6baadfe1f7047ff",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/acme-api"
  }
 ]
