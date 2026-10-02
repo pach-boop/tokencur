@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Project governance: `CONTRIBUTING.md` (ground rules, how to add a
+  source), `SECURITY.md` (what tokencur reads and writes, private
+  vulnerability reporting), a Contributor Covenant code of conduct,
+  issue and pull request templates and `CODEOWNERS`. Dependabot
+  (Actions and Python extras), Dependabot security updates, private
+  vulnerability reporting, CodeQL code scanning and an OpenSSF
+  Scorecard workflow are enabled. Workflows are pinned to commit SHAs
+  and run with least-privilege permissions, timeouts and
+  cancel-in-progress concurrency; `ci` runs on pull requests and on
+  pushes to `main`.
 - Ledger: every command — `report`, `export`, `recommend`, the
   observatory and the dashboard — now keeps what it scans in a local
   SQLite ledger and reports the ledger's full history, so totals no

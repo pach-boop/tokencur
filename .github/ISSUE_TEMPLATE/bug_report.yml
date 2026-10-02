@@ -1,0 +1,51 @@
+name: Bug report
+description: Something tokencur reads, computes or renders is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. Keep message content out of this report: usage metadata
+        (token counts, model ids, timestamps) is all tokencur reads and
+        all it needs to reproduce a bug.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you saw, what you expected.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tokencur version
+      description: "`python -c 'import tokencur; print(tokencur.__version__)'`"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Claude Code ingester
+        - Codex CLI ingester
+        - Kimi Code ingester
+        - Pricing / rate card
+        - FOCUS export
+        - Ledger
+        - Report / recommend CLI
+        - Observatory / prices page
+        - Dashboard (Streamlit)
+        - Other
+  - type: input
+    id: env
+    attributes:
+      label: Python and OS
+      placeholder: "Python 3.13.1, Fedora 44"
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal log sample (metadata only, redacted)
+      description: One or two JSONL lines with content removed, if the bug is in an ingester.
+      render: json

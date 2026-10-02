@@ -1,6 +1,9 @@
 # tokencur
 
 [![ci](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml/badge.svg)](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pach-boop/tokencur/badge)](https://scorecard.dev/viewer/?uri=github.com/pach-boop/tokencur)
+[![Python 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **The CUR for your tokens** — an open-source pipeline that turns AI usage into
 [FOCUS](https://focus.finops.org)-conformant cost datasets, validated in CI by the
@@ -211,6 +214,14 @@ face.
   The export passes it in CI and is cross-checked against the Foundation's official
   sample data (which targets FOCUS 1.0; the tests assert convention compatibility, not
   column equality).
+
+## Contributing
+
+Small, reviewed changes are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the
+ground rules (metadata only, unpriced is never $0, no runtime dependencies) and how
+to add a usage source. Changes land through pull requests with green CI;
+Dependabot, CodeQL and OpenSSF Scorecard run on the repository. Security reports
+go through [SECURITY.md](SECURITY.md), never a public issue.
 
 ## Transparency
 
