@@ -3,10 +3,32 @@ name = "tokencur"
 dynamic = ["version"]  # single source: tokencur.__version__
 description = "Convert multi-provider AI/LLM usage data into FOCUS-conformant cost datasets"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Pedro Aguayo Chávez", email = "aguayochavezpedro@gmail.com" }]
 requires-python = ">=3.11"
 dependencies = []
+keywords = ["finops", "focus", "ai", "llm", "cost", "tokens", "showback", "claude-code", "codex"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/pach-boop/tokencur"
+Changelog = "https://github.com/pach-boop/tokencur/blob/main/CHANGELOG.md"
+Issues = "https://github.com/pach-boop/tokencur/issues"
+Observatory = "https://pach-boop.github.io/tokencur/observatory/"
 
 [project.scripts]
 tokencur = "tokencur.cli:main"
@@ -22,7 +44,7 @@ dev = [
 dashboard = ["streamlit>=1.35", "duckdb>=1.0"]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]  # SPDX license expressions (PEP 639)
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]

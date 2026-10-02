@@ -1,9 +1,10 @@
 # tokencur
 
 [![ci](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml/badge.svg)](https://github.com/pach-boop/tokencur/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/tokencur)](https://pypi.org/project/tokencur/)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pach-boop/tokencur/badge)](https://scorecard.dev/viewer/?uri=github.com/pach-boop/tokencur)
-[![Python 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/pach-boop/tokencur/blob/main/pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/pach-boop/tokencur/blob/main/LICENSE)
 
 **The CUR for your tokens** — an open-source pipeline that turns AI usage into
 [FOCUS](https://focus.finops.org)-conformant cost datasets, validated in CI by the
@@ -43,7 +44,7 @@ after the agents delete their logs.
    local Claude Code session logs, which already exist on disk. Budget: ~$0.
 3. **List-cost showback** — subscription usage isn't billed per token, so costs are
    computed as *API-equivalent list cost*. Pricing has two layers: a curated, dated
-   Anthropic rate card ([`pricing.py`](src/tokencur/pricing.py)) that always wins, and a
+   Anthropic rate card ([`pricing.py`](https://github.com/pach-boop/tokencur/blob/main/src/tokencur/pricing.py)) that always wins, and a
    vendored snapshot of the community-maintained
    [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (290+ live
    models across Anthropic, OpenAI, Gemini, DeepSeek, Kimi/Moonshot, GLM/Z.ai and
@@ -71,19 +72,19 @@ flowchart LR
 ```
 
 Each design decision, with its context and its cost, is recorded as an
-[architecture decision record](docs/adr/README.md).
+[architecture decision record](https://github.com/pach-boop/tokencur/blob/main/docs/adr/README.md).
 
-One module per layer — [`ingest/`](src/tokencur/ingest) (one adapter per source),
-[`ledger`](src/tokencur/ledger.py), [`pricing`](src/tokencur/pricing.py),
-[`focus`](src/tokencur/focus.py) — with the commands on top. Every command loads
-records through one function, [`sources.load_records()`](src/tokencur/sources.py).
+One module per layer — [`ingest/`](https://github.com/pach-boop/tokencur/tree/main/src/tokencur/ingest) (one adapter per source),
+[`ledger`](https://github.com/pach-boop/tokencur/blob/main/src/tokencur/ledger.py), [`pricing`](https://github.com/pach-boop/tokencur/blob/main/src/tokencur/pricing.py),
+[`focus`](https://github.com/pach-boop/tokencur/blob/main/src/tokencur/focus.py) — with the commands on top. Every command loads
+records through one function, [`sources.load_records()`](https://github.com/pach-boop/tokencur/blob/main/src/tokencur/sources.py).
 
 ## Quickstart
 
 Requires Python 3.11+. No runtime dependencies.
 
 ```bash
-pip install -e .
+pip install tokencur
 tokencur report                # cost summary in your terminal
 tokencur export focus.csv      # FOCUS 1.2 conformant dataset
 tokencur recommend             # avoided cost + what-if headroom
@@ -106,11 +107,13 @@ With no arguments it scans every known local source on your machine — **Claude
 (`~/.claude/projects`), **Codex CLI** (`~/.codex/sessions`) and **Kimi Code**
 (`~/.kimi-code/sessions`) — and prints per-model, per-source and per-day
 API-equivalent cost, including provider-correct cache economics. Each scan
-is also kept in a local [ledger](#ledger), so history survives when the
+is also kept in a local [ledger](https://github.com/pach-boop/tokencur#ledger), so history survives when the
 agents delete their old logs.
 
 For the visual version — daily trend, cost by model, token-type mix and unit
 economics, each view exposing the DuckDB SQL behind it:
+
+From a clone of this repository:
 
 ```bash
 pip install -e ".[dashboard]"
@@ -142,7 +145,7 @@ API-EQUIVALENT TOTAL (showback): $817.90
 On the maintainer's machine the full pipeline reads 10.7k model calls from
 ~400 MB of real logs in 1.8 s. Real transcripts carry the conversations,
 which tokencur skips. For scale,
-[`scripts/benchmark.py`](scripts/benchmark.py) times every stage on synthetic
+[`scripts/benchmark.py`](https://github.com/pach-boop/tokencur/blob/main/scripts/benchmark.py) times every stage on synthetic
 metadata-only logs (Python 3.13, Intel i7-1355U, Linux):
 
 | Stage | 100k messages | 1M messages |
@@ -197,7 +200,7 @@ run it), and `tokencur import runpod FILE` keeps it in the ledger. Reports show
 it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
 export gains Compute rows whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
-([ADR 0009](docs/adr/0009-billed-charges-next-to-showback.md)).
+([ADR 0009](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0009-billed-charges-next-to-showback.md)).
 
 ## Unit economics: usage value per commit
 
@@ -222,7 +225,7 @@ repository                              days  calls  usage value  commits  agent
 A commit is a coarse unit: it measures output, not quality. The useful
 comparison is a repository with itself over time. Quality, latency and
 reliability are the next layers
-([ADR 0010](docs/adr/0010-usage-value-per-commit.md)).
+([ADR 0010](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0010-usage-value-per-commit.md)).
 
 ## When an agent changes its logs
 
@@ -241,9 +244,9 @@ tokencur's headline figures are **not** a bill. Three money concepts, kept
 deliberately apart:
 
 - **Actual outlay** — the subscription fees really paid, declared plan by plan
-  in [`subscriptions.json`](./subscriptions.json) with the days each plan was
+  in [`subscriptions.json`](https://github.com/pach-boop/tokencur/blob/main/subscriptions.json) with the days each plan was
   active, and provider bills imported as billed charges (see
-  [Billed cost](#billed-cost)). The only real money here.
+  [Billed cost](https://github.com/pach-boop/tokencur#billed-cost)). The only real money here.
 - **Usage value (showback)** — what the same usage would cost at API list
   prices. Subscriptions don't bill per token, so tokencur *values* the usage
   instead of pretending to bill it.
@@ -329,7 +332,7 @@ last rate), then regenerates this page from that history.
   says nothing about size or quality. Usage logged before tokencur 0.3 kept no
   working directory; it is attributed only if its log is still on disk.
 - Rates are point-in-time: each call is valued at the list rate in force on its
-  UTC day ([ADR 0008](docs/adr/0008-point-in-time-list-rates.md)). Rate history
+  UTC day ([ADR 0008](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0008-point-in-time-list-rates.md)). Rate history
   starts with the snapshot on 2026-07-06, so earlier usage is valued at the first
   rate observed, and a move is dated by the day the price-watch bot saw it.
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
@@ -344,11 +347,11 @@ last rate), then regenerates this page from that history.
 
 ## Contributing
 
-Small, reviewed changes are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the
+Small, reviewed changes are welcome. [CONTRIBUTING.md](https://github.com/pach-boop/tokencur/blob/main/CONTRIBUTING.md) has the
 ground rules (metadata only, unpriced is never $0, no runtime dependencies) and how
 to add a usage source. Changes land through pull requests with green CI;
 Dependabot, CodeQL and OpenSSF Scorecard run on the repository. Security reports
-go through [SECURITY.md](SECURITY.md), never a public issue.
+go through [SECURITY.md](https://github.com/pach-boop/tokencur/blob/main/SECURITY.md), never a public issue.
 
 ## Transparency
 
@@ -357,4 +360,4 @@ not fully understand and stand behind.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/pach-boop/tokencur/blob/main/LICENSE)

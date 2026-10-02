@@ -120,10 +120,10 @@ hand-edit `litellm_snapshot.json`, run `scripts/update_pricing_snapshot.py`.
 3. The release workflow checks that the tag matches `__version__`, builds the
    sdist and wheel, attests their build provenance and drafts a GitHub release
    with them. Write the notes from the changelog, then publish the draft.
-4. PyPI, once: on pypi.org add a trusted publisher (project `tokencur`, owner
-   `pach-boop`, repository `tokencur`, workflow `release.yml`, environment
-   `pypi`), then set the repository variable `PUBLISH_TO_PYPI` to `true`. From
-   then on, each tag also publishes to PyPI, with no token stored anywhere.
+4. The same tag publishes to PyPI through trusted publishing: pypi.org trusts
+   `release.yml` in the `pypi` environment of this repository, and the
+   repository variable `PUBLISH_TO_PYPI` is `true` (both set up on 2026-10-02).
+   No token is stored anywhere.
 
 ## Reporting a vulnerability
 
