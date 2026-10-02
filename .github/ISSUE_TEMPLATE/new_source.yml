@@ -1,0 +1,36 @@
+name: New usage source
+description: Propose an ingester for another agent, API export or billing feed
+labels: [enhancement, help wanted]
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      placeholder: "Gemini CLI, Anthropic Admin API, RunPod billing..."
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where the usage data lives
+      description: Log path or API endpoint, and what identifies one billable call (request id, session + timestamp...).
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: Shape of one usage record (metadata only)
+      description: Field names for input / output / cached tokens, model id and timestamp. No message content.
+      render: json
+  - type: input
+    id: pricing
+    attributes:
+      label: Public price source
+      placeholder: "URL of the provider's pricing page, or 'in LiteLLM as <model id>'"
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Ground rules
+      options:
+        - label: The ingester can be written without reading message content
+          required: true

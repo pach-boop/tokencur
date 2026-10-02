@@ -1,0 +1,26 @@
+name: Feature request
+description: Something tokencur should do, or do differently
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to find out about your AI spend that you cannot today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What tokencur would output or do. Example output helps.
+  - type: dropdown
+    id: money
+    attributes:
+      label: Which money concept does it touch?
+      description: See README "Money concepts". Keeping them apart is a design rule.
+      options:
+        - Actual outlay (money paid)
+        - Usage value (showback at list prices)
+        - Counterfactual (avoided / headroom)
+        - None of these
