@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- `tokencur doctor`: a read-only health check. Per log source it
+  reports files, usage lines, records, unreadable lines and the agent
+  versions the logs name, and flags a likely format change; it checks
+  the ledger's schema and SQLite integrity and prints the pricing
+  snapshot's SHA-256. Exits 1 on any problem. A damaged or
+  newer-schema ledger now gives every command a clear error and a
+  recovery hint instead of a traceback.
 - The observatory discloses corrections to figures it published
   before: a dated note at the top (and a `corrections` list in
   `data.json`) saying what changed and by how much, starting with the

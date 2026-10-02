@@ -13,12 +13,13 @@ included, ``--until`` the first day excluded, so ``--since 2026-09-01
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from tokencur import __version__, observatory, prices
+from tokencur import __version__, doctor, ledger, observatory, prices
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
 from tokencur.ingest import claude_code
@@ -90,6 +91,12 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"default: {prices.DEFAULT_OUTPUT}",
     )
     card.set_defaults(handler=_prices)
+
+    check = commands.add_parser(
+        "doctor",
+        help="check log formats, the ledger and pricing (read-only)",
+    )
+    check.set_defaults(handler=_doctor)
     return parser
 
 
@@ -101,7 +108,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     since, until = getattr(args, "since", None), getattr(args, "until", None)
     if since and until and since >= until:
         parser.error("--since must be an earlier day than --until")
-    return args.handler(args)
+    try:
+        return args.handler(args)
+    except ledger.LedgerError as exc:
+        _fail(str(exc))
+    except sqlite3.DatabaseError as exc:
+        _fail(f"the ledger looks damaged ({exc}); run `tokencur doctor`")
+    return 1
 
 
 def _day(text: str) -> date:
@@ -201,3 +214,9 @@ def _prices(args: argparse.Namespace) -> int:
         f"({len(changes)} events: {moved} rate moves, {gained} models added)"
     )
     return 0
+
+
+def _doctor(args: argparse.Namespace) -> int:
+    diagnosis = doctor.diagnose()
+    print(doctor.render(diagnosis))
+    return 1 if diagnosis.problems else 0

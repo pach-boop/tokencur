@@ -40,6 +40,11 @@ from tokencur.records import UsageRecord
 
 SCHEMA_VERSION = 2
 
+
+class LedgerError(RuntimeError):
+    """The ledger file cannot be used: damaged, or from a newer tokencur."""
+
+
 # One column per UsageRecord field; the round-trip test fails if the
 # dataclass gains a field the ledger does not store.
 _FIELDS = (
@@ -182,10 +187,18 @@ def _connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     if created:
         os.chmod(path, 0o600)
-    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    try:
+        version = conn.execute("PRAGMA user_version").fetchone()[0]
+    except sqlite3.DatabaseError as exc:
+        conn.close()
+        raise LedgerError(
+            f"{path} is not a readable tokencur ledger ({exc}). Restore a "
+            f"backup kept next to it ({path.name}.schema-N.bak), or move it "
+            "aside to start a new ledger; `tokencur doctor` shows the details."
+        ) from exc
     if version > SCHEMA_VERSION:
         conn.close()
-        raise RuntimeError(
+        raise LedgerError(
             f"{path} uses ledger schema {version}; this tokencur reads up "
             f"to {SCHEMA_VERSION}. Upgrade tokencur to keep using it."
         )

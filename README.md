@@ -83,6 +83,7 @@ tokencur report                # cost summary in your terminal
 tokencur export focus.csv      # FOCUS 1.2 conformant dataset
 tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
+tokencur doctor                # read-only health check: log formats, ledger, pricing
 ```
 
 `tokencur --help` lists every command, and `python -m tokencur` works the same.
@@ -171,6 +172,17 @@ history:
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
 never stored.
+
+## When an agent changes its logs
+
+Agents change their log formats without notice. `tokencur doctor` scans every
+source read-only and reports files, usage lines, records, unreadable lines and
+the agent versions the logs name. It flags what looks like a format change:
+log files with no usage lines, usage lines that yield no records, or more than
+1% unreadable lines. It also checks the ledger's schema and SQLite integrity
+and prints the pricing snapshot's SHA-256. It exits 1 when anything needs
+attention. A malformed line is skipped, never guessed at, and never stops a
+scan.
 
 ## Money concepts (read before quoting numbers)
 

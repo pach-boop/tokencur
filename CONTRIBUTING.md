@@ -72,7 +72,10 @@ One module per source under `src/tokencur/ingest/`, exposing
   ([`ingest/identity.py`](src/tokencur/ingest/identity.py)). The ledger
   deduplicates on `(source, record_id)`, so two scans of the same logs
   must produce the same ids.
-- Skip malformed lines. Never raise on one bad line.
+- Read every field through `tokencur.ingest.fields`: a malformed usage line
+  is skipped, never guessed at, and never raises. Count what the scan saw in
+  the optional `stats` argument so `tokencur doctor` can flag format changes.
+  The fuzz tests in `tests/test_fuzz.py` show the shape to extend.
 - Register the default log location in `sources.DEFAULT_SOURCES` and the
   provider and service names in `focus.py`.
 - Tests: a synthetic fixture written inline (as `tests/test_codex.py`

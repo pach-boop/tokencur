@@ -17,6 +17,7 @@ from pathlib import Path
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
 # ``tokencur.records`` and stays importable from here.
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
+from tokencur.ingest.stats import ScanStats
 from tokencur.records import UsageRecord
 
 #: Claude Code logs client-side placeholder messages (API-error stubs,
@@ -25,7 +26,9 @@ from tokencur.records import UsageRecord
 SYNTHETIC_MODEL = "<synthetic>"
 
 
-def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
+def iter_usage_records(
+    root: Path, stats: ScanStats | None = None
+) -> Iterator[UsageRecord]:
     """Yield one UsageRecord per assistant message under ``root``.
 
     Records are deduplicated on (request id, message id): streaming can
@@ -37,17 +40,21 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
     only grow and an early line can hold a partial output count.
     Lines that are not valid JSON or carry no usage data are skipped,
     as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``) and
-    malformed usage (see ``tokencur.ingest.fields``).
+    malformed usage (see ``tokencur.ingest.fields``). ``stats``, when
+    given, counts what the scan saw (see ``tokencur.ingest.stats``).
     """
+    stats = stats if stats is not None else ScanStats()
     messages: dict[str, UsageRecord] = {}
     for path in sorted(root.rglob("*.jsonl")):
+        stats.files += 1
         workspace = path.parent.name
         # errors="replace": a corrupted byte spoils one line, not the scan.
         with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
                 try:
-                    record = _parse_line(line, workspace)
+                    record = _parse_line(line, workspace, stats)
                 except Malformed:
+                    stats.malformed += 1
                     continue
                 if record is None:
                     continue
@@ -74,7 +81,7 @@ def _final_counts(first: UsageRecord, later: UsageRecord) -> UsageRecord:
     )
 
 
-def _parse_line(line: str, workspace: str) -> UsageRecord | None:
+def _parse_line(line: str, workspace: str, stats: ScanStats) -> UsageRecord | None:
     line_entry = entry(line)
     if line_entry.get("type") != "assistant":
         return None
@@ -84,6 +91,8 @@ def _parse_line(line: str, workspace: str) -> UsageRecord | None:
     usage = message.get("usage")
     if not usage:
         return None
+    stats.usage_lines += 1
+    stats.saw_version(text(line_entry.get("version")))
     if not isinstance(usage, dict):
         raise Malformed("usage is not an object")
 
