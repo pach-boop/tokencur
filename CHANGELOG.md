@@ -5,18 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
-### Fixed
-
-- Pricing snapshot no longer loses models that LiteLLM prunes upstream.
-  Retired models keep their last known rate, flagged
-  `retired_upstream`, so historical usage stays priced; 56 models
-  dropped by earlier daily refreshes were restored from git history.
-  Before this, `main` had two failing tests while the badge stayed
-  green: the price-watch bot pushes with `GITHUB_TOKEN`, which does not
-  trigger CI. The price-watch job now runs the test suite before it
-  commits.
-
 ### Added
+
+- Ledger: every command — `report`, `export`, `recommend`, the
+  observatory and the dashboard — now keeps what it scans in a local
+  SQLite ledger and reports the ledger's full history, so totals no
+  longer shrink when coding agents delete old logs (Claude Code removes
+  transcripts after `cleanupPeriodDays`, 30 by default). Usage events
+  are deduplicated on a stable `record_id` built from raw source
+  fields; events whose logs are gone keep their last known values.
+  Metadata only, owner-readable file, schema-versioned, stdlib
+  `sqlite3` (still no runtime dependencies). Location:
+  `$TOKENCUR_LEDGER`, else `$XDG_DATA_HOME/tokencur/ledger.sqlite3`.
 
 - Price card page: `python -m tokencur.prices` renders `docs/prices/`
   (published via GitHub Pages) — the curated Anthropic rates, the
@@ -47,9 +47,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   section headers, `Total what-if headroom`, and a closing
   flat-subscription caveat (was "measured savings" / "Total potential
   savings").
+- `DEFAULT_SOURCES` moved from `tokencur.report` to `tokencur.sources`,
+  whose `load_records()` is now the single loader behind every command
+  (five copies of the scan loop removed).
 
 ### Fixed
 
+- Pricing snapshot no longer loses models that LiteLLM prunes upstream.
+  Retired models keep their last known rate, flagged
+  `retired_upstream`, so historical usage stays priced; 56 models
+  dropped by earlier daily refreshes were restored from git history.
+  Before this, `main` had two failing tests while the badge stayed
+  green: the price-watch bot pushes with `GITHUB_TOKEN`, which does not
+  trigger CI. The price-watch job now runs the test suite before it
+  commits.
 - Claude Code's synthetic placeholder messages (model `<synthetic>`,
   all-zero usage — client-side stubs for API errors and interrupted
   turns) are skipped at parse time. They are not API traffic and were

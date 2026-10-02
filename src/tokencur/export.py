@@ -3,8 +3,10 @@
 Usage:
     python -m tokencur.export OUTPUT.csv [ROOT]
 
-With no ROOT, every known local source is scanned (same as the report).
-Unpriced usage is skipped and reported on stderr — never exported as $0.
+With no ROOT, the full history is exported: every known local source is
+scanned into the ledger, same as the report. An explicit ROOT is read as
+Claude Code logs and never stored. Unpriced usage is skipped and
+reported on stderr — never exported as $0.
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from pathlib import Path
 from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, unpriced_models
 from tokencur.ingest import claude_code
 from tokencur.ingest.claude_code import UsageRecord
-from tokencur.report import DEFAULT_SOURCES
+from tokencur.sources import load_records
 
 
 def export_csv(records: list[UsageRecord], output: Path) -> int:
@@ -37,13 +39,10 @@ def main(argv: list[str]) -> int:
         return 2
     output = Path(argv[1])
 
-    records: list[UsageRecord] = []
     if len(argv) > 2:
         records = list(claude_code.iter_usage_records(Path(argv[2])))
     else:
-        for root, iter_records in DEFAULT_SOURCES:
-            if root.exists():
-                records.extend(iter_records(root))
+        records = load_records()
 
     rows = export_csv(records, output)
     print(f"wrote {rows} FOCUS charge rows to {output}", file=sys.stderr)

@@ -1,4 +1,4 @@
-"""Print savings recommendations over local usage.
+"""Print savings recommendations over the full local usage history.
 
 Usage:
     python -m tokencur recommend
@@ -8,18 +8,15 @@ from __future__ import annotations
 
 import sys
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.recommend import recommendations, render
-from tokencur.report import DEFAULT_SOURCES
+from tokencur.sources import load_records
 
 
 def main(argv: list[str]) -> int:
-    records: list[UsageRecord] = []
-    for root, iter_records in DEFAULT_SOURCES:
-        if root.exists():
-            records.extend(iter_records(root))
+    records = load_records()
     if not records:
-        print("error: no known usage-log locations found", file=sys.stderr)
+        print("error: no usage in known log locations or the ledger",
+              file=sys.stderr)
         return 1
     print(render(recommendations(records)))
     return 0

@@ -1,14 +1,16 @@
 """Quick usage & cost summary over local AI coding-agent logs.
 
 Usage:
-    python -m tokencur.report          # scan all known local sources
-    python -m tokencur.report ROOT     # scan ROOT as Claude Code logs
+    python -m tokencur.report          # all known sources, full history
+    python -m tokencur.report ROOT     # ad hoc: ROOT as Claude Code logs
 
 With no arguments, every known source that exists on this machine is
-scanned: Claude Code (``~/.claude/projects``), Codex CLI
-(``~/.codex/sessions``) and Kimi Code (``~/.kimi-code/sessions``).
-This is the v0 "does the pipeline see my real spend?" check; the FOCUS
-normalizer and analysis layers build on the same records.
+scanned — Claude Code (``~/.claude/projects``), Codex CLI
+(``~/.codex/sessions``) and Kimi Code (``~/.kimi-code/sessions``) — and
+kept in the ledger; the report covers the ledger's full history (see
+``tokencur.sources``). An explicit ROOT is reported as-is and never
+stored. This is the "does the pipeline see my real spend?" check; the
+FOCUS normalizer and analysis layers build on the same records.
 """
 
 from __future__ import annotations
@@ -17,15 +19,10 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from tokencur.ingest import claude_code, codex, kimi_code
+from tokencur.ingest import claude_code
 from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import AS_OF, record_cost_usd
-
-DEFAULT_SOURCES = (
-    (Path.home() / ".claude" / "projects", claude_code.iter_usage_records),
-    (Path.home() / ".codex" / "sessions", codex.iter_usage_records),
-    (Path.home() / ".kimi-code" / "sessions", kimi_code.iter_usage_records),
-)
+from tokencur.sources import load_records
 
 
 def summarize(records: list[UsageRecord]) -> str:
@@ -79,7 +76,6 @@ def summarize(records: list[UsageRecord]) -> str:
 
 
 def main(argv: list[str]) -> int:
-    records: list[UsageRecord] = []
     if len(argv) > 1:
         root = Path(argv[1])
         if not root.exists():
@@ -87,11 +83,10 @@ def main(argv: list[str]) -> int:
             return 1
         records = list(claude_code.iter_usage_records(root))
     else:
-        for root, iter_records in DEFAULT_SOURCES:
-            if root.exists():
-                records.extend(iter_records(root))
+        records = load_records()
         if not records:
-            print("error: no known usage-log locations found", file=sys.stderr)
+            print("error: no usage in known log locations or the ledger",
+                  file=sys.stderr)
             return 1
     print(summarize(records))
     return 0
