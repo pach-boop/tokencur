@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Golden tests: synthetic logs shaped like each agent's real logs
+  (`tests/fixtures/logs`), covering every case that broke or nearly
+  broke an ingester, with the exact records and FOCUS CSV they must
+  produce (`tests/fixtures/golden`). The CI conformance gate now runs
+  the FinOps Foundation validator on that export too, so it checks
+  what the real ingesters produce from real-shaped logs, not only
+  hand-built records.
 - Quality gates in CI: a ruff lint and format job (ruff pinned in the
   dev extra, with a matching pre-commit hook), the suite on macOS and
   Windows besides Linux 3.11 to 3.13, branch coverage measured with

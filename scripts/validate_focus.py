@@ -1,7 +1,14 @@
 """Conformance gate: run the FinOps Foundation validator on our export.
 
-Builds a small synthetic dataset (no real data), exports it as FOCUS
-CSV and runs ``focus-validator`` against spec 1.2. Passes when every
+Exports one FOCUS CSV holding two datasets and runs ``focus-validator``
+against spec 1.2:
+
+- hand-built records for edge dates (a December charge, whose billing
+  period ends in the next year), and
+- the golden fixture logs (``tests/fixtures/logs``) parsed by the real
+  Claude Code, Codex and Kimi ingesters, so the validator checks what
+  tokencur produces from real-shaped logs, not only what a test author
+  typed. No real usage data is involved. Passes when every
 composite column rule passes; the only tolerated raw failure is
 ``InvoiceId-C-005-C`` — the not-null branch of the OR rule
 ``InvoiceId-C-003-C``, which showback data legitimately does not take
@@ -23,9 +30,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from tokencur.export import export_csv
+from tokencur.ingest import claude_code, codex, kimi_code
 from tokencur.records import UsageRecord
 
 TOLERATED_OR_BRANCHES = {"InvoiceId-C-005-C"}
+FIXTURE_LOGS = Path(__file__).parent.parent / "tests" / "fixtures" / "logs"
 
 
 def _synthetic_records() -> list[UsageRecord]:
@@ -64,14 +73,23 @@ def _synthetic_records() -> list[UsageRecord]:
     ]
 
 
+def _fixture_records() -> list[UsageRecord]:
+    return [
+        *claude_code.iter_usage_records(FIXTURE_LOGS / "claude-code"),
+        *codex.iter_usage_records(FIXTURE_LOGS / "codex"),
+        *kimi_code.iter_usage_records(FIXTURE_LOGS / "kimi-code"),
+    ]
+
+
 def main() -> int:
     import focus_validator
 
     package_parent = Path(focus_validator.__file__).parent.parent
     with tempfile.TemporaryDirectory() as tmp:
         data_file = Path(tmp) / "focus_sample.csv"
-        rows = export_csv(_synthetic_records(), data_file)
-        print(f"exported {rows} synthetic FOCUS rows")
+        records = _synthetic_records() + _fixture_records()
+        rows = export_csv(records, data_file)
+        print(f"exported {rows} FOCUS rows (hand-built + golden fixture logs)")
 
         # The validator resolves its rule files relative to the CWD.
         result = subprocess.run(

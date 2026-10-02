@@ -1,0 +1,5 @@
+{"type":"turn.begin","time":1789466400000,"content":"[redacted]"}
+{"type":"usage.record","time":1789466405250,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":1840,"inputCacheRead":22016,"inputCacheCreation":0,"output":512}}
+{"type":"usage.record","time":
+{"type":"usage.record","time":1789466461900,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":310,"inputCacheRead":24064,"inputCacheCreation":1024,"output":233}}
+{"type":"usage.record","time":1789466462000,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"session","usage":{"inputOther":2150,"inputCacheRead":46080,"inputCacheCreation":1024,"output":745}}
