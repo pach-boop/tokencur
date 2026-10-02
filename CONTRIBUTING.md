@@ -6,8 +6,9 @@ it that way.
 ## Ground rules
 
 1. **Metadata only.** Ingesters read token counts, model ids, timestamps,
-   workspace and session ids. They never read, store or log message
-   content. A change that does is declined.
+   workspace and session ids, and the directory each call ran in. They
+   never read, store or log message content. A change that does is
+   declined.
 2. **Unpriced is never $0.** A model with no rate surfaces as *unpriced
    usage*. Silently valuing it at zero is the one bug this project exists
    to avoid.
@@ -66,6 +67,9 @@ One module per source under `src/tokencur/ingest/`, exposing
 - Yield one `UsageRecord` per billable call. Map the source's token fields
   onto input / output / cache read / cache write (5m, 1h); write zeros for
   dimensions the provider does not bill, and say so in the module docstring.
+- Set `cwd` to the directory the call ran in when the source logs it, so
+  `tokencur outcomes` can attribute the call to a repository; leave it
+  empty otherwise. It is never part of a record's identity.
 - Give every record a stable `record_id` built from the source's own
   identity fields: a request id when the source logs one, otherwise
   session + timestamp + a fingerprint of the raw usage object

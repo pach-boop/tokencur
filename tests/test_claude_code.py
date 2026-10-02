@@ -232,3 +232,38 @@ def test_subagent_logs_belong_to_their_project(tmp_path):
     (record,) = iter_usage_records(tmp_path)
 
     assert record.workspace == "-home-dev-acme-api"
+
+
+def _line_in(cwd: str | None, request_id: str, output_tokens: int) -> str:
+    line = json.loads(
+        _assistant_line(request_id, dict(NEW_FORMAT_USAGE, output_tokens=output_tokens))
+    )
+    if cwd is not None:
+        line["cwd"] = cwd
+    return json.dumps(line)
+
+
+def test_each_call_keeps_the_directory_the_agent_was_in(tmp_path):
+    """The agent can change directory mid-session; each call keeps where it
+    ran. A streamed message whose first line names none takes a later one."""
+    log = tmp_path / "workspace" / "session.jsonl"
+    log.parent.mkdir()
+    log.write_text(
+        "\n".join(
+            [
+                _line_in("/home/dev/app", "req_1", 10),
+                _line_in("/home/dev/app/src", "req_2", 10),
+                _line_in(None, "req_3", 7),  # streamed: no cwd on this line
+                _line_in("/home/dev/lib", "req_3", 9),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    cwds = {r.record_id.split(":")[0]: r.cwd for r in iter_usage_records(tmp_path)}
+
+    assert cwds == {
+        "req_1": "/home/dev/app",
+        "req_2": "/home/dev/app/src",
+        "req_3": "/home/dev/lib",
+    }

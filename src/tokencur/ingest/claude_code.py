@@ -5,7 +5,7 @@ Claude Code writes one JSONL transcript per session under
 message line carries a ``message.usage`` object with token counts.
 
 Privacy: this module reads usage metadata only (tokens, model,
-timestamps). It never extracts message content.
+timestamps, the working directory). It never extracts message content.
 """
 
 from __future__ import annotations
@@ -35,9 +35,11 @@ def iter_usage_records(
     log one message across several lines, and resuming a session can
     re-copy past messages into a new file under a new session id — the
     same API request must never be counted twice. The first line seen
-    names the session and workspace; the token counts are each field's
-    largest value across the message's lines, because streamed counts
-    only grow and an early line can hold a partial output count.
+    names the session, workspace and working directory (``cwd``, which
+    follows the agent as it changes directory); the token counts are
+    each field's largest value across the message's lines, because
+    streamed counts only grow and an early line can hold a partial
+    output count.
     Lines that are not valid JSON or carry no usage data are skipped,
     as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``) and
     malformed usage (see ``tokencur.ingest.fields``). ``stats``, when
@@ -83,9 +85,12 @@ _COUNTS = (
 
 
 def _final_counts(first: UsageRecord, later: UsageRecord) -> UsageRecord:
-    """``first``, with each token count raised to ``later``'s if larger."""
+    """``first``, with each token count raised to ``later``'s if larger,
+    and ``later``'s working directory if ``first`` named none."""
     return replace(
-        first, **{f: max(getattr(first, f), getattr(later, f)) for f in _COUNTS}
+        first,
+        cwd=first.cwd or later.cwd,
+        **{f: max(getattr(first, f), getattr(later, f)) for f in _COUNTS},
     )
 
 
@@ -123,6 +128,7 @@ def _parse_line(line: str, workspace: str, stats: ScanStats) -> UsageRecord | No
         # The dedup key above is already the API request's identity.
         record_id=f"{key[0]}:{key[1]}",
         price_modifiers=_modifiers(usage),
+        cwd=text(line_entry.get("cwd")),
     )
 
 

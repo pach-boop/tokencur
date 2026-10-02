@@ -243,3 +243,50 @@ def test_a_new_ledger_is_created_at_the_current_schema_silently(tmp_path, capsys
 
     assert capsys.readouterr().err == ""
     assert not list(tmp_path.glob("*.bak"))
+
+
+def test_schema_4_gains_cwd_and_a_rescan_fills_it(tmp_path, capsys):
+    path = tmp_path / "ledger.sqlite3"
+    old = _record("req_1:msg_1")
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(ledger._V2_USAGE)
+        conn.execute(ledger._V2_SUPERSEDED)
+        conn.execute("PRAGMA user_version = 2")
+    with closing(sqlite3.connect(path)) as conn:
+        for step in (2, 3):
+            ledger._MIGRATIONS[step](conn)
+        with conn:
+            conn.execute(
+                f"INSERT INTO usage VALUES ({', '.join('?' * 13)})",
+                (*ledger._key_fields(old)[:11], "2026-07-01T00:00:00Z", ""),
+            )
+
+    assert ledger.read(path) == [old]  # migrated: stored rows have no cwd
+    assert "schema 5" in capsys.readouterr().err
+    assert (tmp_path / "ledger.sqlite3.schema-4.bak").exists()
+
+    ledger.record([_record("req_1:msg_1", cwd="/home/dev/app")], path)
+    assert ledger.read(path)[0].cwd == "/home/dev/app"
+
+
+def test_a_known_working_directory_is_never_forgotten(tmp_path):
+    """A later parse that cannot see the directory keeps the stored one."""
+    path = tmp_path / "ledger.sqlite3"
+    ledger.record([_record("req_1:msg_1", cwd="/home/dev/app")], path)
+
+    ledger.record([_record("req_1:msg_1", output_tokens=60)], path)
+
+    (kept,) = ledger.read(path)
+    assert (kept.cwd, kept.output_tokens) == ("/home/dev/app", 60)
+
+
+def test_the_working_directory_is_not_part_of_a_records_identity(tmp_path):
+    """A record without a source id is identified by its content; where it
+    ran is not content, so learning it later adds no second row."""
+    path = tmp_path / "ledger.sqlite3"
+    ledger.record([_record("")], path)
+
+    added = ledger.record([_record("", cwd="/home/dev/app")], path)
+
+    assert added == 0
+    assert [r.cwd for r in ledger.read(path)] == ["/home/dev/app"]

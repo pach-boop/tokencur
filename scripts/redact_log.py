@@ -6,8 +6,8 @@ Usage:
 SOURCE is claude-code, codex or kimi-code. The output keeps, from the
 lines that carry usage (and Codex's session and turn lines), only an
 allowlist of fields: the usage numbers, the model, request options,
-line types and the agent version. Everything else is dropped, message
-content included. Every id becomes a stable pseudonym (the same id
+line types, the agent version and the working directory. Everything
+else is dropped, message content included. Every id becomes a stable pseudonym (the same id
 always maps to the same pseudonym, so streaming and dedup behave as in
 the original), paths become /home/dev/<pseudonym>, and timestamps shift
 so the first lands on --start, keeping every interval.
@@ -48,6 +48,14 @@ def pseudonym(kind: str, value: object) -> object:
     if not isinstance(value, str) or not value:
         return value
     return f"{kind}_{hashlib.sha256((SALT + value).encode()).hexdigest()[:12]}"
+
+
+def path_pseudonym(value: object) -> object:
+    """A working directory as /home/dev/<pseudonym>: the same directory
+    always maps to the same path, so attribution behaves as in the original."""
+    if not isinstance(value, str) or not value:
+        return None
+    return f"/home/dev/{pseudonym('dir', value)}"
 
 
 def _numbers(value: object) -> object:
@@ -105,6 +113,7 @@ class Redactor:
             "uuid": pseudonym("uuid", e.get("uuid")),
             "timestamp": self.iso(e.get("timestamp")),
             "version": e.get("version") if isinstance(e.get("version"), str) else None,
+            "cwd": path_pseudonym(e.get("cwd")),
             "message": {
                 "id": pseudonym("msg", message.get("id")),
                 "type": "message",
@@ -121,13 +130,12 @@ class Redactor:
             return None
         base = {"timestamp": self.iso(e.get("timestamp")), "type": kind}
         if kind == "session_meta":
-            cwd = payload.get("cwd")
             return {
                 **base,
                 "payload": {
                     "id": pseudonym("session", payload.get("id")),
                     "timestamp": self.iso(payload.get("timestamp")),
-                    "cwd": f"/home/dev/{pseudonym('dir', cwd)}" if cwd else None,
+                    "cwd": path_pseudonym(payload.get("cwd")),
                     "cli_version": payload.get("cli_version"),
                     "originator": _allowed("originator", payload.get("originator")),
                 },
@@ -137,6 +145,7 @@ class Redactor:
                 **base,
                 "payload": {
                     "model": payload.get("model"),
+                    "cwd": path_pseudonym(payload.get("cwd")),
                     "effort": _allowed("effort", payload.get("effort")),
                 },
             }
@@ -187,8 +196,9 @@ def _first_moment(source: str, lines: list[str]) -> datetime | None:
     return None
 
 
-def usage_of(source: str, path: Path, layout: str) -> list[tuple]:
-    """What the ingester reads from one file: models, counts and options."""
+def usage_of(source: str, path: Path, layout: str, redacted: bool) -> list[tuple]:
+    """What the ingester reads from one file: models, counts, options and
+    where each call ran (the original's directories as their pseudonyms)."""
     with tempfile.TemporaryDirectory() as tmp:
         target = Path(tmp) / layout
         target.parent.mkdir(parents=True)
@@ -203,6 +213,7 @@ def usage_of(source: str, path: Path, layout: str) -> list[tuple]:
                 r.cache_write_5m_tokens,
                 r.cache_write_1h_tokens,
                 r.price_modifiers,
+                r.cwd if redacted else path_pseudonym(r.cwd) or "",
             )
             for r in records
         )
@@ -232,8 +243,8 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         candidate = Path(tmp) / "redacted.jsonl"
         candidate.write_text(text, encoding="utf-8")
-        before = usage_of(args.source, args.input, _LAYOUT[args.source])
-        after = usage_of(args.source, candidate, _LAYOUT[args.source])
+        before = usage_of(args.source, args.input, _LAYOUT[args.source], False)
+        after = usage_of(args.source, candidate, _LAYOUT[args.source], True)
     if before != after:
         print("refusing to write: the redacted log reads differently", file=sys.stderr)
         return 1

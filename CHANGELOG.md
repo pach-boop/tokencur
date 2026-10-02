@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- **Usage value per commit** (ADR 0010), the first unit-economics layer:
+  `tokencur outcomes [REPO...]` sets each git repository's usage value
+  against its commits, with agent-signed commits and lines changed beside
+  them, and reports how much usage it could not attribute and why. Each
+  call is attributed by the directory it ran in, which every ingester now
+  reads: Claude Code per line, Codex per turn, Kimi Code per session
+  (ledger schema 5, local only). On the maintainer's logs, 71% of Claude
+  Code calls ran outside the directory their session started in. `doctor`
+  shows how many records name their directory.
 - **Billed cost, starting with RunPod** (ADR 0009, closes the RunPod
   half of the "API billing exports" gap). `scripts/fetch_runpod_billing.py`
   saves the billing history from RunPod's REST API (it replaces the

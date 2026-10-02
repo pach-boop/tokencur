@@ -140,3 +140,23 @@ def test_the_doctor_command_exits_1_on_any_problem(
 
     assert cli.main(["doctor"]) == code
     assert "tokencur doctor" in capsys.readouterr().out
+
+
+def test_the_ledger_check_counts_records_that_name_their_directory(tmp_path):
+    path = tmp_path / "ledger.sqlite3"
+    ledger.record(
+        [
+            r
+            for root, ingest in FIXTURE_SOURCES
+            for r in ingest(root)
+            if r.source != "kimi-code"
+        ],
+        path,
+    )
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute("UPDATE usage SET cwd = '' WHERE source = 'codex'")
+
+    d = doctor.diagnose(FIXTURE_SOURCES, path)
+
+    assert (d.ledger.with_cwd, sum(d.ledger.records.values())) == (5, 7)
+    assert "5 of 7 records name their working directory" in doctor.render(d)

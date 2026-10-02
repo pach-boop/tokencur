@@ -51,3 +51,46 @@ def test_parses_turn_usage_records(tmp_path):
     assert (r.cache_read_tokens, r.cache_write_5m_tokens) == (14336, 7)
     assert r.date == "2026-06-21"
     assert r.record_id.startswith("session_s1/main@1782024520201#")
+
+
+def _kimi_session(root, workspace: str, session: str, state: dict | None) -> None:
+    """A Kimi session with one per-turn usage record and, if given, a state.json."""
+    folder = root / workspace / session
+    log = folder / "agents" / "main" / "wire.jsonl"
+    log.parent.mkdir(parents=True)
+    log.write_text(
+        json.dumps(
+            {
+                "type": "usage.record",
+                "usageScope": "turn",
+                "time": 1782024520201,
+                "model": "moonshot-ai/kimi-k2.7-code-highspeed",
+                "usage": {"inputOther": 10, "output": 5},
+            }
+        ),
+        encoding="utf-8",
+    )
+    if state is not None:
+        (folder / "state.json").write_text(json.dumps(state), encoding="utf-8")
+
+
+def test_the_working_directory_comes_from_the_session_state(tmp_path):
+    """A session's own state.json names its directory; one that predates
+    that field takes its siblings' when they agree; disagreement names none."""
+    _kimi_session(tmp_path, "wd_app_1", "session_new", {"cwd": "/home/dev/app"})
+    _kimi_session(tmp_path, "wd_app_1", "session_old", {"title": "[redacted]"})
+    _kimi_session(tmp_path, "wd_odd_2", "session_a", {"cwd": "/home/dev/a"})
+    _kimi_session(tmp_path, "wd_odd_2", "session_b", {"cwd": "/home/dev/b"})
+    _kimi_session(tmp_path, "wd_odd_2", "session_c", None)
+    (tmp_path / "wd_bad_3" / "session_x").mkdir(parents=True)
+    (tmp_path / "wd_bad_3" / "session_x" / "state.json").write_text("{not json")
+
+    cwds = {r.session_id: r.cwd for r in iter_usage_records(tmp_path)}
+
+    assert cwds == {
+        "session_new": "/home/dev/app",
+        "session_old": "/home/dev/app",
+        "session_a": "/home/dev/a",
+        "session_b": "/home/dev/b",
+        "session_c": "",
+    }

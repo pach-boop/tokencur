@@ -21,6 +21,7 @@ from collections import defaultdict
 from tokencur.focus import provider_for
 from tokencur.pricing import AS_OF, record_cost_usd
 from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
+from tokencur.terminal import table
 
 
 def summarize(
@@ -85,7 +86,7 @@ def summarize(
         f"list rates in force on each call's day, curated card {AS_OF} "
         "(API-equivalent list cost)",
         "",
-        *_table(header, rows),
+        *table(header, rows),
     ]
     if len(by_source) > 1:
         lines += ["", "by source:"]
@@ -126,26 +127,6 @@ def _converted(usd: float, fx: tuple[str, float]) -> str:
     return (
         f"  = {currency} {usd * rate:,.2f} at {rate:g} {currency} per USD (rate given)"
     )
-
-
-def _table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
-    """Columns as wide as their widest cell: model left, numbers right.
-
-    Fixed widths broke once real totals passed a billion tokens or a
-    model id ran long, and adjacent columns ran together.
-    """
-    widths = [
-        max(len(cell) for cell in column) for column in zip(header, *rows, strict=True)
-    ]
-
-    def line(cells: tuple[str, ...]) -> str:
-        first = cells[0].ljust(widths[0])
-        rest = (
-            cell.rjust(width) for cell, width in zip(cells[1:], widths[1:], strict=True)
-        )
-        return "  ".join((first, *rest)).rstrip()
-
-    return [line(header), *(line(row) for row in rows)]
 
 
 def main(argv: list[str]) -> int:

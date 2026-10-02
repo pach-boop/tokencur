@@ -16,3 +16,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0007](0007-current-list-rates-not-point-in-time.md) | Value history at current list rates, not point-in-time rates | Superseded by 0008 |
 | [0008](0008-point-in-time-list-rates.md) | Value each call at the list rate in force on its day | Accepted |
 | [0009](0009-billed-charges-next-to-showback.md) | Billed charges sit next to showback, never mixed into it | Accepted |
+| [0010](0010-usage-value-per-commit.md) | Usage value per commit: attribute each call by where it ran | Accepted |

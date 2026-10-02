@@ -11,7 +11,8 @@
   "cache_write_1h_tokens": 14723,
   "source": "claude-code",
   "record_id": "req_1bb5c9389d2a:msg_225e049e445d",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:00:28.122Z",
@@ -25,7 +26,8 @@
   "cache_write_1h_tokens": 2865,
   "source": "claude-code",
   "record_id": "req_4e55731983b8:msg_e10d4e610db4",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:00:47.728Z",
@@ -39,7 +41,8 @@
   "cache_write_1h_tokens": 34,
   "source": "claude-code",
   "record_id": "req_424d12d06929:msg_2e49e22876ea",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:01:00.143Z",
@@ -53,7 +56,8 @@
   "cache_write_1h_tokens": 1378,
   "source": "claude-code",
   "record_id": "req_85c351656956:msg_748d49bf9018",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:03:04.915Z",
@@ -67,7 +71,8 @@
   "cache_write_1h_tokens": 42,
   "source": "claude-code",
   "record_id": "req_5519faf0a34d:msg_045f5eda67b9",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:03:17.663Z",
@@ -81,7 +86,8 @@
   "cache_write_1h_tokens": 181,
   "source": "claude-code",
   "record_id": "req_2190b9b88df6:msg_441c81104de8",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:09:02.067Z",
@@ -95,7 +101,8 @@
   "cache_write_1h_tokens": 59,
   "source": "claude-code",
   "record_id": "req_a980190ec000:msg_66182f0a0148",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:09:06.803Z",
@@ -109,7 +116,8 @@
   "cache_write_1h_tokens": 417,
   "source": "claude-code",
   "record_id": "req_1b165368867b:msg_f68c6d977102",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:09:22.041Z",
@@ -123,7 +131,8 @@
   "cache_write_1h_tokens": 626,
   "source": "claude-code",
   "record_id": "req_ee401665e37a:msg_b5a1e577b650",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:09:26.728Z",
@@ -137,7 +146,8 @@
   "cache_write_1h_tokens": 641,
   "source": "claude-code",
   "record_id": "req_31a7ffd9838c:msg_e7e7190c3cb3",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:09:31.400Z",
@@ -151,7 +161,8 @@
   "cache_write_1h_tokens": 5186,
   "source": "claude-code",
   "record_id": "req_83c15d0877f0:msg_81ce84087220",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:09:58.536Z",
@@ -165,7 +176,8 @@
   "cache_write_1h_tokens": 483,
   "source": "claude-code",
   "record_id": "req_d171331b292b:msg_f78687bfca86",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:12:01.075Z",
@@ -179,7 +191,8 @@
   "cache_write_1h_tokens": 63,
   "source": "claude-code",
   "record_id": "req_8bafc80aed9b:msg_704d0666414a",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:15:15.463Z",
@@ -193,7 +206,8 @@
   "cache_write_1h_tokens": 52638,
   "source": "claude-code",
   "record_id": "req_bf5bb4291a03:msg_fae5b5abf66d",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:15:42.428Z",
@@ -207,7 +221,8 @@
   "cache_write_1h_tokens": 4402,
   "source": "claude-code",
   "record_id": "req_a67579b99a81:msg_400e178a3416",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:16:12.979Z",
@@ -221,7 +236,8 @@
   "cache_write_1h_tokens": 27,
   "source": "claude-code",
   "record_id": "req_cb425df9dc30:msg_9ec7928d3025",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:17:06.215Z",
@@ -235,7 +251,8 @@
   "cache_write_1h_tokens": 1280,
   "source": "claude-code",
   "record_id": "req_22f12a99029e:msg_15ef3df84f61",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:17:27.715Z",
@@ -249,7 +266,8 @@
   "cache_write_1h_tokens": 702,
   "source": "claude-code",
   "record_id": "req_cc23ca79306a:msg_5c51fb30ea75",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:17:56.610Z",
@@ -263,7 +281,8 @@
   "cache_write_1h_tokens": 938,
   "source": "claude-code",
   "record_id": "req_d6f8917fccea:msg_c10bdb1ce635",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:18:07.571Z",
@@ -277,7 +296,8 @@
   "cache_write_1h_tokens": 1141,
   "source": "claude-code",
   "record_id": "req_0815b3648895:msg_7c66ec4d06f8",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:18:39.043Z",
@@ -291,7 +311,8 @@
   "cache_write_1h_tokens": 1297,
   "source": "claude-code",
   "record_id": "req_f6e1f66242be:msg_199153633d23",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:19:00.240Z",
@@ -305,7 +326,8 @@
   "cache_write_1h_tokens": 1352,
   "source": "claude-code",
   "record_id": "req_d040f56d4565:msg_b84af3c3d5d8",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:19:12.299Z",
@@ -319,7 +341,8 @@
   "cache_write_1h_tokens": 1175,
   "source": "claude-code",
   "record_id": "req_6518a5336d81:msg_03a1811e47c2",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:20:44.594Z",
@@ -333,7 +356,8 @@
   "cache_write_1h_tokens": 511,
   "source": "claude-code",
   "record_id": "req_9d73c85f5350:msg_e5bfde20e52d",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:01:04.147Z",
@@ -347,7 +371,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:01:04.147Z#79d56b9fe5e4ce76",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:02:45.445Z",
@@ -361,7 +386,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:02:45.445Z#e37c4bc610773660",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:04:23.928Z",
@@ -375,7 +401,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:04:23.928Z#399f354fd95ae23d",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:04:28.885Z",
@@ -389,7 +416,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:04:28.885Z#3014d840bc2196f0",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:05:13.114Z",
@@ -403,7 +431,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:05:13.114Z#b976cc3ee2790d7a",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:05:18.190Z",
@@ -417,7 +446,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:05:18.190Z#906d6f3215c0fd54",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:06:07.747Z",
@@ -431,7 +461,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:06:07.747Z#37d531d3e89fb2c8",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:06:34.432Z",
@@ -445,7 +476,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_c5fd79befb51@2026-09-15T10:06:34.432Z#a0424481768d694e",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-16T10:00:04.376Z",
@@ -459,7 +491,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_e67f39d32550@2026-09-16T10:00:04.376Z#aa2c68388fa26ffb",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-16T10:00:30.978Z",
@@ -473,7 +506,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_e67f39d32550@2026-09-16T10:00:30.978Z#9e0709281bcc7886",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-16T10:02:04.756Z",
@@ -487,7 +521,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_e67f39d32550@2026-09-16T10:02:04.756Z#117d2bcd66b41d1c",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-16T10:03:42.680Z",
@@ -501,7 +536,8 @@
   "cache_write_1h_tokens": 0,
   "source": "codex",
   "record_id": "session_e67f39d32550@2026-09-16T10:03:42.680Z#83d15778edaa23ab",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": "/home/dev/dir_890b45ea7564"
  },
  {
   "timestamp": "2026-09-15T10:00:26.155000+00:00",
@@ -515,7 +551,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466426155#76f9c8d88dd69eff",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:00:34.470000+00:00",
@@ -529,7 +566,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466434470#6c1e756fd58c4411",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:00:44.702000+00:00",
@@ -543,7 +581,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466444702#0b226d98e815eb6f",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:00:47.413000+00:00",
@@ -557,7 +596,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466447413#ca393e5bd6d0d3ac",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:03:02.461000+00:00",
@@ -571,7 +611,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466582461#cb66c41b98e61256",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:03:06.279000+00:00",
@@ -585,7 +626,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466586279#777586967982c32c",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:04:00.096000+00:00",
@@ -599,7 +641,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466640096#229b18cd7c694bbc",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:04:14.756000+00:00",
@@ -613,7 +656,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466654756#0b97307bcb2c5830",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:04:18.569000+00:00",
@@ -627,7 +671,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789466658569#9d62c37179e2416e",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:02.292000+00:00",
@@ -641,7 +686,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467122292#cc68e5a7481cc8cc",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:09.921000+00:00",
@@ -655,7 +701,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467129921#ee7caab8a9ecd85d",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:16.228000+00:00",
@@ -669,7 +716,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467136228#674d846832cbd029",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:34.559000+00:00",
@@ -683,7 +731,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467154559#b844e3e798e6bcc5",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:42.944000+00:00",
@@ -697,7 +746,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467162944#984d3b88b21de345",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:48.880000+00:00",
@@ -711,7 +761,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467168880#d6617a160818cdbd",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:12:56.012000+00:00",
@@ -725,7 +776,8 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467176012#3268bb569215ba11",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  },
  {
   "timestamp": "2026-09-15T10:13:02.265000+00:00",
@@ -739,6 +791,7 @@
   "cache_write_1h_tokens": 0,
   "source": "kimi-code",
   "record_id": "session_real/main@1789467182265#30a233ab8ee18f41",
-  "price_modifiers": ""
+  "price_modifiers": "",
+  "cwd": ""
  }
 ]
