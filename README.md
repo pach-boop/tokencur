@@ -123,6 +123,28 @@ by source:
 API-EQUIVALENT TOTAL (showback): $817.90
 ```
 
+## Performance
+
+On the maintainer's machine the full pipeline reads 10.7k model calls from
+~400 MB of real logs in 1.8 s. Real transcripts carry the conversations,
+which tokencur skips. For scale,
+[`scripts/benchmark.py`](scripts/benchmark.py) times every stage on synthetic
+metadata-only logs (Python 3.13, Intel i7-1355U, Linux):
+
+| Stage | 100k messages | 1M messages |
+|---|---:|---:|
+| Scan logs (38 MB / 376 MB) | 0.6 s | 6.3 s |
+| Ledger write | 0.2 s | 2.5 s |
+| Rescan, adds nothing | 0.2 s | 2.4 s |
+| Ledger read | 0.4 s | 5.1 s |
+| Report | 0.1 s | 1.4 s |
+| FOCUS export (0.4M / 4M rows) | 5.6 s | 55.9 s |
+| Peak memory | 139 MB | 1.1 GB |
+
+Time grows linearly. The benchmark holds the scanned and the stored history at
+once, so its peak memory is about twice what one command needs. Reproduce with
+`python scripts/benchmark.py --messages 1000000 --files 2000`.
+
 ## Ledger
 
 Coding agents treat their logs as disposable: Claude Code deletes session
