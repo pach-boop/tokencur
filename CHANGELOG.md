@@ -84,6 +84,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- `recommendations()` walked its input twice, so a generator (any
+  one-shot iterable) silently lost every right-sizing result. It now
+  materializes the records once; a regression test feeds it a
+  generator.
 - Pricing snapshot no longer loses models that LiteLLM prunes upstream.
   Retired models keep their last known rate, flagged
   `retired_upstream`, so historical usage stays priced; 56 models
