@@ -240,9 +240,10 @@ scan.
 tokencur's headline figures are **not** a bill. Three money concepts, kept
 deliberately apart:
 
-- **Actual outlay** — the flat subscription fees really paid, declared in
-  [`subscriptions.json`](./subscriptions.json), and provider bills imported as
-  billed charges (see [Billed cost](#billed-cost)). The only real money here.
+- **Actual outlay** — the subscription fees really paid, declared plan by plan
+  in [`subscriptions.json`](./subscriptions.json) with the days each plan was
+  active, and provider bills imported as billed charges (see
+  [Billed cost](#billed-cost)). The only real money here.
 - **Usage value (showback)** — what the same usage would cost at API list
   prices. Subscriptions don't bill per token, so tokencur *values* the usage
   instead of pretending to bill it.
@@ -251,7 +252,20 @@ deliberately apart:
   subscription, right-sizing buys rate-limit headroom, not dollars.
 
 Divide value by outlay and you get the observatory's headline metric:
-**subscription leverage** — how many times over the flat fee pays for itself.
+**subscription leverage** — how many times over the fees pay for themselves.
+
+A plan counts only while it was active. `from` is its first day and `until` the
+first day it no longer applied, like a billing period; an upgrade is two plans:
+
+```json
+{"plans": {"Claude Code": [
+  {"monthly_usd": 20, "from": "2026-09-24", "until": "2026-10-02"},
+  {"monthly_usd": 100, "from": "2026-10-02"}
+]}}
+```
+
+A flat `monthly_usd` fee per service still works and counts across the whole
+window.
 
 ## Observatory
 

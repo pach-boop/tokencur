@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **Subscription plans with dates.** `subscriptions.json` can list each
+  service's plans with the days they were active (`from` included,
+  `until` excluded): an upgrade, a cancellation, a late start. The
+  observatory counts each fee only while its plan was active, shows the
+  plans in words with any assumption behind their dates, and reports the
+  fees paid on the window's last day as "subscriptions / month now". A
+  flat `monthly_usd` fee still reads as one plan across the whole window.
+
 ## [0.3.0] - 2026-10-02
 
 ### Added

@@ -9,8 +9,9 @@ geometry is computed here; the browser only draws tooltips.
 
 Money concepts are kept apart on purpose (see README):
 
-- **Actual outlay** — the flat subscription fees the maintainer really
-  pays (``subscriptions.json``). The only real money on the page.
+- **Actual outlay** — the subscription fees the maintainer really pays,
+  plan by plan (``subscriptions.json``): each fee counts only while its
+  plan was active. The only real money on the page, with provider bills.
 - **Usage value (showback)** — what the same usage would cost at API
   list prices. A valuation, not spend.
 - **Counterfactuals** — cost avoided by provider caching and what-if
@@ -36,7 +37,7 @@ from __future__ import annotations
 import html
 import json
 import sys
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from tokencur.focus import to_focus_rows, unpriced_models
@@ -71,12 +72,31 @@ SERVICE_CLASS = {
 
 
 def load_subscriptions(path: Path = DEFAULT_SUBSCRIPTIONS) -> dict | None:
-    """Read ``subscriptions.json``: the flat monthly fees the maintainer
-    actually pays (``monthly_usd``) and any known ``history_gaps``."""
+    """Read ``subscriptions.json``: the fees the maintainer actually pays,
+    as dated ``plans`` or flat ``monthly_usd`` fees, and any known
+    ``history_gaps``."""
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
-    return data if data.get("monthly_usd") else None
+    return data if data.get("plans") or data.get("monthly_usd") else None
+
+
+def _plans(subscriptions: dict | None) -> dict[str, list[dict]]:
+    """Each service's plans. ``plans`` lists them with the days they were
+    active: ``from`` included, ``until`` excluded, like a billing period.
+    A flat ``monthly_usd`` fee reads as one plan across the whole window."""
+    subscriptions = subscriptions or {}
+    plans = {
+        service: [{"monthly_usd": fee}]
+        for service, fee in (subscriptions.get("monthly_usd") or {}).items()
+    }
+    for service, entries in (subscriptions.get("plans") or {}).items():
+        plans[service] = list(entries)
+    return plans
+
+
+def _day(text: str | None, default: date) -> date:
+    return date.fromisoformat(text) if text else default
 
 
 def _history_gaps(daily: dict, subscriptions: dict | None) -> list[dict]:
@@ -109,28 +129,48 @@ def _money(
 ) -> dict | None:
     """Real-outlay block: subscription fees over the data window vs usage value.
 
-    Every fee counts across the whole calendar window — a paid month with
-    no usage is real money — except across a declared history gap, where
-    the usage happened but its record was lost.
+    Each plan's fee counts for the days it was active within the calendar
+    window — a paid month with no usage is real money — except across a
+    declared history gap, where the usage happened but its record was lost.
     """
-    fees = (subscriptions or {}).get("monthly_usd") or {}
-    if not fees or not daily or total <= 0:
-        return None
-    monthly = round(sum(fees.values()), 2)
-    if monthly <= 0:
+    plans = _plans(subscriptions)
+    if not plans or not daily or total <= 0:
         return None
     days = sorted(daily)
-    span_days = (date.fromisoformat(days[-1]) - date.fromisoformat(days[0])).days + 1
-    excluded = {g["service"]: g["excluded_days"] for g in gaps}
-    outlay = sum(
-        fee * (span_days - excluded.get(service, 0)) / DAYS_PER_MONTH
-        for service, fee in fees.items()
-    )
+    start, last = date.fromisoformat(days[0]), date.fromisoformat(days[-1])
+    end = last + timedelta(days=1)
+    lost = {g["service"]: date.fromisoformat(g["before"]) for g in gaps}
+    counted = []
+    for service, entries in sorted(plans.items()):
+        for plan in entries:
+            begin = max(start, _day(plan.get("from"), start), lost.get(service, start))
+            stop = min(end, _day(plan.get("until"), end))
+            active = max((stop - begin).days, 0)
+            counted.append(
+                {
+                    "service": service,
+                    "monthly_usd": plan["monthly_usd"],
+                    "from": plan.get("from"),
+                    "until": plan.get("until"),
+                    "days_counted": active,
+                    "outlay_usd": round(
+                        plan["monthly_usd"] * active / DAYS_PER_MONTH, 2
+                    ),
+                    **({"note": plan["note"]} if plan.get("note") else {}),
+                }
+            )
+    outlay = sum(p["monthly_usd"] * p["days_counted"] / DAYS_PER_MONTH for p in counted)
     if outlay <= 0:
         return None
+    current: dict[str, float] = {}  # fees of the plans active on the last day
+    for p in counted:
+        if _day(p["from"], start) <= last < _day(p["until"], end):
+            current[p["service"]] = current.get(p["service"], 0.0) + p["monthly_usd"]
+    span_days = (end - start).days
     return {
-        "subscriptions_monthly_usd": dict(sorted(fees.items())),
-        "monthly_total_usd": monthly,
+        "plans": counted,
+        "subscriptions_monthly_usd": dict(sorted(current.items())),
+        "monthly_total_usd": round(sum(current.values()), 2),
         "window_days": span_days,
         "window_months": round(span_days / DAYS_PER_MONTH, 2),
         "estimated_outlay_usd": round(outlay, 2),
@@ -240,6 +280,35 @@ def snapshot(
 
 def _usd(x: float) -> str:
     return f"${x:,.2f}"
+
+
+def _plan_terms(plans: list[dict]) -> str:
+    """Plans in words: 'Claude Code $20/mo from 2026-09-24 to 2026-10-01,
+    then $100/mo from 2026-10-02; Codex CLI $20/mo until 2026-04-30'."""
+    terms: dict[str, list[str]] = {}
+    for p in plans:
+        fee = p["monthly_usd"]
+        price = f"${fee:,.0f}" if float(fee).is_integer() else _usd(fee)
+        terms.setdefault(p["service"], []).append(
+            f"{price}/mo{_active(p.get('from'), p.get('until'))}"
+        )
+    return "; ".join(
+        f"{service} {', then '.join(parts)}" for service, parts in terms.items()
+    )
+
+
+def _active(start: str | None, until: str | None) -> str:
+    """A plan's dates in words, with the last day included."""
+    last = (
+        (date.fromisoformat(until) - timedelta(days=1)).isoformat() if until else None
+    )
+    if start and last:
+        return f" from {start} to {last}"
+    if start:
+        return f" from {start}"
+    if last:
+        return f" until {last}"
+    return ""
 
 
 def _nice_ceiling(x: float) -> float:
@@ -372,14 +441,15 @@ def render_html(snap: dict) -> str:
     billed = snap.get("billed")
     money_section = ""
     if money:
-        subs = " + ".join(
-            f"{name} {_usd(fee)}"
-            for name, fee in money["subscriptions_monthly_usd"].items()
+        notes = "".join(
+            f"<br>{html.escape(p['service'])}: {html.escape(p['note'])}"
+            for p in money["plans"]
+            if p.get("note")
         )
         money_section = (
             "<h2>What is actually paid</h2>"
             '<div class="kpis">'
-            + _kpi("subscriptions / month", _usd(money["monthly_total_usd"]))
+            + _kpi("subscriptions / month now", _usd(money["monthly_total_usd"]))
             + _kpi(
                 f"est. outlay over {money['window_months']:g} months",
                 _usd(money["estimated_outlay_usd"]),
@@ -387,7 +457,9 @@ def render_html(snap: dict) -> str:
             + _kpi("subscription leverage", f"{money['leverage']:g}×")
             + _kpi("effective discount vs API", f"{money['effective_discount_pct']:g}%")
             + "</div>"
-            f'<p class="muted">Flat fees really paid ({html.escape(subs)}): actual money. '
+            '<p class="muted">Subscription fees really paid, each counted only '
+            f"while its plan was active ({html.escape(_plan_terms(money['plans']))}): "
+            "actual money. "
             "Leverage = API-equivalent usage value ÷ estimated outlay "
             "over the same window"
             + (
@@ -395,7 +467,9 @@ def render_html(snap: dict) -> str:
                 if snap.get("history_gaps")
                 else ""
             )
-            + ".</p>"
+            + "."
+            + notes
+            + "</p>"
         )
     if billed:
         services = " + ".join(
@@ -412,7 +486,7 @@ def render_html(snap: dict) -> str:
             "compute rather than coding-agent usage, so they stay out of "
             "subscription leverage.</p>"
         )
-    fees = (money or {}).get("subscriptions_monthly_usd", {})
+    fees = {p["service"] for p in (money or {}).get("plans", [])}
     gap_note = "".join(
         '<p class="note">'
         f"<strong>History gap · {html.escape(g['service'])}</strong> — no usage on record "
