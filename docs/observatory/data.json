@@ -1,13 +1,13 @@
 {
- "generated_at": "2026-10-02 19:30 UTC",
+ "generated_at": "2026-10-02 22:53 UTC",
  "rates_as_of": "2026-10-02",
  "kpis": {
-  "total_usd": 838.93,
+  "total_usd": 920.18,
   "days": 52,
-  "avg_day_usd": 16.13,
-  "messages": 10901,
-  "achieved_savings_usd": 5430.93,
-  "potential_savings_usd": 191.92
+  "avg_day_usd": 17.7,
+  "messages": 11398,
+  "achieved_savings_usd": 6339.98,
+  "potential_savings_usd": 208.47
  },
  "daily": [
   {
@@ -319,15 +319,15 @@
   {
    "day": "2026-10-02",
    "services": {
-    "Claude Code": 88.2722
+    "Claude Code": 169.526
    }
   }
  ],
  "by_model": [
   {
    "model": "claude-opus-5-5",
-   "cost_usd": 492.46,
-   "tokens": 1133736910
+   "cost_usd": 573.72,
+   "tokens": 1377096895
   },
   {
    "model": "gpt-5.4",
@@ -373,15 +373,15 @@
  "by_bucket": [
   {
    "bucket": "cache-read",
-   "cost_usd": 366.91
+   "cost_usd": 415.07
   },
   {
    "bucket": "cache-write-1h",
-   "cost_usd": 183.99
+   "cost_usd": 195.99
   },
   {
    "bucket": "output",
-   "cost_usd": 153.72
+   "cost_usd": 174.8
   },
   {
    "bucket": "input",
@@ -396,8 +396,8 @@
   {
    "kind": "achieved",
    "title": "Prompt caching on claude-opus-5-5",
-   "savings_usd": 4117.47,
-   "savings_pct": 91.2
+   "savings_usd": 5026.52,
+   "savings_pct": 91.6
   },
   {
    "kind": "achieved",
@@ -414,8 +414,8 @@
   {
    "kind": "potential",
    "title": "Right-size claude-opus-5-5 → claude-sonnet-5-5",
-   "savings_usd": 135.55,
-   "savings_pct": 27.5
+   "savings_usd": 152.09,
+   "savings_pct": 26.5
   },
   {
    "kind": "potential",
@@ -484,21 +484,67 @@
  "corrections": [
   {
    "date": "2026-10-02",
+   "what": "Subscription fees were counted across the whole window, as if all three plans had been paid every day of it. Each plan now counts only while it was active: Codex CLI through April 2026, Kimi Code from June to September 2026, and Claude Code from 2026-09-24, upgraded from $20 to $100 a month on 2026-10-02. For 2026-02-07 to 2026-10-02 the page had published $240.49 of estimated outlay and 3.5× subscription leverage; counted plan by plan, the same window comes to $96.59 and 8.7×."
+  },
+  {
+   "date": "2026-10-02",
    "what": "Codex usage was counted about twice: Codex re-sends each usage report, and earlier snapshots counted every copy. Codex usage value went from $685.66 to $332.95; every Codex session now reconciles with Codex's own running total. Details in the changelog."
   }
  ],
- "money": {
-  "subscriptions_monthly_usd": {
-   "Claude Code": 20.0,
-   "Codex CLI": 20.0,
-   "Kimi Code": 10.0
+ "billed": {
+  "total_usd": 2.69,
+  "by_service": {
+   "RunPod Pods": 2.69
   },
-  "monthly_total_usd": 50.0,
+  "charges": 20
+ },
+ "money": {
+  "plans": [
+   {
+    "service": "Claude Code",
+    "monthly_usd": 20.0,
+    "from": "2026-09-24",
+    "until": "2026-10-02",
+    "days_counted": 8,
+    "outlay_usd": 5.26,
+    "note": "Pro for about a week before the upgrade, counted from 2026-09-24, the first day on record."
+   },
+   {
+    "service": "Claude Code",
+    "monthly_usd": 100.0,
+    "from": "2026-10-02",
+    "until": null,
+    "days_counted": 1,
+    "outlay_usd": 3.29
+   },
+   {
+    "service": "Codex CLI",
+    "monthly_usd": 20.0,
+    "from": null,
+    "until": "2026-05-01",
+    "days_counted": 83,
+    "outlay_usd": 54.54,
+    "note": "ChatGPT Plus, no longer paid. Its cancellation date was not recorded, so it counts through April 2026, the month Codex CLI was last used."
+   },
+   {
+    "service": "Kimi Code",
+    "monthly_usd": 10.0,
+    "from": "2026-06-21",
+    "until": "2026-10-01",
+    "days_counted": 102,
+    "outlay_usd": 33.51,
+    "note": "No longer paid. Its dates were not recorded, so it counts from the first day Kimi Code was used through September 2026, the month it was last used."
+   }
+  ],
+  "subscriptions_monthly_usd": {
+   "Claude Code": 100.0
+  },
+  "monthly_total_usd": 100.0,
   "window_days": 238,
   "window_months": 7.82,
-  "estimated_outlay_usd": 240.49,
-  "api_equivalent_usd": 838.93,
-  "leverage": 3.5,
-  "effective_discount_pct": 71.3
+  "estimated_outlay_usd": 96.59,
+  "api_equivalent_usd": 920.18,
+  "leverage": 9.5,
+  "effective_discount_pct": 89.5
  }
 }

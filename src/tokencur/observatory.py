@@ -52,6 +52,16 @@ DEFAULT_SUBSCRIPTIONS = Path("subscriptions.json")
 CORRECTIONS: tuple[dict[str, str], ...] = (
     {
         "date": "2026-10-02",
+        "what": "Subscription fees were counted across the whole window, as if "
+        "all three plans had been paid every day of it. Each plan now counts "
+        "only while it was active: Codex CLI through April 2026, Kimi Code from "
+        "June to September 2026, and Claude Code from 2026-09-24, upgraded from "
+        "$20 to $100 a month on 2026-10-02. For 2026-02-07 to 2026-10-02 the "
+        "page had published $240.49 of estimated outlay and 3.5× subscription "
+        "leverage; counted plan by plan, the same window comes to $96.59 and 8.7×.",
+    },
+    {
+        "date": "2026-10-02",
         "what": "Codex usage was counted about twice: Codex re-sends each usage "
         "report, and earlier snapshots counted every copy. Codex usage value "
         "went from $685.66 to $332.95; every Codex session now reconciles with "

@@ -15,6 +15,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   fees paid on the window's last day as "subscriptions / month now". A
   flat `monthly_usd` fee still reads as one plan across the whole window.
 
+### Fixed
+
+- The published observatory overstated what the maintainer pays. It
+  counted all three subscription fees across the whole window, while
+  Codex CLI's plan ended in April, Kimi Code's ran from June to
+  September, and Claude Code's started on 2026-09-24 and moved from $20
+  to $100 on 2026-10-02. For 2026-02-07 to 2026-10-02, estimated outlay
+  goes from $240.49 to $96.59 and subscription leverage from 3.5x to
+  8.7x. The page discloses the correction.
+
 ## [0.3.0] - 2026-10-02
 
 ### Added
