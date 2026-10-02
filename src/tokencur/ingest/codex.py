@@ -13,6 +13,12 @@ Mapping notes:
 - ``output_tokens`` already includes reasoning tokens
   (``reasoning_output_tokens`` is an informational subset).
 - OpenAI bills no cache-write premium, so write tiers are zero.
+- Codex re-sends an unchanged report under a new timestamp (alongside
+  rate-limit updates). Each event also carries the session's running
+  ``total_token_usage``; only an event that moves it is a new model
+  call. Counting every event roughly doubled Codex usage; with this
+  rule, the counted calls sum to Codex's own running total. Reports
+  with no billable tokens (only ``total_tokens`` moved) are no call.
 """
 
 from __future__ import annotations
@@ -37,7 +43,7 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
     workspace = ""
     session_id = ""
     model = "unknown"
-    previous: tuple | None = None
+    previous: object = None  # last running total (or report) seen
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             if not any(marker in line for marker in _INTERESTING):
@@ -58,9 +64,27 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
             elif entry.get("type") == "turn_context":
                 model = payload.get("model") or model
             elif payload.get("type") == "token_count":
-                usage = (payload.get("info") or {}).get("last_token_usage")
+                info = payload.get("info") or {}
+                usage = info.get("last_token_usage")
                 if not usage:
                     continue  # rate-limit-only updates carry no usage
+                # A re-sent report leaves the running total where it was.
+                # Logs without a total fall back to skipping a consecutive
+                # report that is identical, timestamp included.
+                total = info.get("total_token_usage")
+                marker = total if total is not None else (entry.get("timestamp"), usage)
+                if marker == previous:
+                    continue
+                previous = marker
+                if not any(
+                    usage.get(field)
+                    for field in (
+                        "input_tokens",
+                        "cached_input_tokens",
+                        "output_tokens",
+                    )
+                ):
+                    continue  # moved only total_tokens: no billable call
                 cached = usage.get("cached_input_tokens", 0) or 0
                 timestamp = entry.get("timestamp", "")
                 record = UsageRecord(
@@ -78,14 +102,4 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                     # plus the event timestamp identify the call.
                     record_id=f"{session_id}@{timestamp}#{fingerprint(usage)}",
                 )
-                # Defensive: skip consecutive identical reports.
-                key = (
-                    record.timestamp,
-                    record.input_tokens,
-                    record.output_tokens,
-                    record.cache_read_tokens,
-                )
-                if key == previous:
-                    continue
-                previous = key
                 yield record

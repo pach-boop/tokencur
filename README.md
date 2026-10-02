@@ -131,6 +131,11 @@ history:
   ids, in a file readable by its owner only.
 - **Location** — `~/.local/share/tokencur/ledger.sqlite3` (honours
   `$XDG_DATA_HOME`), or wherever `$TOKENCUR_LEDGER` points.
+- **Corrections are audited, not erased** — the schema is versioned and
+  migrated in place. Before an upgrade the file is copied to
+  `ledger.sqlite3.schema-N.bak`, and rows a later version finds were not
+  usage move to a `superseded` table with when and why. Schema 2 retired the
+  Codex re-sent reports earlier versions double counted (see the changelog).
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -202,8 +207,11 @@ face.
 - The ledger can only keep usage it has seen. Run tokencur more often than
   Claude Code's `cleanupPeriodDays`, or raise that setting in
   `~/.claude/settings.json`.
-- Codex records are taken from `token_count` events as reported, with only a
-  consecutive-duplicate guard — no cross-file dedup yet.
+- Codex calls are counted when the session's running total moves; per session,
+  the counted calls reconcile exactly with Codex's own running total (all 94 of
+  the maintainer's rollouts). Codex ids include the session id, so a fork that
+  copied earlier reports into a new rollout would count them again; none of
+  those 94 rollouts share an event.
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
