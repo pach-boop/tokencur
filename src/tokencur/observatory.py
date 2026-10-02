@@ -18,6 +18,11 @@ Money concepts are kept apart on purpose (see README):
   actions taken; under a flat subscription, right-sizing buys rate-limit
   headroom, not dollars.
 
+History gaps declared in ``subscriptions.json`` (usage that happened but
+whose logs were lost before the ledger existed) are disclosed in a note
+at the top of the page, and the affected fee is not counted across the
+gap — a lost record is not a month paid for nothing.
+
 Privacy: the snapshot publishes aggregates only — day x service, model
 and token-bucket totals, and the recommendation headlines. Workspace
 names, session ids and message content never enter the output.
@@ -31,7 +36,7 @@ from __future__ import annotations
 import html
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from tokencur.focus import to_focus_rows, unpriced_models
@@ -51,31 +56,62 @@ SERVICE_CLASS = {"Claude Code": "sv-claude", "Codex CLI": "sv-codex", "Kimi Code
 
 
 def load_subscriptions(path: Path = DEFAULT_SUBSCRIPTIONS) -> dict | None:
-    """Read the flat monthly fees the maintainer actually pays, if declared."""
+    """Read ``subscriptions.json``: the flat monthly fees the maintainer
+    actually pays (``monthly_usd``) and any known ``history_gaps``."""
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
-    return data.get("monthly_usd") or None
+    return data if data.get("monthly_usd") else None
 
 
-def _money(total: float, daily: dict, subscriptions: dict | None) -> dict | None:
-    """Real-outlay block: window-scaled subscription cost vs usage value."""
-    if not subscriptions or not daily or total <= 0:
+def _history_gaps(daily: dict, subscriptions: dict | None) -> list[dict]:
+    """Declared gaps, clipped to the data window: ``excluded_days`` counts
+    the window days before ``before`` that have no usage on record."""
+    declared = (subscriptions or {}).get("history_gaps") or {}
+    if not declared or not daily:
+        return []
+    days = sorted(daily)
+    start, end = date.fromisoformat(days[0]), date.fromisoformat(days[-1])
+    span_days = (end - start).days + 1
+    gaps = []
+    for service, gap in sorted(declared.items()):
+        before = date.fromisoformat(gap["before"])
+        excluded = min(max((before - start).days, 0), span_days)
+        if excluded:
+            gaps.append({"service": service, "before": gap["before"],
+                         "excluded_days": excluded, "why": gap.get("why", "")})
+    return gaps
+
+
+def _money(
+    total: float, daily: dict, subscriptions: dict | None, gaps: list[dict]
+) -> dict | None:
+    """Real-outlay block: subscription fees over the data window vs usage value.
+
+    Every fee counts across the whole calendar window — a paid month with
+    no usage is real money — except across a declared history gap, where
+    the usage happened but its record was lost.
+    """
+    fees = (subscriptions or {}).get("monthly_usd") or {}
+    if not fees or not daily or total <= 0:
         return None
-    monthly = round(sum(subscriptions.values()), 2)
+    monthly = round(sum(fees.values()), 2)
     if monthly <= 0:
         return None
     days = sorted(daily)
-    span_days = (
-        datetime.strptime(days[-1], "%Y-%m-%d") - datetime.strptime(days[0], "%Y-%m-%d")
-    ).days + 1
-    months = span_days / DAYS_PER_MONTH
-    outlay = monthly * months
+    span_days = (date.fromisoformat(days[-1]) - date.fromisoformat(days[0])).days + 1
+    excluded = {g["service"]: g["excluded_days"] for g in gaps}
+    outlay = sum(
+        fee * (span_days - excluded.get(service, 0)) / DAYS_PER_MONTH
+        for service, fee in fees.items()
+    )
+    if outlay <= 0:
+        return None
     return {
-        "subscriptions_monthly_usd": dict(sorted(subscriptions.items())),
+        "subscriptions_monthly_usd": dict(sorted(fees.items())),
         "monthly_total_usd": monthly,
         "window_days": span_days,
-        "window_months": round(months, 2),
+        "window_months": round(span_days / DAYS_PER_MONTH, 2),
         "estimated_outlay_usd": round(outlay, 2),
         "api_equivalent_usd": round(total, 2),
         "leverage": round(total / outlay, 1),
@@ -88,6 +124,8 @@ def snapshot(records: list, subscriptions: dict | None = None) -> dict:
 
     Reads only day, service, model, token bucket, cost and quantity from
     the FOCUS rows — nothing identifying survives the aggregation.
+    ``subscriptions`` is the parsed ``subscriptions.json`` (see
+    ``load_subscriptions``): fees and declared history gaps.
     """
     daily: dict[str, dict[str, float]] = {}
     by_model: dict[str, dict[str, float]] = {}
@@ -149,7 +187,10 @@ def snapshot(records: list, subscriptions: dict | None = None) -> dict:
         ],
         "unpriced": dict(sorted(unpriced_models(records).items())),
     }
-    money = _money(total, daily, subscriptions)
+    gaps = _history_gaps(daily, subscriptions)
+    if gaps:
+        snap["history_gaps"] = gaps
+    money = _money(total, daily, subscriptions, gaps)
     if money:
         snap["money"] = money
     return snap
@@ -308,8 +349,24 @@ def render_html(snap: dict) -> str:
             + "</div>"
             f'<p class="muted">Flat fees really paid ({html.escape(subs)}) — the only actual '
             "money on this page. Leverage = API-equivalent usage value ÷ estimated outlay "
-            "over the same window.</p>"
+            "over the same window"
+            + (" (fees not counted across the history gap above)" if snap.get("history_gaps") else "")
+            + ".</p>"
         )
+    fees = (money or {}).get("subscriptions_monthly_usd", {})
+    gap_note = "".join(
+        '<p class="note">'
+        f'<strong>History gap · {html.escape(g["service"])}</strong> — no usage on record '
+        f'before {html.escape(g["before"])}. {html.escape(g["why"])}'
+        + (
+            " Its subscription fee is not counted across the gap, so lost records "
+            "don't read as months paid for nothing."
+            if g["service"] in fees
+            else ""
+        )
+        + "</p>"
+        for g in snap.get("history_gaps", [])
+    )
 
     showback = "".join(
         [
@@ -378,6 +435,7 @@ body {{ background:var(--surface); color:var(--ink); font:15px/1.5 system-ui,-ap
 h1 {{ font-size:1.5rem }} h2 {{ font-size:1.05rem; margin:36px 0 12px }}
 .sub {{ color:var(--ink-2); margin:4px 0 24px }}
 .muted {{ color:var(--muted); font-size:.85rem; margin-top:8px }}
+.note {{ background:var(--card); border-left:3px solid var(--muted); border-radius:6px; padding:10px 14px; color:var(--ink-2); font-size:.85rem; margin:0 0 10px }}
 .kpis {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px }}
 .kpi {{ background:var(--card); border-radius:10px; padding:14px 16px }}
 .kpi-value {{ font-size:1.35rem; font-weight:650; font-variant-numeric:tabular-nums }}
@@ -411,7 +469,7 @@ footer a {{ color:var(--ink-2) }}
 <p class="sub">What the maintainer actually pays for AI subscriptions vs what the same usage
 would cost at API list prices — real fees, showback valuation and counterfactuals, kept apart.
 Aggregates only: no workspaces, no sessions, no content.</p>
-{money_section}
+{gap_note}{money_section}
 <h2>Usage value — showback, not money spent</h2>
 <div class="kpis">{showback}</div>
 <p class="muted">Subscriptions bill a flat fee, not per token. These figures value the usage
