@@ -22,7 +22,7 @@ from pathlib import Path
 from tokencur import __version__, doctor, ledger, observatory, prices
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
-from tokencur.ingest import claude_code
+from tokencur.ingest import claude_code, runpod
 from tokencur.pricing import ConfigError, load_discounts
 from tokencur.recommend import recommendations, render
 from tokencur.records import UsageRecord, in_period
@@ -109,6 +109,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     card.set_defaults(handler=_prices)
 
+    keep = commands.add_parser(
+        "import",
+        help="keep a provider's billing export (billed cost) in the ledger",
+    )
+    keep.add_argument("provider", choices=["runpod"])
+    keep.add_argument("files", nargs="+", type=Path, help="exports to import")
+    keep.set_defaults(handler=_import)
+
     check = commands.add_parser(
         "doctor",
         help="check log formats, the ledger and pricing (read-only)",
@@ -152,6 +160,16 @@ def _positive(text: str) -> float:
     if not value > 0:
         raise argparse.ArgumentTypeError(f"must be above 0: {text!r}")
     return value
+
+
+def _charges(args: argparse.Namespace) -> list:
+    """Billed charges in the ledger for the command's period. An explicit
+    log root is an ad hoc look at those logs alone, so it gets none."""
+    if getattr(args, "root", None) is not None:
+        return []
+    return in_period(
+        ledger.read_charges(), args.since, args.until, when=lambda c: c.period_start
+    )
 
 
 def _discounts(args: argparse.Namespace) -> dict[str, float] | None:
@@ -202,7 +220,15 @@ def _report(args: argparse.Namespace) -> int:
         _fail(f"no usage {_period(args)}")
         return 1
     fx = (args.currency, args.fx_rate) if args.currency else None
-    print(summarize(records, period=_period(args), discounts=_discounts(args), fx=fx))
+    print(
+        summarize(
+            records,
+            period=_period(args),
+            discounts=_discounts(args),
+            fx=fx,
+            charges=_charges(args),
+        )
+    )
     return 0
 
 
@@ -210,7 +236,7 @@ def _export(args: argparse.Namespace) -> int:
     records = _records(args)
     if records is None:
         return 1
-    rows = export_csv(records, args.output, _discounts(args))
+    rows = export_csv(records, args.output, _discounts(args), _charges(args))
     print(f"wrote {rows} FOCUS charge rows to {args.output}", file=sys.stderr)
     skipped = unpriced_models(records)
     if skipped:
@@ -240,7 +266,9 @@ def _observatory(args: argparse.Namespace) -> int:
     if not records:
         _fail(_NOTHING)
         return 1
-    snap = observatory.snapshot(records, observatory.load_subscriptions())
+    snap = observatory.snapshot(
+        records, observatory.load_subscriptions(), ledger.read_charges()
+    )
     observatory.write_site(snap, args.outdir)
     print(f"observatory written to {args.outdir} ({len(records)} records aggregated)")
     return 0
@@ -262,3 +290,23 @@ def _doctor(args: argparse.Namespace) -> int:
     diagnosis = doctor.diagnose()
     print(doctor.render(diagnosis))
     return 1 if diagnosis.problems else 0
+
+
+def _import(args: argparse.Namespace) -> int:
+    charges = []
+    for path in args.files:
+        if not path.exists():
+            _fail(f"{path} does not exist")
+            return 1
+        charges.extend(runpod.iter_charges(path))
+    if not charges:
+        _fail("no billed charges in those files")
+        return 1
+    added = ledger.record_charges(charges)
+    total = sum(c.amount_usd for c in charges)
+    providers = ", ".join(sorted({c.provider for c in charges}))
+    print(
+        f"{len(charges)} billed charges ({added} new), ${total:,.2f} from "
+        f"{providers} — {ledger.default_path()}"
+    )
+    return 0

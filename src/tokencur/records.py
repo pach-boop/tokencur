@@ -48,6 +48,29 @@ class UsageRecord:
         return self.timestamp[:10]
 
 
+@dataclass(frozen=True, slots=True)
+class BilledCharge:
+    """Money a provider billed for one resource over one period.
+
+    A UsageRecord is valued by tokencur at list price (showback); a charge
+    is what the provider actually took: real outlay, never mixed with
+    showback (see ADR 0009).
+    """
+
+    source: str  # the ingester, e.g. "runpod"
+    record_id: str  # identity within the source, stable across imports
+    period_start: str  # ISO 8601 UTC, inclusive
+    period_end: str  # ISO 8601 UTC, exclusive
+    provider: str  # FOCUS ProviderName
+    service: str  # FOCUS ServiceName
+    resource_id: str  # what was billed, e.g. a pod id
+    resource_type: str  # FOCUS ResourceType, e.g. "GPU pod"
+    quantity: float  # usage billed, in `unit` (0 when only storage was billed)
+    unit: str  # FOCUS ConsumedUnit, e.g. "Hours"
+    amount_usd: float  # what was billed
+    detail: str = ""  # a note for people, e.g. "50 GB disk"
+
+
 def parse_timestamp(timestamp: str) -> datetime | None:
     """A logged timestamp as an aware UTC datetime; None if missing or malformed.
 
@@ -66,19 +89,22 @@ def parse_timestamp(timestamp: str) -> datetime | None:
 
 
 def in_period(
-    records: Iterable[UsageRecord], since: date | None, until: date | None
-) -> list[UsageRecord]:
+    records: Iterable, since: date | None, until: date | None, when=None
+) -> list:
     """Records whose UTC day is in ``[since, until)``; either bound optional.
 
     Billing convention: ``until`` is the first day *not* included. With a
     bound set, undated records are left out, since no period can hold
     them; with no bounds, every record is kept, undated ones included.
+    ``when`` picks the timestamp (default ``record.timestamp``; a billed
+    charge uses its ``period_start``).
     """
     if since is None and until is None:
         return list(records)
+    when = when or (lambda record: record.timestamp)
     kept = []
     for record in records:
-        moment = parse_timestamp(record.timestamp)
+        moment = parse_timestamp(when(record))
         if moment is None:
             continue
         day = moment.date()

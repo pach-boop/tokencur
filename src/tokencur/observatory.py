@@ -140,13 +140,17 @@ def _money(
     }
 
 
-def snapshot(records: list, subscriptions: dict | None = None) -> dict:
+def snapshot(
+    records: list, subscriptions: dict | None = None, charges: list | tuple = ()
+) -> dict:
     """Aggregate usage records into the public snapshot dict.
 
     Reads only day, service, model, token bucket, cost and quantity from
     the FOCUS rows — nothing identifying survives the aggregation.
     ``subscriptions`` is the parsed ``subscriptions.json`` (see
-    ``load_subscriptions``): fees and declared history gaps.
+    ``load_subscriptions``): fees and declared history gaps. ``charges``
+    are billed by providers (real money); only their totals per service
+    are published, never resource ids.
     """
     daily: dict[str, dict[str, float]] = {}
     by_model: dict[str, dict[str, float]] = {}
@@ -219,6 +223,15 @@ def snapshot(records: list, subscriptions: dict | None = None) -> dict:
     if gaps:
         snap["history_gaps"] = gaps
     snap["corrections"] = list(CORRECTIONS)
+    if charges:
+        by_service: dict[str, float] = {}
+        for c in charges:
+            by_service[c.service] = by_service.get(c.service, 0.0) + c.amount_usd
+        snap["billed"] = {
+            "total_usd": round(sum(by_service.values()), 2),
+            "by_service": {s: round(v, 2) for s, v in sorted(by_service.items())},
+            "charges": len(charges),
+        }
     money = _money(total, daily, subscriptions, gaps)
     if money:
         snap["money"] = money
@@ -356,6 +369,7 @@ def _kpi(label: str, value: str) -> str:
 def render_html(snap: dict) -> str:
     k = snap["kpis"]
     money = snap.get("money")
+    billed = snap.get("billed")
     money_section = ""
     if money:
         subs = " + ".join(
@@ -373,8 +387,8 @@ def render_html(snap: dict) -> str:
             + _kpi("subscription leverage", f"{money['leverage']:g}×")
             + _kpi("effective discount vs API", f"{money['effective_discount_pct']:g}%")
             + "</div>"
-            f'<p class="muted">Flat fees really paid ({html.escape(subs)}) — the only actual '
-            "money on this page. Leverage = API-equivalent usage value ÷ estimated outlay "
+            f'<p class="muted">Flat fees really paid ({html.escape(subs)}): actual money. '
+            "Leverage = API-equivalent usage value ÷ estimated outlay "
             "over the same window"
             + (
                 " (fees not counted across the history gap above)"
@@ -382,6 +396,21 @@ def render_html(snap: dict) -> str:
                 else ""
             )
             + ".</p>"
+        )
+    if billed:
+        services = " + ".join(
+            f"{html.escape(name)} {_usd(amount)}"
+            for name, amount in billed["by_service"].items()
+        )
+        money_section += (
+            ("" if money else "<h2>What is actually paid</h2>")
+            + '<div class="kpis">'
+            + _kpi("billed by providers", _usd(billed["total_usd"]))
+            + _kpi("billed charges", f"{billed['charges']:,}")
+            + "</div>"
+            f'<p class="muted">Provider bills ({services}) are real money too, for '
+            "compute rather than coding-agent usage, so they stay out of "
+            "subscription leverage.</p>"
         )
     fees = (money or {}).get("subscriptions_monthly_usd", {})
     gap_note = "".join(

@@ -31,14 +31,14 @@ import sqlite3
 import sys
 from collections.abc import Iterable
 from contextlib import closing
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from datetime import UTC, datetime
 from pathlib import Path
 
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
-from tokencur.records import UsageRecord
+from tokencur.records import BilledCharge, UsageRecord
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class LedgerError(RuntimeError):
@@ -93,6 +93,32 @@ _V2_SUPERSEDED = f"""CREATE TABLE IF NOT EXISTS superseded ({_V1_COLUMNS}
 )"""
 _V1_FIELDS = (*_FIELDS[:11], "first_seen")
 
+# Billed charges (schema 4): real money from provider bills, kept apart
+# from usage, which tokencur values itself (ADR 0009).
+_CHARGE_FIELDS = tuple(f.name for f in fields(BilledCharge))
+_V4_CHARGES = """CREATE TABLE IF NOT EXISTS charges (
+    source        TEXT NOT NULL,
+    record_id     TEXT NOT NULL,
+    period_start  TEXT NOT NULL,
+    period_end    TEXT NOT NULL,
+    provider      TEXT NOT NULL,
+    service       TEXT NOT NULL,
+    resource_id   TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    quantity      REAL NOT NULL,
+    unit          TEXT NOT NULL,
+    amount_usd    REAL NOT NULL,
+    detail        TEXT NOT NULL,
+    first_seen    TEXT NOT NULL,
+    PRIMARY KEY (source, record_id)
+)"""
+_UPSERT_CHARGE = (
+    f"INSERT INTO charges ({', '.join(_CHARGE_FIELDS)}, first_seen) "
+    f"VALUES ({', '.join('?' * (len(_CHARGE_FIELDS) + 1))}) "
+    "ON CONFLICT (source, record_id) DO UPDATE SET "
+    + ", ".join(f"{f} = excluded.{f}" for f in _CHARGE_FIELDS[2:])
+)
+
 _UPSERT = (
     f"INSERT INTO usage ({', '.join(_FIELDS)}, first_seen) "
     f"VALUES ({', '.join('?' * (len(_FIELDS) + 1))}) "
@@ -135,6 +161,32 @@ def read(path: Path | None = None) -> list[UsageRecord]:
             "ORDER BY timestamp, source, record_id"
         )
         return [UsageRecord(**dict(zip(_FIELDS, row, strict=True))) for row in cursor]
+
+
+def record_charges(charges: Iterable[BilledCharge], path: Path | None = None) -> int:
+    """Upsert billed charges into the ledger; return how many were new."""
+    first_seen = _utc_now()
+    rows = [(*(getattr(c, f) for f in _CHARGE_FIELDS), first_seen) for c in charges]
+    if not rows:
+        return 0  # nothing to keep: don't create an empty ledger
+    with closing(_connect(path or default_path())) as conn, conn:
+        before = conn.execute("SELECT COUNT(*) FROM charges").fetchone()[0]
+        conn.executemany(_UPSERT_CHARGE, rows)
+        after = conn.execute("SELECT COUNT(*) FROM charges").fetchone()[0]
+    return after - before
+
+
+def read_charges(path: Path | None = None) -> list[BilledCharge]:
+    """Every billed charge in the ledger, oldest period first."""
+    target = path or default_path()
+    if not target.exists():
+        return []
+    with closing(_connect(target)) as conn:
+        cursor = conn.execute(
+            f"SELECT {', '.join(_CHARGE_FIELDS)} FROM charges "
+            "ORDER BY period_start, source, record_id"
+        )
+        return [BilledCharge(*row) for row in cursor]
 
 
 def _without_copies(conn: sqlite3.Connection, rows: list[tuple]) -> list[tuple]:
@@ -320,8 +372,17 @@ def _add_column(conn: sqlite3.Connection, table: str, ddl: str) -> None:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
 
 
+def _v3_to_v4(conn: sqlite3.Connection) -> str:
+    """Schema 4: the ``charges`` table, for money providers actually billed
+    (RunPod first), kept apart from usage valued at list price."""
+    with conn:
+        conn.execute(_V4_CHARGES)
+        conn.execute("PRAGMA user_version = 4")
+    return "added the charges table for billed costs"
+
+
 # Step from version N to N + 1, keyed by N.
-_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3}
+_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
 
 
 def _utc_now() -> str:

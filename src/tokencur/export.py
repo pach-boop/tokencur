@@ -14,20 +14,23 @@ from __future__ import annotations
 
 import csv
 import sys
+from collections.abc import Iterable
 from operator import itemgetter
 from pathlib import Path
 
 from tokencur.focus import (
     FOCUS_COLUMNS,
+    charge_rows,
     to_focus_rows,
 )
-from tokencur.records import UsageRecord
+from tokencur.records import BilledCharge, UsageRecord
 
 
 def export_csv(
     records: list[UsageRecord],
     output: Path,
     discounts: dict[str, float] | None = None,
+    charges: Iterable[BilledCharge] = (),
 ) -> int:
     """Write FOCUS rows to ``output``; return the number of rows."""
     # itemgetter pulls a row's values in column order in C; a row missing
@@ -39,6 +42,9 @@ def export_csv(
         writer = csv.writer(fh)
         writer.writerow(FOCUS_COLUMNS)
         for row in to_focus_rows(records, discounts):
+            writer.writerow(values(row))
+            rows += 1
+        for row in charge_rows(charges):
             writer.writerow(values(row))
             rows += 1
     return rows

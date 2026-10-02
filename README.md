@@ -88,6 +88,7 @@ tokencur export focus.csv      # FOCUS 1.2 conformant dataset
 tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 tokencur doctor                # read-only health check: log formats, ledger, pricing
+tokencur import runpod FILE    # billed cost: a RunPod billing export
 ```
 
 `tokencur --help` lists every command, and `python -m tokencur` works the same.
@@ -184,6 +185,17 @@ The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
 never stored.
 
+## Billed cost
+
+Showback values usage at list price; a bill is what a provider actually took.
+RunPod is the first billed source: `scripts/fetch_runpod_billing.py` saves the
+billing history from RunPod's REST API (the one step that goes online, when you
+run it), and `tokencur import runpod FILE` keeps it in the ledger. Reports show
+it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
+export gains Compute rows whose `BilledCost` is the billed amount, and the
+observatory shows it as actual money outside subscription leverage
+([ADR 0009](docs/adr/0009-billed-charges-next-to-showback.md)).
+
 ## When an agent changes its logs
 
 Agents change their log formats without notice. `tokencur doctor` scans every
@@ -201,7 +213,8 @@ tokencur's headline figures are **not** a bill. Three money concepts, kept
 deliberately apart:
 
 - **Actual outlay** — the flat subscription fees really paid, declared in
-  [`subscriptions.json`](./subscriptions.json). The only real money here.
+  [`subscriptions.json`](./subscriptions.json), and provider bills imported as
+  billed charges (see [Billed cost](#billed-cost)). The only real money here.
 - **Usage value (showback)** — what the same usage would cost at API list
   prices. Subscriptions don't bill per token, so tokencur *values* the usage
   instead of pretending to bill it.
@@ -256,9 +269,10 @@ last rate), then regenerates this page from that history.
 
 ## Limitations (honest)
 
-- Local-log sources only so far (Claude Code, Codex CLI, Kimi Code); billed-cost
-  sources are next: [RunPod](https://github.com/pach-boop/tokencur/issues/6) and
-  the [Anthropic and OpenAI admin APIs](https://github.com/pach-boop/tokencur/issues/7).
+- Usage comes from three coding agents' local logs (Claude Code, Codex CLI, Kimi
+  Code); billed cost from RunPod exports. The
+  [Anthropic and OpenAI admin cost APIs](https://github.com/pach-boop/tokencur/issues/7)
+  are next and wait on real response samples.
 - The ledger can only keep usage it has seen. Run tokencur more often than
   Claude Code's `cleanupPeriodDays`, or raise that setting in
   `~/.claude/settings.json`.
