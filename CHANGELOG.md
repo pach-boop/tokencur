@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Each release publishes the pricing snapshot as its own asset,
+  `tokencur-pricing-snapshot-X.Y.Z.json`, with a build provenance
+  attestation, so the prices behind every figure are versioned and
+  verifiable; `tokencur doctor` prints the installed snapshot's
+  SHA-256 to compare. SECURITY.md shows how to verify both.
 - Fixtures from real agent logs (`tests/fixtures/logs-real`): a Claude
   Code 2.1.282 session, Codex 0.98.0 and 0.104.0 rollouts and a Kimi
   Code wire log, redacted by `scripts/redact_log.py` to an allowlist
