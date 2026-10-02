@@ -84,6 +84,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- The report's table sized its columns by hand, so billion-token
+  cache totals and long model ids ran into the next column. Columns
+  now fit their widest cell. Rows are counted as "model calls"
+  (was "assistant messages", which only fit Claude Code).
 - **Codex usage was counted about twice.** Codex re-sends each
   `token_count` report under a new timestamp (alongside rate-limit
   updates), and tokencur counted every one. A call now counts only
