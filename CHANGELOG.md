@@ -50,6 +50,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - `DEFAULT_SOURCES` moved from `tokencur.report` to `tokencur.sources`,
   whose `load_records()` is now the single loader behind every command
   (five copies of the scan loop removed).
+- The version has one source, `tokencur.__version__`, which
+  `pyproject.toml` reads dynamically (`__init__` had drifted to 0.1.0
+  while the package shipped 0.2.0).
+- CI conformance gate pinned to `focus-validator` 2.2.1 (same result:
+  136 rules pass).
+- README states what is ingested today (three coding agents) instead
+  of implying Gemini or local-model ingestion, adds an architecture
+  diagram, updates pricing coverage (290+ live models, daily refresh,
+  retired models kept) and explains why the target is FOCUS 1.2.
 
 ### Fixed
 
