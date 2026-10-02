@@ -123,63 +123,65 @@ def undated_count(records: Iterable[UsageRecord]) -> int:
 def _record_rows(
     record: UsageRecord, rates: ModelRates, charge_start: datetime
 ) -> Iterator[dict]:
-    charge_end = charge_start + timedelta(hours=1)
     period_start = charge_start.replace(
         day=1, hour=0, minute=0, second=0, microsecond=0
     )
-    period_end = _next_month(period_start)
     provider = _PROVIDER_BY_SOURCE.get(record.source, "Unknown")
     service = _SERVICE_BY_SOURCE.get(record.source, record.source)
+    # Columns that are the same for every bucket of this record, built
+    # once: an export writes up to five rows per record.
+    shared = {
+        "BillingAccountId": "tokencur-local",
+        "BillingAccountName": "Local AI usage (showback)",
+        "BillingCurrency": "USD",
+        "BillingPeriodStart": _fmt(period_start),
+        "BillingPeriodEnd": _fmt(_next_month(period_start)),
+        "ChargeCategory": "Usage",
+        "ChargeClass": None,
+        "ChargeFrequency": "Usage-Based",
+        "ChargePeriodStart": _fmt(_floor_hour(charge_start)),
+        "ChargePeriodEnd": _fmt(_floor_hour(charge_start + timedelta(hours=1))),
+        "ConsumedUnit": "tokens",
+        # Showback charges have no invoice; the spec requires an
+        # explicit null in that case.
+        "InvoiceId": None,
+        "InvoiceIssuerName": provider,
+        "PricingCategory": "Standard",
+        "PricingUnit": "tokens",
+        "ProviderName": provider,
+        "PublisherName": provider,
+        "ResourceId": record.session_id or None,
+        "ResourceName": record.session_id or None,
+        "ResourceType": "AI agent session",
+        "ServiceCategory": "AI and Machine Learning",
+        "ServiceName": service,
+        "ServiceSubcategory": "Generative AI",
+        "SubAccountId": record.workspace or None,
+        "SubAccountName": record.workspace or None,
+    }
 
     for attribute, sku_suffix, label, rate_attribute in _BUCKETS:
         quantity = getattr(record, attribute)
         if not quantity:
             continue
-        rate_mtok = getattr(rates, rate_attribute)
-        unit_price = rate_mtok / 1_000_000  # USD per token
+        unit_price = getattr(rates, rate_attribute) / 1_000_000  # USD per token
         cost = quantity * unit_price
         sku = f"{record.model}/{sku_suffix}"
         yield {
+            **shared,
             # Showback: all four cost columns carry list cost (module doc).
             "BilledCost": cost,
             "EffectiveCost": cost,
             "ContractedCost": cost,
             "ListCost": cost,
-            "BillingAccountId": "tokencur-local",
-            "BillingAccountName": "Local AI usage (showback)",
-            "BillingCurrency": "USD",
-            "BillingPeriodStart": _fmt(period_start),
-            "BillingPeriodEnd": _fmt(period_end),
-            "ChargeCategory": "Usage",
-            "ChargeClass": None,
             "ChargeDescription": f"{record.model} {label} via {service}",
-            "ChargeFrequency": "Usage-Based",
-            "ChargePeriodStart": _fmt(_floor_hour(charge_start)),
-            "ChargePeriodEnd": _fmt(_floor_hour(charge_end)),
             # Quantities as decimals: FOCUS metric columns must not
             # schema-infer as integers.
             "ConsumedQuantity": float(quantity),
-            "ConsumedUnit": "tokens",
-            # Showback charges have no invoice; the spec requires an
-            # explicit null in that case.
-            "InvoiceId": None,
-            "InvoiceIssuerName": provider,
             "ListUnitPrice": unit_price,
-            "PricingCategory": "Standard",
             "PricingQuantity": float(quantity),
-            "PricingUnit": "tokens",
-            "ProviderName": provider,
-            "PublisherName": provider,
-            "ResourceId": record.session_id or None,
-            "ResourceName": record.session_id or None,
-            "ResourceType": "AI agent session",
-            "ServiceCategory": "AI and Machine Learning",
-            "ServiceName": service,
-            "ServiceSubcategory": "Generative AI",
             "SkuId": sku,
             "SkuPriceId": sku,
-            "SubAccountId": record.workspace or None,
-            "SubAccountName": record.workspace or None,
         }
 
 
