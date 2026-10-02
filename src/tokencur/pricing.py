@@ -7,9 +7,10 @@ showback approach: what this usage would cost at published rates.
 
 Two layers, curated first:
 
-1. ``RATE_CARD`` — the hand-maintained Anthropic card (dated, sourced).
-   Cache multipliers per Anthropic pricing docs: reads at 0.1x the
-   input rate; writes at 1.25x (5-minute TTL) or 2x (1-hour TTL).
+1. ``RATE_CARD`` — the hand-maintained Anthropic card (dated, sourced):
+   every model on Anthropic's pricing page as of ``AS_OF``. Writes cost
+   1.25x the input rate (5-minute TTL) or 2x (1-hour TTL); reads 0.1x,
+   except where the page says otherwise (Opus 5.5, Fable 5.1).
 2. A vendored snapshot of the community-maintained LiteLLM price
    database (see ``scripts/update_pricing_snapshot.py``) as fallback,
    which extends coverage to OpenAI/Gemini and future models. Cache
@@ -27,8 +28,8 @@ from importlib import resources
 
 from tokencur.records import UsageRecord
 
-AS_OF = "2026-07-06"
-SOURCE = "https://platform.claude.com/docs/en/pricing"
+AS_OF = "2026-10-02"
+SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing"
 
 
 @dataclass(frozen=True)
@@ -42,30 +43,45 @@ class ModelRates:
     cache_write_1h: float
 
 
-def _anthropic_rates(input: float, output: float) -> ModelRates:
+def _anthropic_rates(input: float, output: float, read: float = 0.10) -> ModelRates:
     """Anthropic's published cache multipliers over the input rate."""
     return ModelRates(
         input=input,
         output=output,
-        cache_read=input * 0.10,
+        cache_read=input * read,
         cache_write_5m=input * 1.25,
         cache_write_1h=input * 2.00,
     )
 
 
 RATE_CARD: dict[str, ModelRates] = {
+    # Anthropic's pricing page on 2026-10-02 (SOURCE), top to bottom.
+    # Cache hits cost 0.025x input on Fable 5.1 / Mythos 5.1 ($0.25)
+    # and 0.05x on Opus 5.5 ($0.20); every other model uses 0.1x.
+    "claude-fable-5-1": _anthropic_rates(10.00, 50.00, read=0.025),
+    "claude-mythos-5-1": _anthropic_rates(10.00, 50.00, read=0.025),
     "claude-fable-5": _anthropic_rates(10.00, 50.00),
+    "claude-mythos-5": _anthropic_rates(10.00, 50.00),
+    "claude-opus-5-5": _anthropic_rates(4.00, 20.00, read=0.05),
+    "claude-opus-5": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-8": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-7": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-6": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-5": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-1": _anthropic_rates(15.00, 75.00),
-    # Sonnet 5 standard list price. An intro price ($2/$10) applies
-    # through 2026-08-31; the card values usage at list for consistency.
-    "claude-sonnet-5": _anthropic_rates(3.00, 15.00),
+    "claude-sonnet-5-5": _anthropic_rates(2.00, 10.00),
+    # Launched at $2/$10 as an introductory price through 2026-08-31;
+    # Anthropic made it the standard price and cancelled the scheduled
+    # rise to $3/$15. (This card had valued Sonnet 5 at $3/$15.)
+    "claude-sonnet-5": _anthropic_rates(2.00, 10.00),
     "claude-sonnet-4-6": _anthropic_rates(3.00, 15.00),
     "claude-sonnet-4-5": _anthropic_rates(3.00, 15.00),
     "claude-haiku-4-5": _anthropic_rates(1.00, 5.00),
+    # Retired models, keyed the way rates_for() resolves their dated ids
+    # (claude-opus-4-20250514 -> claude-opus-4), so old logs stay priced.
+    "claude-opus-4": _anthropic_rates(15.00, 75.00),
+    "claude-sonnet-4": _anthropic_rates(3.00, 15.00),
+    "claude-3-5-haiku": _anthropic_rates(0.80, 4.00),
     # Proxy rate (documented estimation, 2026-07-08): Kimi Code's
     # coding-plan alias has no published per-token price. Valued at
     # kimi-k2.6 list rates — the nearest published generation — so real

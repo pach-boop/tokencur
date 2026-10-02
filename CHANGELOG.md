@@ -56,6 +56,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
+- The curated Anthropic card mirrors Anthropic's pricing page as of
+  2026-10-02 (was 2026-07-06): adds Claude Opus 5.5, Fable 5.1,
+  Mythos 5 and 5.1, Opus 5, Sonnet 5.5 and the retired Opus 4,
+  Sonnet 4 and Haiku 3.5, keyed so their dated ids resolve. Cache
+  reads follow each model's published multiplier: 0.05x on Opus 5.5,
+  0.025x on Fable 5.1 and Mythos 5.1, 0.1x elsewhere. Opus 5.5 was
+  the maintainer's largest Claude cost and was priced only by the
+  community snapshot; the values are unchanged, now from the source.
 - `UsageRecord` moved to its own module, `tokencur.records`: pricing,
   the FOCUS normalizer, the ledger and every ingester now depend on a
   shared type instead of on the Claude Code ingester. The old import
@@ -84,6 +92,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- Claude Sonnet 5 was valued at $3/$15 per MTok. Its $2/$10 launch
+  price, announced as introductory through 2026-08-31, became the
+  standard price and the rise to $3/$15 was cancelled. The community
+  snapshot already said $2/$10; a new test now fails whenever the
+  curated card and the snapshot disagree on a model both price.
 - The report's table sized its columns by hand, so billion-token
   cache totals and long model ids ran into the next column. Columns
   now fit their widest cell. Rows are counted as "model calls"
