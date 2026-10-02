@@ -99,8 +99,9 @@ _BUCKETS = (
 def to_focus_rows(records: Iterable[UsageRecord]) -> Iterator[dict]:
     """Yield FOCUS charge rows for every priced record."""
     for record in records:
-        rates = rates_for(record.model)
         charge_start = parse_timestamp(record.timestamp)
+        # List price in force on the charge's day (point-in-time).
+        rates = rates_for(record.model, charge_start.date() if charge_start else None)
         if rates is None or charge_start is None:
             continue  # surfaced by callers: never $0, never a made-up date
         yield from _record_rows(record, rates, charge_start)

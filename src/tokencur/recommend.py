@@ -16,11 +16,10 @@ that need user-supplied inputs belong to a later phase.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from tokencur.pricing import ModelRates, rates_for
+from tokencur.pricing import ModelRates, rates_for, record_day
 from tokencur.records import UsageRecord
 
 # Curated "one tier down" pairs. Only emitted when the sibling is
@@ -51,25 +50,13 @@ class Recommendation:
         return 100 * self.savings_usd / self.baseline_usd if self.baseline_usd else 0.0
 
 
-def _totals_by_model(records: Iterable[UsageRecord]) -> dict[str, dict[str, int]]:
-    totals: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    for r in records:
-        agg = totals[r.model]
-        agg["input"] += r.input_tokens
-        agg["output"] += r.output_tokens
-        agg["cache_read"] += r.cache_read_tokens
-        agg["cache_write_5m"] += r.cache_write_5m_tokens
-        agg["cache_write_1h"] += r.cache_write_1h_tokens
-    return totals
-
-
-def _cost(tokens: dict[str, int], rates: ModelRates) -> float:
+def _cost(record: UsageRecord, rates: ModelRates) -> float:
     return (
-        tokens["input"] * rates.input
-        + tokens["output"] * rates.output
-        + tokens["cache_read"] * rates.cache_read
-        + tokens["cache_write_5m"] * rates.cache_write_5m
-        + tokens["cache_write_1h"] * rates.cache_write_1h
+        record.input_tokens * rates.input
+        + record.output_tokens * rates.output
+        + record.cache_read_tokens * rates.cache_read
+        + record.cache_write_5m_tokens * rates.cache_write_5m
+        + record.cache_write_1h_tokens * rates.cache_write_1h
     ) / 1_000_000
 
 
@@ -77,22 +64,26 @@ def caching_roi(records: Iterable[UsageRecord]) -> list[Recommendation]:
     """Measured savings from prompt caching, per model.
 
     Counterfactual: without caching, every cache-read and cache-write
-    token would have been sent as fresh input at the input rate.
+    token would have been sent as fresh input at the input rate. Each
+    record is priced at the rates in force on its own day.
     """
-    out = []
-    for model, t in _totals_by_model(records).items():
-        rates = rates_for(model)
-        if rates is None or not (
-            t["cache_read"] or t["cache_write_5m"] or t["cache_write_1h"]
-        ):
+    sums: dict[str, list[float]] = {}  # model -> [without caching, actual]
+    for r in records:
+        cached = r.cache_read_tokens + r.cache_write_5m_tokens + r.cache_write_1h_tokens
+        if not cached:
             continue
-        cached_tokens = t["cache_read"] + t["cache_write_5m"] + t["cache_write_1h"]
-        no_cache = cached_tokens * rates.input / 1_000_000
-        actual = (
-            t["cache_read"] * rates.cache_read
-            + t["cache_write_5m"] * rates.cache_write_5m
-            + t["cache_write_1h"] * rates.cache_write_1h
+        rates = rates_for(r.model, record_day(r))
+        if rates is None:
+            continue
+        acc = sums.setdefault(r.model, [0.0, 0.0])
+        acc[0] += cached * rates.input / 1_000_000
+        acc[1] += (
+            r.cache_read_tokens * rates.cache_read
+            + r.cache_write_5m_tokens * rates.cache_write_5m
+            + r.cache_write_1h_tokens * rates.cache_write_1h
         ) / 1_000_000
+    out = []
+    for model, (no_cache, actual) in sums.items():
         saved = no_cache - actual
         if saved >= 0:
             detail = "Keep prompts cache-stable; this saving repeats every session."
@@ -111,16 +102,30 @@ def caching_roi(records: Iterable[UsageRecord]) -> list[Recommendation]:
 
 
 def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
-    """What the same token mix would cost one model tier down."""
-    out = []
-    for model, t in _totals_by_model(records).items():
-        sibling = DOWNSIZE.get(model.split("/")[-1])
-        rates, sibling_rates = rates_for(model), rates_for(sibling) if sibling else None
+    """What the same calls would cost one model tier down.
+
+    Both sides are priced call by call at the rates in force on each
+    call's day; whether the pair is a step down at all is judged on
+    today's list rates.
+    """
+    sums: dict[str, list[float]] = {}  # model -> [current, downsized]
+    for r in records:
+        sibling = DOWNSIZE.get(r.model.split("/")[-1])
+        if sibling is None:
+            continue
+        day = record_day(r)
+        rates, sibling_rates = rates_for(r.model, day), rates_for(sibling, day)
         if rates is None or sibling_rates is None:
             continue
-        if sibling_rates.input >= rates.input or sibling_rates.output >= rates.output:
+        acc = sums.setdefault(r.model, [0.0, 0.0])
+        acc[0] += _cost(r, rates)
+        acc[1] += _cost(r, sibling_rates)
+    out = []
+    for model, (current, downsized) in sums.items():
+        sibling = DOWNSIZE[model.split("/")[-1]]
+        now, now_sibling = rates_for(model), rates_for(sibling)
+        if now_sibling.input >= now.input or now_sibling.output >= now.output:
             continue  # curated pair is not actually cheaper — skip
-        current, downsized = _cost(t, rates), _cost(t, sibling_rates)
         if current - downsized < 1.0:
             continue  # not worth a recommendation
         out.append(

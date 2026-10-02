@@ -69,7 +69,8 @@ def summarize(records: list[UsageRecord], period: str | None = None) -> str:
     lines = [
         f"tokencur report — {len(records)} model call{'s' * (len(records) != 1)}"
         f"{f' {period}' if period else ''}, "
-        f"rates as of {AS_OF} (API-equivalent list cost)",
+        f"list rates in force on each call's day, curated card {AS_OF} "
+        "(API-equivalent list cost)",
         "",
         *_table(header, rows),
     ]

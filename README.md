@@ -49,6 +49,8 @@ after the agents delete their logs.
    Ollama, refreshed daily by the [price-watch action](.github/workflows/price-watch.yml);
    models LiteLLM retires keep their last known rate, so historical usage stays priced).
    Unknown models surface as *unpriced usage* rather than silently costing $0.
+   Rates are point-in-time: each call is valued at the list rate in force on its
+   day, from a rate history the snapshot keeps.
 4. **Explainable over clever** — every line that ships is one the maintainer fully
    understands and can defend.
 
@@ -260,10 +262,10 @@ last rate), then regenerates this page from that history.
   gone: a copy is recognized by its timestamp and raw usage, so two distinct
   calls identical to the millisecond would also count once (never observed).
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
-- Rates are current, not point-in-time: when a provider moves a list price, past
-  usage is revalued at the new rate, so a published total is reproducible only
-  with the rates date the report prints ([ADR 0007](docs/adr/0007-current-list-rates-not-point-in-time.md);
-  point-in-time pricing is [#5](https://github.com/pach-boop/tokencur/issues/5)).
+- Rates are point-in-time: each call is valued at the list rate in force on its
+  UTC day ([ADR 0008](docs/adr/0008-point-in-time-list-rates.md)). Rate history
+  starts with the snapshot on 2026-07-06, so earlier usage is valued at the first
+  rate observed, and a move is dated by the day the price-watch bot saw it.
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
