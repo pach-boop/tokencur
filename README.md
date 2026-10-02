@@ -30,7 +30,8 @@ after the agents delete their logs.
 | Category | Projects | How tokencur differs |
 |---|---|---|
 | Dev observability | Langfuse, Helicone, LiteLLM | Per-request tracing; no FOCUS output, no finance vocabulary |
-| Coding-agent trackers | ccusage, tokscale, TokenTracker | Dashboards without a financial standard behind them |
+| Coding-agent trackers | ccusage, tokscale, TokenTracker, [tokentop](https://github.com/tokentopapp/tokentop), [budi](https://github.com/siropkin/budi) | Dashboards and live monitors (budi also attributes each call to a repo, branch and ticket); none exports FOCUS or keeps a finance vocabulary |
+| Cost per commit | [agent-cost](https://github.com/lucianareynaud/agent-cost) | Links a cost you log by hand after each session to the commits it produced; tokencur attributes every call from the agents' own logs, with no manual step |
 | Enterprise platforms | Finout, Vantage, CloudZero | FOCUS-aligned but closed source and enterprise-priced |
 | Plumbing | OpenCost OpenAI plugin, focus_converters | k8s-bound / cloud-only; tokencur is standalone, multi-provider, analyst-friendly |
 
