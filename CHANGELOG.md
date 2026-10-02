@@ -110,6 +110,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- The dashboard test read the real logs of whoever ran it and found
+  the app by a relative path, which newer Streamlit resolves against
+  the test file; it had never run in CI. It now renders synthetic
+  logs with known prices, checks the headline value, and locates the
+  script through the import system (passes on Streamlit 1.59 and
+  1.64).
 - Claude Sonnet 5 was valued at $3/$15 per MTok. Its $2/$10 launch
   price, announced as introductory through 2026-08-31, became the
   standard price and the rise to $3/$15 was cancelled. The community
