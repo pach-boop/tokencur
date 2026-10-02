@@ -157,9 +157,10 @@ def render(recs: list[Recommendation]) -> str:
         if not subset:
             continue
         lines += ["", header]
+        width = max(48, *(len(r.title) for r in subset))
         for r in subset:
             lines.append(
-                f"  {r.title:<48} ${r.savings_usd:>10,.2f}  ({r.savings_pct:.0f}% of ${r.baseline_usd:,.2f})"
+                f"  {r.title:<{width}} ${r.savings_usd:>10,.2f}  ({r.savings_pct:.0f}% of ${r.baseline_usd:,.2f})"
             )
             lines.append(f"    {r.detail}")
     total = sum(r.savings_usd for r in recs if r.kind == "potential")

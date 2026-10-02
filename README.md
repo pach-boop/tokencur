@@ -76,10 +76,14 @@ Requires Python 3.11+. No runtime dependencies.
 
 ```bash
 pip install -e .
-python -m tokencur report             # cost summary in your terminal
-python -m tokencur export focus.csv   # FOCUS 1.2 conformant dataset
-python -m tokencur recommend          # avoided cost + what-if headroom
+tokencur report                # cost summary in your terminal
+tokencur export focus.csv      # FOCUS 1.2 conformant dataset
+tokencur recommend             # avoided cost + what-if headroom
+tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 ```
+
+`tokencur --help` lists every command, and `python -m tokencur` works the same.
+Periods are UTC days with `--until` excluded, the way a billing period is cut.
 
 With no arguments it scans every known local source on your machine — **Claude Code**
 (`~/.claude/projects`), **Codex CLI** (`~/.codex/sessions`) and **Kimi Code**
@@ -166,7 +170,7 @@ A public, static snapshot of this repository's own AI spend — the FOCUS datase
 rendered as a dashboard: **https://pach-boop.github.io/tokencur/observatory/**
 
 ```bash
-python -m tokencur.observatory   # regenerates docs/observatory/
+tokencur observatory   # regenerates docs/observatory/
 ```
 
 The snapshot publishes aggregates only (day × service, model and token-bucket
@@ -182,7 +186,7 @@ built from the git history of the pricing snapshot:
 **https://pach-boop.github.io/tokencur/prices/**
 
 ```bash
-python -m tokencur.prices   # regenerates docs/prices/
+tokencur prices   # regenerates docs/prices/
 ```
 
 A daily [price-watch action](.github/workflows/price-watch.yml) refreshes the

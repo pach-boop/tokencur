@@ -17,15 +17,12 @@ from __future__ import annotations
 
 import sys
 from collections import defaultdict
-from pathlib import Path
 
-from tokencur.ingest import claude_code
 from tokencur.pricing import AS_OF, record_cost_usd
 from tokencur.records import UsageRecord, parse_timestamp
-from tokencur.sources import load_records
 
 
-def summarize(records: list[UsageRecord]) -> str:
+def summarize(records: list[UsageRecord], period: str | None = None) -> str:
     by_model: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     by_day: dict[str, float] = defaultdict(float)
     by_source: dict[str, float] = defaultdict(float)
@@ -70,7 +67,8 @@ def summarize(records: list[UsageRecord]) -> str:
         for model, agg in sorted(by_model.items(), key=lambda kv: -kv[1]["cost"])
     ]
     lines = [
-        f"tokencur report — {len(records)} model calls, "
+        f"tokencur report — {len(records)} model call{'s' * (len(records) != 1)}"
+        f"{f' {period}' if period else ''}, "
         f"rates as of {AS_OF} (API-equivalent list cost)",
         "",
         *_table(header, rows),
@@ -110,21 +108,10 @@ def _table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) > 1:
-        root = Path(argv[1])
-        if not root.exists():
-            print(f"error: {root} does not exist", file=sys.stderr)
-            return 1
-        records = list(claude_code.iter_usage_records(root))
-    else:
-        records = load_records()
-        if not records:
-            print(
-                "error: no usage in known log locations or the ledger", file=sys.stderr
-            )
-            return 1
-    print(summarize(records))
-    return 0
+    """``python -m tokencur.report [ROOT]`` — kept; see ``tokencur.cli``."""
+    from tokencur.cli import main as cli
+
+    return cli(["report", *argv[1:]])
 
 
 if __name__ == "__main__":

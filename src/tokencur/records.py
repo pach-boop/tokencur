@@ -8,8 +8,9 @@ ingester, so no layer depends on how a particular agent logs.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 
 # slots: no per-instance __dict__. A full history is held in memory as
@@ -57,3 +58,25 @@ def parse_timestamp(timestamp: str) -> datetime | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
+
+def in_period(
+    records: Iterable[UsageRecord], since: date | None, until: date | None
+) -> list[UsageRecord]:
+    """Records whose UTC day is in ``[since, until)``; either bound optional.
+
+    Billing convention: ``until`` is the first day *not* included. With a
+    bound set, undated records are left out, since no period can hold
+    them; with no bounds, every record is kept, undated ones included.
+    """
+    if since is None and until is None:
+        return list(records)
+    kept = []
+    for record in records:
+        moment = parse_timestamp(record.timestamp)
+        if moment is None:
+            continue
+        day = moment.date()
+        if (since is None or day >= since) and (until is None or day < until):
+            kept.append(record)
+    return kept
