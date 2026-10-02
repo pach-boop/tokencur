@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- The observatory discloses corrections to figures it published
+  before: a dated note at the top (and a `corrections` list in
+  `data.json`) saying what changed and by how much, starting with the
+  Codex double count ($685.66 → $332.95).
 - Release workflow: a `vX.Y.Z` tag that matches `__version__` builds
   the sdist and wheel, attests their build provenance (verifiable with
   `gh attestation verify`) and drafts a GitHub release with them.

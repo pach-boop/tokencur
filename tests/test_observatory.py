@@ -157,3 +157,14 @@ def test_render_html_is_self_contained():
         assert tag not in page or tag == 'href="http://'
     # The only http references are the footer links.
     assert page.count("https://") == 1  # repo link in footer
+
+
+def test_corrections_to_published_figures_are_disclosed():
+    """A figure this page once published, then found wrong, is corrected in
+    the open: dated, with what changed and by how much."""
+    snap = snapshot([_record("2026-09-15")], None)
+    html = render_html(snap)
+
+    assert snap["corrections"][0]["date"] == "2026-10-02"
+    assert "Correction · 2026-10-02" in html
+    assert "$685.66" in html and "$332.95" in html
