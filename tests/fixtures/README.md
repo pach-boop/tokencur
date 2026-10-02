@@ -35,3 +35,30 @@ same export. After an intended change, regenerate and review the diff:
 ```bash
 TOKENCUR_UPDATE_GOLDEN=1 pytest tests/test_golden.py
 ```
+
+## logs-real/
+
+Real logs of the maintainer's agents, made safe to publish by
+`scripts/redact_log.py`: from the lines that carry usage it keeps only
+an allowlist (usage numbers, model, request options, line types, agent
+version), turns every id into a stable pseudonym, every path into
+`/home/dev/<pseudonym>`, shifts timestamps (intervals kept) and drops
+all content. The script refuses to write unless the ingester reads
+exactly the same usage from the redacted file as from the original, and
+`tests/test_fixture_privacy.py` fails on any string that is not an
+allowed shape.
+
+| Source | Agent version | Calls |
+|---|---|---|
+| Claude Code | 2.1.282 (streamed messages, 1h cache writes, thinking tokens) | 24 |
+| Codex CLI | 0.98.0 and 0.104.0 (re-sent reports) | 8 + 4 |
+| Kimi Code | current wire format | 17 |
+
+Their golden outputs are `golden/records-real.json` and
+`golden/focus-real.csv`. To refresh one from a newer agent version:
+
+```bash
+python scripts/redact_log.py codex ~/.codex/sessions/.../rollout-X.jsonl \
+  tests/fixtures/logs-real/codex/2026/09/17/rollout-real.jsonl --start 2026-09-17T10:00:00Z
+TOKENCUR_UPDATE_GOLDEN=1 pytest tests/test_golden.py
+```

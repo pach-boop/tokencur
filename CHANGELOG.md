@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Fixtures from real agent logs (`tests/fixtures/logs-real`): a Claude
+  Code 2.1.282 session, Codex 0.98.0 and 0.104.0 rollouts and a Kimi
+  Code wire log, redacted by `scripts/redact_log.py` to an allowlist
+  of usage fields with pseudonymous ids, shifted times and no content.
+  The script refuses to write unless the ingester reads the same usage
+  from the redacted file as from the original; a privacy test fails on
+  any string that is not an allowed shape (checked against an injected
+  leak). Their golden records and FOCUS CSV join the golden tests, and
+  the CI conformance gate now validates them too.
 - Request options that change a call's price, as Claude Code logs them:
   fast mode (2x: Opus 5.5 $8/$40), US-only inference (1.1x on every
   category) and the Batch API (0.5x), cache multipliers stacked on top.
