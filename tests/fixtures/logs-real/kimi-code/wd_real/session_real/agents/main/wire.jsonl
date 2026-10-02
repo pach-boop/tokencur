@@ -1,0 +1,17 @@
+{"type":"usage.record","time":1789466426155,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":17535,"output":310,"inputCacheRead":512,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466434470,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":506,"output":211,"inputCacheRead":17920,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466444702,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":504,"output":168,"inputCacheRead":18176,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466447413,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":869,"output":290,"inputCacheRead":18432,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466582461,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":432,"output":227,"inputCacheRead":19200,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466586279,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":638,"output":404,"inputCacheRead":19456,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466640096,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":538,"output":233,"inputCacheRead":19968,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466654756,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":267,"output":134,"inputCacheRead":20480,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789466658569,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":356,"output":461,"inputCacheRead":20736,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467122292,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":607,"output":1137,"inputCacheRead":20992,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467129921,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":3961,"output":168,"inputCacheRead":21504,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467136228,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":864,"output":186,"inputCacheRead":25364,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467154559,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":335,"output":122,"inputCacheRead":26112,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467162944,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":305,"output":163,"inputCacheRead":26368,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467168880,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":254,"output":186,"inputCacheRead":26624,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467176012,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":4759,"output":451,"inputCacheRead":26624,"inputCacheCreation":0}}
+{"type":"usage.record","time":1789467182265,"model":"moonshot-ai/kimi-k2.7-code-highspeed","usageScope":"turn","usage":{"inputOther":2678,"output":631,"inputCacheRead":31232,"inputCacheCreation":0}}
