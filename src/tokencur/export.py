@@ -24,7 +24,11 @@ from tokencur.focus import (
 from tokencur.records import UsageRecord
 
 
-def export_csv(records: list[UsageRecord], output: Path) -> int:
+def export_csv(
+    records: list[UsageRecord],
+    output: Path,
+    discounts: dict[str, float] | None = None,
+) -> int:
     """Write FOCUS rows to ``output``; return the number of rows."""
     # itemgetter pulls a row's values in column order in C; a row missing
     # a column raises KeyError. (csv.DictWriter checked each row in Python
@@ -34,7 +38,7 @@ def export_csv(records: list[UsageRecord], output: Path) -> int:
     with output.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
         writer.writerow(FOCUS_COLUMNS)
-        for row in to_focus_rows(records):
+        for row in to_focus_rows(records, discounts):
             writer.writerow(values(row))
             rows += 1
     return rows

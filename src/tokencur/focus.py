@@ -96,15 +96,29 @@ _BUCKETS = (
 )
 
 
-def to_focus_rows(records: Iterable[UsageRecord]) -> Iterator[dict]:
-    """Yield FOCUS charge rows for every priced record."""
+def provider_for(source: str) -> str:
+    """The FOCUS ProviderName of a usage source."""
+    return _PROVIDER_BY_SOURCE.get(source, "Unknown")
+
+
+def to_focus_rows(
+    records: Iterable[UsageRecord], discounts: dict[str, float] | None = None
+) -> Iterator[dict]:
+    """Yield FOCUS charge rows for every priced record.
+
+    ``discounts`` (provider name -> fraction off list, see
+    ``pricing.load_discounts``) are a negotiated contract: ListCost keeps
+    the public price; ContractedCost, EffectiveCost and BilledCost carry
+    the price after the discount.
+    """
     for record in records:
         charge_start = parse_timestamp(record.timestamp)
         # List price in force on the charge's day, for its request options.
         rates = rates_for_record(record)
         if rates is None or charge_start is None:
             continue  # surfaced by callers: never $0, never a made-up date
-        yield from _record_rows(record, rates, charge_start)
+        off = (discounts or {}).get(provider_for(record.source), 0.0)
+        yield from _record_rows(record, rates, charge_start, 1.0 - off)
 
 
 def unpriced_models(records: Iterable[UsageRecord]) -> dict[str, int]:
@@ -122,12 +136,12 @@ def undated_count(records: Iterable[UsageRecord]) -> int:
 
 
 def _record_rows(
-    record: UsageRecord, rates: ModelRates, charge_start: datetime
+    record: UsageRecord, rates: ModelRates, charge_start: datetime, contracted: float
 ) -> Iterator[dict]:
     period_start = charge_start.replace(
         day=1, hour=0, minute=0, second=0, microsecond=0
     )
-    provider = _PROVIDER_BY_SOURCE.get(record.source, "Unknown")
+    provider = provider_for(record.source)
     service = _SERVICE_BY_SOURCE.get(record.source, record.source)
     # Columns that are the same for every bucket of this record, built
     # once: an export writes up to five rows per record.
@@ -174,10 +188,11 @@ def _record_rows(
         note = f" ({record.price_modifiers})" if record.price_modifiers else ""
         yield {
             **shared,
-            # Showback: all four cost columns carry list cost (module doc).
-            "BilledCost": cost,
-            "EffectiveCost": cost,
-            "ContractedCost": cost,
+            # Showback: the cost columns carry list cost (module doc); a
+            # negotiated discount lowers all but ListCost.
+            "BilledCost": cost * contracted,
+            "EffectiveCost": cost * contracted,
+            "ContractedCost": cost * contracted,
             "ListCost": cost,
             "ChargeDescription": f"{record.model} {label} via {service}{note}",
             # Quantities as decimals: FOCUS metric columns must not

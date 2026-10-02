@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Negotiated discounts: `--discounts FILE` on `report` and `export`
+  (`{"discounts": {"Anthropic": 0.15}}`, a fraction off list per FOCUS
+  provider). The FOCUS export keeps the public price in `ListCost` and
+  puts the contracted one in `ContractedCost`, `EffectiveCost` and
+  `BilledCost`; the report adds a contracted total. A malformed file is
+  a one-line error. The CI conformance gate validates a discounted
+  export too.
+- `tokencur report --currency CODE --fx-rate RATE` shows the totals in
+  another currency at a rate you give; nothing is fetched, and the
+  FOCUS export stays in USD, the currency providers bill in.
 - Each release publishes the pricing snapshot as its own asset,
   `tokencur-pricing-snapshot-X.Y.Z.json`, with a build provenance
   attestation, so the prices behind every figure are versioned and

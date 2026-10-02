@@ -23,6 +23,7 @@ from tokencur import __version__, doctor, ledger, observatory, prices
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
 from tokencur.ingest import claude_code
+from tokencur.pricing import ConfigError, load_discounts
 from tokencur.recommend import recommendations, render
 from tokencur.records import UsageRecord, in_period
 from tokencur.report import summarize
@@ -51,15 +52,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--until", type=_day, metavar="YYYY-MM-DD", help="first UTC day excluded"
     )
     root_help = "read these Claude Code logs instead; never stored in the ledger"
+    contract = argparse.ArgumentParser(add_help=False)
+    contract.add_argument(
+        "--discounts",
+        type=Path,
+        metavar="FILE",
+        help='negotiated discounts: {"discounts": {"Anthropic": 0.15}} (15%% off list)',
+    )
 
     report = commands.add_parser(
-        "report", parents=[period], help="cost summary in the terminal"
+        "report", parents=[period, contract], help="cost summary in the terminal"
     )
     report.add_argument("root", nargs="?", type=Path, help=root_help)
+    report.add_argument(
+        "--currency", type=_currency, metavar="CODE", help="also show totals in CODE"
+    )
+    report.add_argument(
+        "--fx-rate",
+        type=_positive,
+        metavar="RATE",
+        help="units of --currency per USD; you give the rate, nothing is fetched",
+    )
     report.set_defaults(handler=_report)
 
     export = commands.add_parser(
-        "export", parents=[period], help="write a FOCUS 1.2 CSV"
+        "export", parents=[period, contract], help="write a FOCUS 1.2 CSV"
     )
     export.add_argument("output", type=Path, help="CSV file to write")
     export.add_argument("root", nargs="?", type=Path, help=root_help)
@@ -108,13 +125,37 @@ def main(argv: Sequence[str] | None = None) -> int:
     since, until = getattr(args, "since", None), getattr(args, "until", None)
     if since and until and since >= until:
         parser.error("--since must be an earlier day than --until")
+    if (getattr(args, "currency", None) is None) != (
+        getattr(args, "fx_rate", None) is None
+    ):
+        parser.error("--currency and --fx-rate go together")
     try:
         return args.handler(args)
-    except ledger.LedgerError as exc:
+    except (ledger.LedgerError, ConfigError) as exc:
         _fail(str(exc))
     except sqlite3.DatabaseError as exc:
         _fail(f"the ledger looks damaged ({exc}); run `tokencur doctor`")
     return 1
+
+
+def _currency(text: str) -> str:
+    if len(text) != 3 or not text.isalpha() or not text.isupper():
+        raise argparse.ArgumentTypeError(f"not a 3-letter currency code: {text!r}")
+    return text
+
+
+def _positive(text: str) -> float:
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {text!r}") from None
+    if not value > 0:
+        raise argparse.ArgumentTypeError(f"must be above 0: {text!r}")
+    return value
+
+
+def _discounts(args: argparse.Namespace) -> dict[str, float] | None:
+    return load_discounts(args.discounts) if args.discounts else None
 
 
 def _day(text: str) -> date:
@@ -160,7 +201,8 @@ def _report(args: argparse.Namespace) -> int:
     if not records:
         _fail(f"no usage {_period(args)}")
         return 1
-    print(summarize(records, period=_period(args)))
+    fx = (args.currency, args.fx_rate) if args.currency else None
+    print(summarize(records, period=_period(args), discounts=_discounts(args), fx=fx))
     return 0
 
 
@@ -168,7 +210,7 @@ def _export(args: argparse.Namespace) -> int:
     records = _records(args)
     if records is None:
         return 1
-    rows = export_csv(records, args.output)
+    rows = export_csv(records, args.output, _discounts(args))
     print(f"wrote {rows} FOCUS charge rows to {args.output}", file=sys.stderr)
     skipped = unpriced_models(records)
     if skipped:

@@ -1,6 +1,6 @@
 """Conformance gate: run the FinOps Foundation validator on our export.
 
-Exports one FOCUS CSV holding two datasets and runs ``focus-validator``
+Exports one FOCUS CSV holding these datasets and runs ``focus-validator``
 against spec 1.2:
 
 - hand-built records for edge dates (a December charge, whose billing
@@ -9,7 +9,9 @@ against spec 1.2:
   ingesters: synthetic real-shaped logs (``tests/fixtures/logs``) and
   real logs redacted to usage metadata (``tests/fixtures/logs-real``),
   so the validator checks what tokencur produces from the formats agents
-  actually write, not only what a test author typed. Passes when every
+  actually write, not only what a test author typed;
+- the hand-built records again under negotiated discounts, so rows where
+  ContractedCost, EffectiveCost and BilledCost sit below ListCost pass too. Passes when every
 composite column rule passes; the only tolerated raw failure is
 ``InvoiceId-C-005-C`` — the not-null branch of the OR rule
 ``InvoiceId-C-003-C``, which showback data legitimately does not take
@@ -35,6 +37,8 @@ from tokencur.ingest import claude_code, codex, kimi_code
 from tokencur.records import UsageRecord
 
 TOLERATED_OR_BRANCHES = {"InvoiceId-C-005-C"}
+# A negotiated contract (see tokencur.pricing.load_discounts).
+DISCOUNTS = {"Anthropic": 0.15, "OpenAI": 0.10, "Moonshot AI": 0.05}
 FIXTURES = Path(__file__).parent.parent / "tests" / "fixtures"
 
 
@@ -94,8 +98,13 @@ def main() -> int:
         data_file = Path(tmp) / "focus_sample.csv"
         records = _synthetic_records() + _fixture_records()
         rows = export_csv(records, data_file)
+        discounted = Path(tmp) / "discounted.csv"
+        rows += export_csv(_synthetic_records(), discounted, DISCOUNTS)
+        with data_file.open("a", encoding="utf-8", newline="") as out:
+            out.writelines(discounted.read_text(encoding="utf-8").splitlines(True)[1:])
         print(
-            f"exported {rows} FOCUS rows (hand-built + fixture logs, synthetic and real)"
+            f"exported {rows} FOCUS rows: hand-built, fixture logs (synthetic and "
+            "real) and hand-built under negotiated discounts"
         )
 
         # The validator resolves its rule files relative to the CWD.

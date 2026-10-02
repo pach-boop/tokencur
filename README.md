@@ -91,6 +91,12 @@ tokencur doctor                # read-only health check: log formats, ledger, pr
 ```
 
 `tokencur --help` lists every command, and `python -m tokencur` works the same.
+Under a negotiated contract, `--discounts discounts.json` (for example
+`{"discounts": {"Anthropic": 0.15}}`) keeps the public price in FOCUS `ListCost`
+and puts the contracted price in `ContractedCost`, `EffectiveCost` and
+`BilledCost`; the report adds a contracted total. The export stays in USD, the
+currency every provider bills in; `tokencur report --currency MXN --fx-rate
+18.37` also shows totals at a rate you give (nothing is fetched).
 Periods are UTC days with `--until` excluded, the way a billing period is cut.
 
 With no arguments it scans every known local source on your machine — **Claude Code**

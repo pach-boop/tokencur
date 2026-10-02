@@ -110,3 +110,25 @@ def test_a_priced_option_is_its_own_sku_price():
     assert out["SkuPriceId"] == "claude-opus-5-5/output/fast"
     assert out["ListUnitPrice"] == pytest.approx(40 / 1_000_000)  # $40/MTok
     assert out["ChargeDescription"].endswith("(fast)")
+
+
+def test_a_negotiated_discount_lowers_contracted_cost_not_list_cost():
+    """FOCUS keeps the public price in ListCost; a contract's discount shows
+    in ContractedCost, EffectiveCost and BilledCost."""
+    list_rows = list(to_focus_rows([_record()]))
+    rows = list(to_focus_rows([_record()], discounts={"Anthropic": 0.15}))
+
+    for plain, discounted in zip(list_rows, rows, strict=True):
+        assert discounted["ListCost"] == plain["ListCost"]
+        for column in ("ContractedCost", "EffectiveCost", "BilledCost"):
+            assert discounted[column] == pytest.approx(plain["ListCost"] * 0.85)
+
+
+def test_a_discount_applies_only_to_its_provider():
+    rows = list(
+        to_focus_rows(
+            [_record(source="codex", model="gpt-5.4")], discounts={"Anthropic": 0.5}
+        )
+    )
+
+    assert all(r["BilledCost"] == r["ListCost"] for r in rows)
