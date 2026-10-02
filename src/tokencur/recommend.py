@@ -17,8 +17,8 @@ that need user-supplied inputs belong to a later phase.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import ModelRates, rates_for
@@ -78,7 +78,9 @@ def caching_roi(records: Iterable[UsageRecord]) -> list[Recommendation]:
     out = []
     for model, t in _totals_by_model(records).items():
         rates = rates_for(model)
-        if rates is None or not (t["cache_read"] or t["cache_write_5m"] or t["cache_write_1h"]):
+        if rates is None or not (
+            t["cache_read"] or t["cache_write_5m"] or t["cache_write_1h"]
+        ):
             continue
         cached_tokens = t["cache_read"] + t["cache_write_5m"] + t["cache_write_1h"]
         no_cache = cached_tokens * rates.input / 1_000_000
@@ -92,13 +94,15 @@ def caching_roi(records: Iterable[UsageRecord]) -> list[Recommendation]:
             detail = "Keep prompts cache-stable; this saving repeats every session."
         else:
             detail = "Cache writes are not being amortized by reads — investigate."
-        out.append(Recommendation(
-            kind="achieved",
-            title=f"Prompt caching on {model}",
-            detail=detail,
-            savings_usd=saved,
-            baseline_usd=no_cache,
-        ))
+        out.append(
+            Recommendation(
+                kind="achieved",
+                title=f"Prompt caching on {model}",
+                detail=detail,
+                savings_usd=saved,
+                baseline_usd=no_cache,
+            )
+        )
     return out
 
 
@@ -115,16 +119,18 @@ def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
         current, downsized = _cost(t, rates), _cost(t, sibling_rates)
         if current - downsized < 1.0:
             continue  # not worth a recommendation
-        out.append(Recommendation(
-            kind="potential",
-            title=f"Right-size {model} → {sibling}",
-            detail=(
-                "Ceiling if the cheaper tier suffices for this workload; "
-                "quality trade-off is a human call."
-            ),
-            savings_usd=current - downsized,
-            baseline_usd=current,
-        ))
+        out.append(
+            Recommendation(
+                kind="potential",
+                title=f"Right-size {model} → {sibling}",
+                detail=(
+                    "Ceiling if the cheaper tier suffices for this workload; "
+                    "quality trade-off is a human call."
+                ),
+                savings_usd=current - downsized,
+                baseline_usd=current,
+            )
+        )
     return out
 
 
@@ -135,8 +141,10 @@ def recommendations(records: Iterable[UsageRecord]) -> list[Recommendation]:
 
 def render(recs: list[Recommendation]) -> str:
     lines = []
-    for kind, header in (("achieved", "AVOIDED — measured, counterfactual at list prices"),
-                         ("potential", "HEADROOM — what-if at list prices")):
+    for kind, header in (
+        ("achieved", "AVOIDED — measured, counterfactual at list prices"),
+        ("potential", "HEADROOM — what-if at list prices"),
+    ):
         subset = [r for r in recs if r.kind == kind]
         if not subset:
             continue

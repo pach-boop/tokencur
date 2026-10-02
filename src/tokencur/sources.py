@@ -9,8 +9,8 @@ when an agent deletes old logs (see ``tokencur.ledger``).
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Callable, Iterator
 
 from tokencur import ledger
 from tokencur.ingest import claude_code, codex, kimi_code

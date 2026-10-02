@@ -21,7 +21,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from importlib import resources
 from pathlib import Path
 
@@ -61,7 +61,9 @@ _PER_TOKEN_TO_MTOK = 1_000_000
 _FIELDS = (("input", "input_cost_per_token"), ("output", "output_cost_per_token"))
 
 
-def diff_models(before: dict, after: dict) -> tuple[list[str], list[str], list[ModelDelta]]:
+def diff_models(
+    before: dict, after: dict
+) -> tuple[list[str], list[str], list[ModelDelta]]:
     """Diff two ``{model: entry}`` price maps.
 
     Returns (added, removed, changed). A change is any movement in the
@@ -144,8 +146,11 @@ def price_changes(
             continue
         changes.append(
             PriceChange(
-                date=iso[:10], sha=sha[:9],
-                added=added, removed=removed, changed=changed,
+                date=iso[:10],
+                sha=sha[:9],
+                added=added,
+                removed=removed,
+                changed=changed,
                 introduced=introduced,
             )
         )
@@ -215,12 +220,11 @@ def _timeline(changes: list[PriceChange]) -> str:
         if c.is_introduction:
             detail = f'<p class="muted">Snapshot introduced — {len(c.added)} models tracked.</p>'
         else:
-            parts = []
-            for d in c.changed:
-                parts.append(
-                    f'<div class="row"><span class="model">{d.model}</span>'
-                    f'<span class="field">{d.field}</span>{_delta_arrow(d.old, d.new)}</div>'
-                )
+            parts = [
+                f'<div class="row"><span class="model">{d.model}</span>'
+                f'<span class="field">{d.field}</span>{_delta_arrow(d.old, d.new)}</div>'
+                for d in c.changed
+            ]
             if c.added:
                 parts.append(
                     f'<div class="row added">+ added: {", ".join(c.added)}</div>'
@@ -239,7 +243,7 @@ def _timeline(changes: list[PriceChange]) -> str:
 
 
 def render_html(rows: list[dict], meta: dict, changes: list[PriceChange]) -> str:
-    generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    generated = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     return f"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

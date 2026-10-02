@@ -18,8 +18,8 @@ Mapping notes:
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from tokencur.ingest.claude_code import UsageRecord
 from tokencur.ingest.identity import fingerprint
@@ -79,8 +79,12 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                     record_id=f"{session_id}@{timestamp}#{fingerprint(usage)}",
                 )
                 # Defensive: skip consecutive identical reports.
-                key = (record.timestamp, record.input_tokens,
-                       record.output_tokens, record.cache_read_tokens)
+                key = (
+                    record.timestamp,
+                    record.input_tokens,
+                    record.output_tokens,
+                    record.cache_read_tokens,
+                )
                 if key == previous:
                     continue
                 previous = key

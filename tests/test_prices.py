@@ -61,8 +61,15 @@ def _commit(repo: Path, rel: str, models: dict, when: str) -> None:
     _run(repo, "add", rel)
     _run(
         repo,
-        "-c", "user.name=t", "-c", "user.email=t@t",
-        "commit", "-m", "snap", "--date", when,
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "commit",
+        "-m",
+        "snap",
+        "--date",
+        when,
     )
 
 
@@ -72,7 +79,8 @@ class TestPriceChanges:
         rel = "snap.json"
         _commit(tmp_path, rel, {"m": _entry(1e-6, 2e-6)}, "2026-07-01T00:00:00Z")
         _commit(
-            tmp_path, rel,
+            tmp_path,
+            rel,
             {"m": _entry(2e-6, 2e-6), "new": _entry(9e-6, 9e-6)},
             "2026-07-05T00:00:00Z",
         )
@@ -98,7 +106,8 @@ class TestPriceChanges:
         rel = "snap.json"
         _commit(tmp_path, rel, {"m": _entry(1e-6, 2e-6)}, "2026-07-01T00:00:00Z")
         _commit(
-            tmp_path, rel,
+            tmp_path,
+            rel,
             {"m": _entry(1e-6, 2e-6), "brand-new": _entry(9e-6, 9e-6)},
             "2026-07-05T00:00:00Z",
         )
@@ -120,7 +129,7 @@ def test_render_is_self_contained_and_has_no_external_scripts():
 
     assert "<style>" in page and "claude-opus-4-8" in page
     # No external scripts, stylesheets or font/image loads.
-    for forbidden in ('<script', 'src="http', "@import", "url(http"):
+    for forbidden in ("<script", 'src="http', "@import", "url(http"):
         assert forbidden not in page
 
 

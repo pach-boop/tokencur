@@ -39,7 +39,9 @@ FIELDS = (
     "cache_creation_input_token_cost_above_1hr",
     "litellm_provider",
 )
-TARGET = Path(__file__).parent.parent / "src/tokencur/pricing_data/litellm_snapshot.json"
+TARGET = (
+    Path(__file__).parent.parent / "src/tokencur/pricing_data/litellm_snapshot.json"
+)
 
 
 def build_snapshot(full: dict, previous: dict | None) -> dict[str, dict]:
@@ -91,8 +93,10 @@ def main() -> None:
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_text(
         json.dumps(
-            {"_meta": {"source": SOURCE, "fetched": date.today().isoformat()},
-             "models": snapshot},
+            {
+                "_meta": {"source": SOURCE, "fetched": date.today().isoformat()},
+                "models": snapshot,
+            },
             indent=1,
             sort_keys=True,
         )

@@ -73,8 +73,11 @@ RATE_CARD: dict[str, ModelRates] = {
     # automatic caching bills reads only (no write premium). Replace
     # with the official rate if Moonshot publishes one.
     "kimi-k2.7-code-highspeed": ModelRates(
-        input=0.95, output=4.00, cache_read=0.16,
-        cache_write_5m=0.0, cache_write_1h=0.0,
+        input=0.95,
+        output=4.00,
+        cache_read=0.16,
+        cache_write_5m=0.0,
+        cache_write_1h=0.0,
     ),
 }
 

@@ -36,7 +36,7 @@ from __future__ import annotations
 import html
 import json
 import sys
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from tokencur.focus import to_focus_rows, unpriced_models
@@ -52,7 +52,11 @@ DAYS_PER_MONTH = 365.25 / 12
 # service, never the rank). Both palettes pass the six-check validator
 # against their own surface.
 SERVICE_ORDER = ["Claude Code", "Codex CLI", "Kimi Code"]
-SERVICE_CLASS = {"Claude Code": "sv-claude", "Codex CLI": "sv-codex", "Kimi Code": "sv-kimi"}
+SERVICE_CLASS = {
+    "Claude Code": "sv-claude",
+    "Codex CLI": "sv-codex",
+    "Kimi Code": "sv-kimi",
+}
 
 
 def load_subscriptions(path: Path = DEFAULT_SUBSCRIPTIONS) -> dict | None:
@@ -78,8 +82,14 @@ def _history_gaps(daily: dict, subscriptions: dict | None) -> list[dict]:
         before = date.fromisoformat(gap["before"])
         excluded = min(max((before - start).days, 0), span_days)
         if excluded:
-            gaps.append({"service": service, "before": gap["before"],
-                         "excluded_days": excluded, "why": gap.get("why", "")})
+            gaps.append(
+                {
+                    "service": service,
+                    "before": gap["before"],
+                    "excluded_days": excluded,
+                    "why": gap.get("why", ""),
+                }
+            )
     return gaps
 
 
@@ -150,7 +160,7 @@ def snapshot(records: list, subscriptions: dict | None = None) -> dict:
     recs = recommendations(records)
     days = len(daily)
     snap = {
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         "rates_as_of": AS_OF,
         "kpis": {
             "total_usd": round(total, 2),
@@ -165,11 +175,18 @@ def snapshot(records: list, subscriptions: dict | None = None) -> dict:
             ),
         },
         "daily": [
-            {"day": day, "services": {s: round(c, 4) for s, c in sorted(services.items())}}
+            {
+                "day": day,
+                "services": {s: round(c, 4) for s, c in sorted(services.items())},
+            }
             for day, services in sorted(daily.items())
         ],
         "by_model": [
-            {"model": m, "cost_usd": round(a["cost_usd"], 2), "tokens": int(a["tokens"])}
+            {
+                "model": m,
+                "cost_usd": round(a["cost_usd"], 2),
+                "tokens": int(a["tokens"]),
+            }
             for m, a in sorted(by_model.items(), key=lambda kv: -kv[1]["cost_usd"])
         ],
         "by_bucket": [
@@ -221,9 +238,7 @@ def _daily_chart(snap: dict) -> str:
 
     width, height, pad_l, pad_r, pad_t, pad_b = 860, 280, 56, 16, 12, 28
     plot_w, plot_h = width - pad_l - pad_r, height - pad_t - pad_b
-    y_max = _nice_ceiling(
-        max(cost for d in days for cost in d["services"].values())
-    )
+    y_max = _nice_ceiling(max(cost for d in days for cost in d["services"].values()))
     n = len(days)
 
     def x(i: int) -> float:
@@ -274,14 +289,17 @@ def _daily_chart(snap: dict) -> str:
         for s in services
     )
     table = _table(
-        ["day"] + services,
-        [[d["day"]] + [_usd(d["services"].get(s, 0.0)) for s in services] for d in days],
+        ["day", *services],
+        [
+            [d["day"], *(_usd(d["services"].get(s, 0.0)) for s in services)]
+            for d in days
+        ],
     )
     return (
         f'<div class="legend">{legend}</div>'
         f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="Daily cost by service">'
         f'{"".join(grid)}<line class="crosshair" y1="{pad_t}" y2="{pad_t + plot_h}" hidden/>'
-        f'{"".join(lines)}{"".join(labels)}{"".join(hovers)}</svg>'
+        f"{''.join(lines)}{''.join(labels)}{''.join(hovers)}</svg>"
         f"{_details(table)}"
     )
 
@@ -291,18 +309,13 @@ def _bars(rows: list[tuple[str, float, str]], aria: str) -> str:
     if not rows:
         return "<p class='muted'>Nothing to show yet.</p>"
     top = max(cost for _, cost, _ in rows)
-    out = ['<div class="bars" role="img" aria-label="%s">' % html.escape(aria)]
+    out = [f'<div class="bars" role="img" aria-label="{html.escape(aria)}">']
     for label, cost, tip in rows:
         pct = 100 * cost / top if top else 0
         out.append(
-            '<div class="bar-row" data-tip="{tip}"><span class="bar-label">{label}</span>'
-            '<span class="track"><span class="fill" style="width:{pct:.1f}%"></span></span>'
-            '<span class="bar-value">{value}</span></div>'.format(
-                tip=html.escape(tip),
-                label=html.escape(label),
-                pct=pct,
-                value=_usd(cost),
-            )
+            f'<div class="bar-row" data-tip="{html.escape(tip)}"><span class="bar-label">{html.escape(label)}</span>'
+            f'<span class="track"><span class="fill" style="width:{pct:.1f}%"></span></span>'
+            f'<span class="bar-value">{_usd(cost)}</span></div>'
         )
     out.append("</div>")
     return "".join(out)
@@ -334,7 +347,8 @@ def render_html(snap: dict) -> str:
     money_section = ""
     if money:
         subs = " + ".join(
-            f"{name} {_usd(fee)}" for name, fee in money["subscriptions_monthly_usd"].items()
+            f"{name} {_usd(fee)}"
+            for name, fee in money["subscriptions_monthly_usd"].items()
         )
         money_section = (
             "<h2>What is actually paid</h2>"
@@ -350,14 +364,18 @@ def render_html(snap: dict) -> str:
             f'<p class="muted">Flat fees really paid ({html.escape(subs)}) — the only actual '
             "money on this page. Leverage = API-equivalent usage value ÷ estimated outlay "
             "over the same window"
-            + (" (fees not counted across the history gap above)" if snap.get("history_gaps") else "")
+            + (
+                " (fees not counted across the history gap above)"
+                if snap.get("history_gaps")
+                else ""
+            )
             + ".</p>"
         )
     fees = (money or {}).get("subscriptions_monthly_usd", {})
     gap_note = "".join(
         '<p class="note">'
-        f'<strong>History gap · {html.escape(g["service"])}</strong> — no usage on record '
-        f'before {html.escape(g["before"])}. {html.escape(g["why"])}'
+        f"<strong>History gap · {html.escape(g['service'])}</strong> — no usage on record "
+        f"before {html.escape(g['before'])}. {html.escape(g['why'])}"
         + (
             " Its subscription fee is not counted across the gap, so lost records "
             "don't read as months paid for nothing."
@@ -384,7 +402,11 @@ def render_html(snap: dict) -> str:
     )
     model_bars = _bars(
         [
-            (m["model"], m["cost_usd"], f"{m['model']} · {m['tokens']:,} tokens · {_usd(m['cost_usd'])}")
+            (
+                m["model"],
+                m["cost_usd"],
+                f"{m['model']} · {m['tokens']:,} tokens · {_usd(m['cost_usd'])}",
+            )
             for m in snap["by_model"]
         ],
         "Cost by model",
@@ -392,18 +414,27 @@ def render_html(snap: dict) -> str:
     model_table = _details(
         _table(
             ["model", "value USD", "tokens"],
-            [[m["model"], _usd(m["cost_usd"]), f"{m['tokens']:,}"] for m in snap["by_model"]],
+            [
+                [m["model"], _usd(m["cost_usd"]), f"{m['tokens']:,}"]
+                for m in snap["by_model"]
+            ],
         )
     )
     bucket_bars = _bars(
-        [(b["bucket"], b["cost_usd"], f"{b['bucket']} · {_usd(b['cost_usd'])}") for b in snap["by_bucket"]],
+        [
+            (b["bucket"], b["cost_usd"], f"{b['bucket']} · {_usd(b['cost_usd'])}")
+            for b in snap["by_bucket"]
+        ],
         "Cost by token type",
     )
     recs = snap["recommendations"]
     rec_table = (
         _table(
             ["kind", "recommendation", "USD (list prices)", "% of baseline"],
-            [[r["kind"], r["title"], _usd(r["savings_usd"]), f"{r['savings_pct']}%"] for r in recs],
+            [
+                [r["kind"], r["title"], _usd(r["savings_usd"]), f"{r['savings_pct']}%"]
+                for r in recs
+            ],
         )
         if recs
         else "<p class='muted'>No recommendations yet.</p>"
@@ -411,9 +442,7 @@ def render_html(snap: dict) -> str:
     unpriced = ""
     if snap["unpriced"]:
         pairs = ", ".join(f"{m} ×{n}" for m, n in snap["unpriced"].items())
-        unpriced = (
-            f'<p class="muted">Unpriced usage (excluded, never billed as $0): {html.escape(pairs)}</p>'
-        )
+        unpriced = f'<p class="muted">Unpriced usage (excluded, never billed as $0): {html.escape(pairs)}</p>'
 
     return f"""<!doctype html>
 <html lang="en"><head>
@@ -533,8 +562,7 @@ def main(argv: list[str]) -> int:
     outdir = Path(argv[1]) if len(argv) > 1 else DEFAULT_OUTPUT
     records = load_records()
     if not records:
-        print("error: no usage in known log locations or the ledger",
-              file=sys.stderr)
+        print("error: no usage in known log locations or the ledger", file=sys.stderr)
         return 1
     write_site(snapshot(records, load_subscriptions()), outdir)
     print(f"observatory written to {outdir} ({len(records)} records aggregated)")

@@ -38,9 +38,7 @@ def test_row_costs_sum_to_record_cost():
     record = _record()
     rows = list(to_focus_rows([record]))
 
-    assert sum(r["BilledCost"] for r in rows) == pytest.approx(
-        record_cost_usd(record)
-    )
+    assert sum(r["BilledCost"] for r in rows) == pytest.approx(record_cost_usd(record))
     # Showback: the four cost columns agree.
     for r in rows:
         assert r["BilledCost"] == r["EffectiveCost"] == r["ListCost"]

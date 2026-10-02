@@ -19,13 +19,31 @@ FIXTURE = Path(__file__).parent / "fixtures" / "focus_sample_official_slice.csv"
 
 # Every column both datasets must share: the FOCUS core that predates 1.2.
 CORE_SHARED = {
-    "BilledCost", "BillingAccountId", "BillingCurrency",
-    "BillingPeriodStart", "BillingPeriodEnd", "ChargeCategory",
-    "ChargeDescription", "ChargePeriodStart", "ChargePeriodEnd",
-    "ConsumedQuantity", "ConsumedUnit", "ContractedCost", "EffectiveCost",
-    "InvoiceIssuerName", "ListCost", "ListUnitPrice", "PricingQuantity",
-    "PricingUnit", "ProviderName", "PublisherName", "ServiceCategory",
-    "ServiceName", "SkuId", "SkuPriceId", "SubAccountId",
+    "BilledCost",
+    "BillingAccountId",
+    "BillingCurrency",
+    "BillingPeriodStart",
+    "BillingPeriodEnd",
+    "ChargeCategory",
+    "ChargeDescription",
+    "ChargePeriodStart",
+    "ChargePeriodEnd",
+    "ConsumedQuantity",
+    "ConsumedUnit",
+    "ContractedCost",
+    "EffectiveCost",
+    "InvoiceIssuerName",
+    "ListCost",
+    "ListUnitPrice",
+    "PricingQuantity",
+    "PricingUnit",
+    "ProviderName",
+    "PublisherName",
+    "ServiceCategory",
+    "ServiceName",
+    "SkuId",
+    "SkuPriceId",
+    "SubAccountId",
 }
 
 CHARGE_CATEGORIES = {"Usage", "Purchase", "Tax", "Credit", "Adjustment"}
@@ -39,10 +57,15 @@ def _official_rows() -> list[dict]:
 
 def _our_rows() -> list[dict]:
     record = UsageRecord(
-        timestamp="2026-07-01T10:23:45.500Z", workspace="ws",
-        session_id="s1", model="claude-opus-4-8",
-        input_tokens=1000, output_tokens=500, cache_read_tokens=2000,
-        cache_write_5m_tokens=300, cache_write_1h_tokens=100,
+        timestamp="2026-07-01T10:23:45.500Z",
+        workspace="ws",
+        session_id="s1",
+        model="claude-opus-4-8",
+        input_tokens=1000,
+        output_tokens=500,
+        cache_read_tokens=2000,
+        cache_write_5m_tokens=300,
+        cache_write_1h_tokens=100,
         source="claude-code",
     )
     return list(to_focus_rows([record]))
@@ -52,8 +75,8 @@ def test_core_focus_vocabulary_is_shared():
     official = set(_official_rows()[0])
     ours = set(FOCUS_COLUMNS)
 
-    assert CORE_SHARED <= official, "fixture no longer covers the FOCUS core"
-    assert CORE_SHARED <= ours, "export dropped a core FOCUS column"
+    assert official >= CORE_SHARED, "fixture no longer covers the FOCUS core"
+    assert ours >= CORE_SHARED, "export dropped a core FOCUS column"
     # Broad overlap beyond the core: both speak the same schema family.
     assert len(official & ours) >= 25
 

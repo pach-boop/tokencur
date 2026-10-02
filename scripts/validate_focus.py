@@ -22,8 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from tokencur.export import export_csv  # noqa: E402
-from tokencur.ingest.claude_code import UsageRecord  # noqa: E402
+from tokencur.export import export_csv
+from tokencur.ingest.claude_code import UsageRecord
 
 TOLERATED_OR_BRANCHES = {"InvoiceId-C-005-C"}
 
@@ -38,18 +38,28 @@ def _synthetic_records() -> list[UsageRecord]:
     )
     return [
         UsageRecord(
-            timestamp="2026-07-01T10:00:00.000Z", workspace="ws-a",
-            session_id="s1", model="claude-opus-4-8",
-            source="claude-code", **base,
+            timestamp="2026-07-01T10:00:00.000Z",
+            workspace="ws-a",
+            session_id="s1",
+            model="claude-opus-4-8",
+            source="claude-code",
+            **base,
         ),
         UsageRecord(
-            timestamp="2026-07-02T23:59:59.000Z", workspace="ws-b",
-            session_id="s2", model="gpt-5.2-codex", source="codex", **base,
+            timestamp="2026-07-02T23:59:59.000Z",
+            workspace="ws-b",
+            session_id="s2",
+            model="gpt-5.2-codex",
+            source="codex",
+            **base,
         ),
         UsageRecord(
-            timestamp="2026-12-15T00:00:00.000Z", workspace="ws-c",
-            session_id="s3", model="kimi-k2-0711-preview",
-            source="kimi-code", **base,
+            timestamp="2026-12-15T00:00:00.000Z",
+            workspace="ws-c",
+            session_id="s3",
+            model="kimi-k2-0711-preview",
+            source="kimi-code",
+            **base,
         ),
     ]
 
@@ -65,9 +75,18 @@ def main() -> int:
 
         # The validator resolves its rule files relative to the CWD.
         result = subprocess.run(
-            ["focus-validator", "--data-file", str(data_file),
-             "--validate-version", "1.2", "--output-type", "console"],
-            cwd=package_parent, capture_output=True, text=True,
+            [
+                "focus-validator",
+                "--data-file",
+                str(data_file),
+                "--validate-version",
+                "1.2",
+                "--output-type",
+                "console",
+            ],
+            cwd=package_parent,
+            capture_output=True,
+            text=True,
         )
     output = result.stdout + result.stderr
 
@@ -78,7 +97,9 @@ def main() -> int:
     print(summary.group(0) if summary else "no summary line found")
 
     if result.returncode != 0 or unexpected or not or_satisfied:
-        print(f"FOCUS conformance FAILED — unexpected rule failures: {sorted(unexpected)}")
+        print(
+            f"FOCUS conformance FAILED — unexpected rule failures: {sorted(unexpected)}"
+        )
         print(output[-3000:])
         return 1
     print("FOCUS 1.2 conformance gate: PASS")

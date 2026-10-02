@@ -85,8 +85,9 @@ def main(argv: list[str]) -> int:
     else:
         records = load_records()
         if not records:
-            print("error: no usage in known log locations or the ledger",
-                  file=sys.stderr)
+            print(
+                "error: no usage in known log locations or the ledger", file=sys.stderr
+            )
             return 1
     print(summarize(records))
     return 0
