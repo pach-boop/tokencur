@@ -106,12 +106,106 @@ def test_gap_outside_the_window_changes_nothing():
     assert snap["money"]["estimated_outlay_usd"] == round(50.0 * 61 / DAYS_PER_MONTH, 2)
 
 
+def test_each_plan_counts_only_while_it_was_active():
+    """A plan change, a cancellation and a late start: each fee counts for
+    the days its plan was active, and "per month now" is what is paid on
+    the window's last day."""
+    records = [_record("2026-05-01"), _record("2026-06-30")]  # 61-day window
+    subscriptions = {
+        "plans": {
+            "Claude Code": [
+                {"monthly_usd": 20.0, "until": "2026-06-01"},
+                {"monthly_usd": 100.0, "from": "2026-06-01"},
+            ],
+            "Codex CLI": [{"monthly_usd": 20.0, "until": "2026-05-16"}],
+            "Kimi Code": [{"monthly_usd": 10.0, "from": "2026-06-21"}],
+        }
+    }
+
+    snap = snapshot(records, subscriptions)
+
+    money = snap["money"]
+    days = {(p["service"], p["monthly_usd"]): p["days_counted"] for p in money["plans"]}
+    assert days == {
+        ("Claude Code", 20.0): 31,
+        ("Claude Code", 100.0): 30,
+        ("Codex CLI", 20.0): 15,
+        ("Kimi Code", 10.0): 10,
+    }
+    outlay = (20.0 * 31 + 100.0 * 30 + 20.0 * 15 + 10.0 * 10) / DAYS_PER_MONTH
+    assert money["estimated_outlay_usd"] == round(outlay, 2)
+    assert money["subscriptions_monthly_usd"] == {
+        "Claude Code": 100.0,
+        "Kimi Code": 10.0,
+    }
+    assert money["monthly_total_usd"] == 110.0
+    page = render_html(snap)
+    assert "subscriptions / month now" in page
+    assert "Claude Code $20/mo until 2026-05-31, then $100/mo from 2026-06-01" in page
+    assert "Codex CLI $20/mo until 2026-05-15" in page
+
+
+def test_a_plan_note_states_its_assumption_on_the_page():
+    records = [_record("2026-05-01"), _record("2026-06-30")]
+    note = "Cancellation date not recorded: counted through the month of last use."
+    subscriptions = {
+        "plans": {
+            "Codex CLI": [{"monthly_usd": 20.0, "until": "2026-06-01", "note": note}]
+        }
+    }
+
+    snap = snapshot(records, subscriptions)
+
+    assert snap["money"]["plans"][0]["note"] == note
+    assert f"Codex CLI: {note}" in render_html(snap)
+
+
+def test_plans_still_skip_a_history_gap():
+    """A plan active before a declared gap ends counts only after it."""
+    records = [_record("2026-05-01"), _record("2026-06-30")]
+    subscriptions = {
+        "plans": {"Claude Code": [{"monthly_usd": 50.0, "from": "2026-05-10"}]},
+        "history_gaps": {"Claude Code": {"before": "2026-06-01", "why": "Lost."}},
+    }
+
+    snap = snapshot(records, subscriptions)
+
+    assert snap["money"]["plans"][0]["days_counted"] == 30
+
+
+def test_a_plan_outside_the_window_costs_nothing():
+    records = [_record("2026-05-01"), _record("2026-06-30")]
+    subscriptions = {
+        "plans": {
+            "Codex CLI": [{"monthly_usd": 20.0, "until": "2026-04-01"}],
+            "Claude Code": [{"monthly_usd": 20.0}],
+        }
+    }
+
+    money = snapshot(records, subscriptions)["money"]
+
+    assert [p["days_counted"] for p in money["plans"]] == [61, 0]
+    assert money["subscriptions_monthly_usd"] == {"Claude Code": 20.0}
+
+
 def test_published_subscriptions_file_is_valid():
-    """subscriptions.json is public data: fees must be positive and every
-    declared gap needs a real date and a reason readers can see."""
+    """subscriptions.json is public data: every fee must be positive, every
+    plan's dates real and in order, and every declared gap needs a real
+    date and a reason readers can see."""
     config = load_subscriptions(Path(__file__).parent.parent / "subscriptions.json")
 
-    assert config and all(fee > 0 for fee in config["monthly_usd"].values())
+    assert config
+    assert all(fee > 0 for fee in (config.get("monthly_usd") or {}).values())
+    for plans in (config.get("plans") or {}).values():
+        for plan in plans:
+            assert plan["monthly_usd"] > 0
+            start, until = plan.get("from"), plan.get("until")
+            if start and until:
+                assert date.fromisoformat(start) < date.fromisoformat(until)
+            else:
+                for day in (start, until):
+                    if day:
+                        date.fromisoformat(day)
     for gap in (config.get("history_gaps") or {}).values():
         date.fromisoformat(gap["before"])
         assert gap["why"].strip()
