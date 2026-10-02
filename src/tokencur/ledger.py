@@ -38,7 +38,7 @@ from pathlib import Path
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
 from tokencur.records import UsageRecord
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class LedgerError(RuntimeError):
@@ -59,10 +59,13 @@ _FIELDS = (
     "cache_read_tokens",
     "cache_write_5m_tokens",
     "cache_write_1h_tokens",
+    "price_modifiers",
 )
 
-# Columns shared by the live table and the audit table below.
-_COLUMNS = """
+# Each schema's DDL is frozen as of its version: a migration must build
+# the shape of the step it implements, never today's. The live table and
+# the audit table share these columns.
+_V1_COLUMNS = """
     source                TEXT    NOT NULL,
     record_id             TEXT    NOT NULL,
     timestamp             TEXT    NOT NULL,
@@ -77,16 +80,18 @@ _COLUMNS = """
     first_seen            TEXT    NOT NULL,  -- when the ledger first stored it
 """
 
-_CREATE_USAGE = f"CREATE TABLE usage ({_COLUMNS}    PRIMARY KEY (source, record_id)\n)"
+_V1_USAGE = f"CREATE TABLE usage ({_V1_COLUMNS}    PRIMARY KEY (source, record_id)\n)"
+_V2_USAGE = _V1_USAGE  # schema 2 left the live table as it was
 
 # Rows a later tokencur found were not usage after all. They leave the
 # totals but are never deleted: each keeps when and why it was retired,
 # so a restatement can be audited and undone.
-_CREATE_SUPERSEDED = f"""CREATE TABLE IF NOT EXISTS superseded ({_COLUMNS}
+_V2_SUPERSEDED = f"""CREATE TABLE IF NOT EXISTS superseded ({_V1_COLUMNS}
     superseded_at         TEXT    NOT NULL,
     reason                TEXT    NOT NULL,
     PRIMARY KEY (source, record_id)
 )"""
+_V1_FIELDS = (*_FIELDS[:11], "first_seen")
 
 _UPSERT = (
     f"INSERT INTO usage ({', '.join(_FIELDS)}, first_seen) "
@@ -164,7 +169,7 @@ def _key_fields(r: UsageRecord) -> tuple:
     # A record without an id (a third-party ingester, a hand-built test
     # record) falls back to a hash of its content, so distinct records
     # never collapse into one row under an empty id.
-    record_id = r.record_id or "content:" + fingerprint(asdict(r))
+    record_id = r.record_id or "content:" + _content_id(r)
     return (
         r.source,
         record_id,
@@ -177,7 +182,20 @@ def _key_fields(r: UsageRecord) -> tuple:
         r.cache_read_tokens,
         r.cache_write_5m_tokens,
         r.cache_write_1h_tokens,
+        r.price_modifiers,
     )
+
+
+def _content_id(r: UsageRecord) -> str:
+    """Hash of a record's fields, for records without a source id.
+
+    A field added after schema 1 joins the hash only when it is set, so a
+    record's content id never changes just because the dataclass grew.
+    """
+    fields = asdict(r)
+    if not fields["price_modifiers"]:
+        del fields["price_modifiers"]
+    return fingerprint(fields)
 
 
 def _connect(path: Path) -> sqlite3.Connection:
@@ -203,10 +221,14 @@ def _connect(path: Path) -> sqlite3.Connection:
             f"to {SCHEMA_VERSION}. Upgrade tokencur to keep using it."
         )
     if version == 0:
+        # A new ledger starts from schema 2 and takes the later steps
+        # silently: there is nothing to back up or announce.
         with conn:
-            conn.execute(_CREATE_USAGE)
-            conn.execute(_CREATE_SUPERSEDED)
-            conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+            conn.execute(_V2_USAGE)
+            conn.execute(_V2_SUPERSEDED)
+            conn.execute("PRAGMA user_version = 2")
+        for step in range(2, SCHEMA_VERSION):
+            _MIGRATIONS[step](conn)
     elif version < SCHEMA_VERSION:
         _migrate(conn, path, version)
     return conn
@@ -250,7 +272,7 @@ def _v1_to_v2(conn: sqlite3.Connection) -> str:
     maintainer's ledger that selects exactly the rows the corrected
     parser no longer yields.
     """
-    conn.execute(_CREATE_SUPERSEDED)
+    conn.execute(_V2_SUPERSEDED)
     rows = conn.execute(
         "SELECT record_id, session_id, input_tokens, output_tokens, "
         "cache_read_tokens, cache_write_5m_tokens, cache_write_1h_tokens "
@@ -264,10 +286,11 @@ def _v1_to_v2(conn: sqlite3.Connection) -> str:
             resent.append((record_id,))
         previous = key
     stamp = _utc_now()
+    columns = ", ".join(_V1_FIELDS)
     with conn:
         conn.executemany(
-            "INSERT OR REPLACE INTO superseded "
-            "SELECT *, ?, ? FROM usage WHERE source = 'codex' AND record_id = ?",
+            f"INSERT OR REPLACE INTO superseded ({columns}, superseded_at, reason) "
+            f"SELECT {columns}, ?, ? FROM usage WHERE source = 'codex' AND record_id = ?",
             [(stamp, _CODEX_RESEND, record_id) for (record_id,) in resent],
         )
         conn.executemany(
@@ -277,8 +300,28 @@ def _v1_to_v2(conn: sqlite3.Connection) -> str:
     return f"retired {len(resent):,} re-sent Codex reports to the superseded table"
 
 
+def _v2_to_v3(conn: sqlite3.Connection) -> str:
+    """Schema 3: ``price_modifiers``, the request options that change a
+    call's price (fast mode, US-only inference, Batch API; see
+    ``tokencur.pricing.MODIFIER_FACTORS``). Existing rows read as standard
+    calls, which is what every logged call was until now; a rescan
+    refreshes rows whose logs are still on disk."""
+    with conn:
+        for table in ("usage", "superseded"):
+            _add_column(conn, table, "price_modifiers TEXT NOT NULL DEFAULT ''")
+        conn.execute("PRAGMA user_version = 3")
+    return "added price_modifiers (fast mode, US-only, batch); stored rows read as standard"
+
+
+def _add_column(conn: sqlite3.Connection, table: str, ddl: str) -> None:
+    """ALTER TABLE ADD COLUMN, skipped when a crashed run already added it."""
+    name = ddl.split()[0]
+    if name not in {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+
 # Step from version N to N + 1, keyed by N.
-_MIGRATIONS = {1: _v1_to_v2}
+_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3}
 
 
 def _utc_now() -> str:

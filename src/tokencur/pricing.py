@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import date
 from functools import lru_cache
 from importlib import resources
@@ -184,6 +184,33 @@ def _in_force(current: ModelRates, history: History, on: date | None) -> ModelRa
     return current
 
 
+#: Price multipliers for the request options Anthropic publishes, applied
+#: to every rate of the call, cache rates included (cache multipliers
+#: stack on them). Fast mode doubles the price (Opus 5.5 $8/$40, Opus 5
+#: and 4.8 $10/$50); US-only inference costs 1.1x on every category; the
+#: Batch API halves input and output. Source: SOURCE, as of 2026-10-02.
+MODIFIER_FACTORS = {"fast": 2.0, "us": 1.1, "batch": 0.5}
+
+
+def with_modifiers(rates: ModelRates, modifiers: str) -> ModelRates:
+    """``rates`` scaled for the request options in ``modifiers``."""
+    factor = 1.0
+    for name in filter(None, modifiers.split("+")):
+        factor *= MODIFIER_FACTORS.get(name, 1.0)
+    if factor == 1.0:
+        return rates
+    return ModelRates(*(getattr(rates, f.name) * factor for f in fields(ModelRates)))
+
+
+def rates_for_record(record: UsageRecord) -> ModelRates | None:
+    """The rates one call is valued at: its model's list rate in force on
+    its day, scaled for its request options. None if unpriced."""
+    rates = rates_for(record.model, record_day(record))
+    if rates is None or not record.price_modifiers:
+        return rates
+    return with_modifiers(rates, record.price_modifiers)
+
+
 def record_day(record: UsageRecord) -> date | None:
     """The UTC day a record's call happened, or None when undated."""
     moment = parse_timestamp(record.timestamp)
@@ -192,8 +219,8 @@ def record_day(record: UsageRecord) -> date | None:
 
 def record_cost_usd(record: UsageRecord) -> float | None:
     """API-equivalent list cost of one usage record, at the rate in force
-    on its day; None if unpriced."""
-    rates = rates_for(record.model, record_day(record))
+    on its day and for its request options; None if unpriced."""
+    rates = rates_for_record(record)
     if rates is None:
         return None
     return (

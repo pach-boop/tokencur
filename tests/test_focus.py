@@ -98,3 +98,15 @@ def test_undated_records_are_skipped_and_counted(timestamp):
     assert rows
     assert all(r["ChargePeriodStart"].startswith("2026-07-01") for r in rows)
     assert undated_count(records) == 1
+
+
+def test_a_priced_option_is_its_own_sku_price():
+    rows = list(
+        to_focus_rows([_record(model="claude-opus-5-5", price_modifiers="fast")])
+    )
+
+    out = next(r for r in rows if r["SkuId"].endswith("/output"))
+    assert out["SkuId"] == "claude-opus-5-5/output"
+    assert out["SkuPriceId"] == "claude-opus-5-5/output/fast"
+    assert out["ListUnitPrice"] == pytest.approx(40 / 1_000_000)  # $40/MTok
+    assert out["ChargeDescription"].endswith("(fast)")

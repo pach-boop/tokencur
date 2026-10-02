@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
 
-from tokencur.pricing import ModelRates, rates_for
+from tokencur.pricing import ModelRates, rates_for, rates_for_record
 from tokencur.records import UsageRecord, parse_timestamp
 
 FOCUS_VERSION = "1.2"
@@ -100,8 +100,8 @@ def to_focus_rows(records: Iterable[UsageRecord]) -> Iterator[dict]:
     """Yield FOCUS charge rows for every priced record."""
     for record in records:
         charge_start = parse_timestamp(record.timestamp)
-        # List price in force on the charge's day (point-in-time).
-        rates = rates_for(record.model, charge_start.date() if charge_start else None)
+        # List price in force on the charge's day, for its request options.
+        rates = rates_for_record(record)
         if rates is None or charge_start is None:
             continue  # surfaced by callers: never $0, never a made-up date
         yield from _record_rows(record, rates, charge_start)
@@ -168,6 +168,10 @@ def _record_rows(
         unit_price = getattr(rates, rate_attribute) / 1_000_000  # USD per token
         cost = quantity * unit_price
         sku = f"{record.model}/{sku_suffix}"
+        # A request option (fast mode, US-only, batch) is a price point of
+        # the same SKU: SkuPriceId names it, ListUnitPrice carries it.
+        option = f"/{record.price_modifiers}" if record.price_modifiers else ""
+        note = f" ({record.price_modifiers})" if record.price_modifiers else ""
         yield {
             **shared,
             # Showback: all four cost columns carry list cost (module doc).
@@ -175,14 +179,14 @@ def _record_rows(
             "EffectiveCost": cost,
             "ContractedCost": cost,
             "ListCost": cost,
-            "ChargeDescription": f"{record.model} {label} via {service}",
+            "ChargeDescription": f"{record.model} {label} via {service}{note}",
             # Quantities as decimals: FOCUS metric columns must not
             # schema-infer as integers.
             "ConsumedQuantity": float(quantity),
             "ListUnitPrice": unit_price,
             "PricingQuantity": float(quantity),
             "SkuId": sku,
-            "SkuPriceId": sku,
+            "SkuPriceId": sku + option,
         }
 
 

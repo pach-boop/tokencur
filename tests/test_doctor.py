@@ -25,10 +25,10 @@ def test_healthy_logs_pass_with_what_each_scan_saw(tmp_path):
 
     assert d.problems == []
     claude, cx, kimi = (_check(d, n) for n in ("claude-code", "codex", "kimi-code"))
-    assert (claude.stats.files, claude.stats.usage_lines, claude.records) == (2, 6, 4)
+    assert (claude.stats.files, claude.stats.usage_lines, claude.records) == (2, 7, 5)
     assert (cx.stats.files, cx.stats.usage_lines, cx.records) == (1, 4, 2)
     assert (kimi.stats.files, kimi.stats.usage_lines, kimi.records) == (1, 2, 2)
-    assert dict(claude.stats.versions) == {"2.1.280": 6}
+    assert dict(claude.stats.versions) == {"2.1.280": 7}
     assert dict(cx.stats.versions) == {"0.120.0": 1}
     assert "all checks passed" in doctor.render(d)
 
@@ -108,7 +108,7 @@ def test_a_ledger_from_a_newer_tokencur_is_flagged(tmp_path):
 def test_doctor_never_migrates_or_writes_the_ledger(tmp_path):
     path = tmp_path / "ledger.sqlite3"
     with closing(sqlite3.connect(path)) as conn, conn:
-        conn.execute(ledger._CREATE_USAGE)
+        conn.execute(ledger._V1_USAGE)
         conn.execute("PRAGMA user_version = 1")
     before = path.read_bytes()
 

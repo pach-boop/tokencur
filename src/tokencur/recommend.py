@@ -19,7 +19,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from tokencur.pricing import ModelRates, rates_for, record_day
+from tokencur.pricing import (
+    ModelRates,
+    rates_for,
+    rates_for_record,
+    record_day,
+    with_modifiers,
+)
 from tokencur.records import UsageRecord
 
 # Curated "one tier down" pairs. Only emitted when the sibling is
@@ -72,7 +78,7 @@ def caching_roi(records: Iterable[UsageRecord]) -> list[Recommendation]:
         cached = r.cache_read_tokens + r.cache_write_5m_tokens + r.cache_write_1h_tokens
         if not cached:
             continue
-        rates = rates_for(r.model, record_day(r))
+        rates = rates_for_record(r)
         if rates is None:
             continue
         acc = sums.setdefault(r.model, [0.0, 0.0])
@@ -113,10 +119,12 @@ def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
         sibling = DOWNSIZE.get(r.model.split("/")[-1])
         if sibling is None:
             continue
-        day = record_day(r)
-        rates, sibling_rates = rates_for(r.model, day), rates_for(sibling, day)
+        rates, sibling_rates = rates_for_record(r), rates_for(sibling, record_day(r))
         if rates is None or sibling_rates is None:
             continue
+        # The cheaper model would run with the same region and batch
+        # options, at standard speed: fast mode is an Opus option.
+        sibling_rates = with_modifiers(sibling_rates, _without_fast(r.price_modifiers))
         acc = sums.setdefault(r.model, [0.0, 0.0])
         acc[0] += _cost(r, rates)
         acc[1] += _cost(r, sibling_rates)
@@ -141,6 +149,10 @@ def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
             )
         )
     return out
+
+
+def _without_fast(modifiers: str) -> str:
+    return "+".join(m for m in modifiers.split("+") if m and m != "fast")
 
 
 def recommendations(records: Iterable[UsageRecord]) -> list[Recommendation]:

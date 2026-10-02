@@ -114,7 +114,20 @@ def _parse_line(line: str, workspace: str, stats: ScanStats) -> UsageRecord | No
         source="claude-code",
         # The dedup key above is already the API request's identity.
         record_id=f"{key[0]}:{key[1]}",
+        price_modifiers=_modifiers(usage),
     )
+
+
+def _modifiers(usage: dict) -> str:
+    """The logged request options that change the call's price."""
+    found = []
+    if usage.get("service_tier") == "batch":
+        found.append("batch")
+    if usage.get("speed") == "fast":
+        found.append("fast")
+    if usage.get("inference_geo") == "us":
+        found.append("us")
+    return "+".join(found)
 
 
 def _cache_writes(usage: dict) -> tuple[int, int]:

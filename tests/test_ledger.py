@@ -123,11 +123,11 @@ def test_default_path_honours_overrides(tmp_path, monkeypatch):
 def _v1_ledger(path, rows):
     """A ledger as tokencur 0.2 left it: schema 1, no superseded table."""
     with closing(sqlite3.connect(path)) as conn, conn:
-        conn.execute(ledger._CREATE_USAGE)
+        conn.execute(ledger._V1_USAGE)
         conn.execute("PRAGMA user_version = 1")
         conn.executemany(
             f"INSERT INTO usage VALUES ({', '.join('?' * 12)})",
-            [(*ledger._key_fields(r), "2026-07-01T00:00:00Z") for r in rows],
+            [(*ledger._key_fields(r)[:11], "2026-07-01T00:00:00Z") for r in rows],
         )
 
 
@@ -164,7 +164,9 @@ def test_schema_1_ledger_retires_codex_resends_with_an_audit_trail(tmp_path, cap
 
     assert sorted(r.record_id for r in history) == sorted(r.record_id for r in kept)
     with closing(sqlite3.connect(path)) as conn, conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert (
+            conn.execute("PRAGMA user_version").fetchone()[0] == ledger.SCHEMA_VERSION
+        )
         retired = conn.execute(
             "SELECT record_id, reason FROM superseded ORDER BY record_id"
         ).fetchall()
@@ -176,7 +178,9 @@ def test_schema_1_ledger_retires_codex_resends_with_an_audit_trail(tmp_path, cap
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
     if os.name == "posix":
         assert os.stat(backup).st_mode & 0o777 == 0o600
-    assert "retired 2 re-sent Codex reports" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "retired 2 re-sent Codex reports" in err  # step 1 -> 2
+    assert "added price_modifiers" in err  # step 2 -> 3, same run, same backup
 
 
 def test_migration_runs_once(tmp_path, capsys):
@@ -200,3 +204,42 @@ def test_new_ledger_starts_at_the_current_schema(tmp_path):
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master")}
     assert {"usage", "superseded"} <= tables
     assert not (tmp_path / "ledger.sqlite3.schema-0.bak").exists()
+
+
+def test_schema_2_gains_price_modifiers_and_keeps_its_rows(tmp_path, capsys):
+    path = tmp_path / "ledger.sqlite3"
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(ledger._V2_USAGE)
+        conn.execute(ledger._V2_SUPERSEDED)
+        conn.execute("PRAGMA user_version = 2")
+        conn.execute(
+            f"INSERT INTO usage VALUES ({', '.join('?' * 12)})",
+            (*ledger._key_fields(_record("req_1:msg_1"))[:11], "2026-07-01T00:00:00Z"),
+        )
+
+    (kept,) = ledger.read(path)
+
+    assert kept.record_id == "req_1:msg_1" and kept.price_modifiers == ""
+    with closing(sqlite3.connect(path)) as conn:
+        assert (
+            conn.execute("PRAGMA user_version").fetchone()[0] == ledger.SCHEMA_VERSION
+        )
+    assert "schema 3" in capsys.readouterr().err
+    assert (tmp_path / "ledger.sqlite3.schema-2.bak").exists()
+
+
+def test_price_modifiers_round_trip(tmp_path):
+    path = tmp_path / "ledger.sqlite3"
+    fast = _record("req_9:msg_9", price_modifiers="fast+us")
+
+    ledger.record([fast], path)
+
+    assert ledger.read(path) == [fast]
+
+
+def test_a_new_ledger_is_created_at_the_current_schema_silently(tmp_path, capsys):
+    path = tmp_path / "ledger.sqlite3"
+    ledger.record([_record("req_1:msg_1")], path)
+
+    assert capsys.readouterr().err == ""
+    assert not list(tmp_path.glob("*.bak"))

@@ -50,7 +50,9 @@ after the agents delete their logs.
    models LiteLLM retires keep their last known rate, so historical usage stays priced).
    Unknown models surface as *unpriced usage* rather than silently costing $0.
    Rates are point-in-time: each call is valued at the list rate in force on its
-   day, from a rate history the snapshot keeps.
+   day, from a rate history the snapshot keeps. Request options that change the
+   price are applied as Claude Code logs them: fast mode (2x), US-only inference
+   (1.1x) and the Batch API (0.5x).
 4. **Explainable over clever** — every line that ships is one the maintainer fully
    understands and can defend.
 
@@ -169,7 +171,8 @@ history:
   migrated in place. Before an upgrade the file is copied to
   `ledger.sqlite3.schema-N.bak`, and rows a later version finds were not
   usage move to a `superseded` table with when and why. Schema 2 retired the
-  Codex re-sent reports earlier versions double counted (see the changelog).
+  Codex re-sent reports earlier versions double counted (see the changelog);
+  schema 3 records each call's price-changing request options.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -250,8 +253,6 @@ last rate), then regenerates this page from that history.
 - Local-log sources only so far (Claude Code, Codex CLI, Kimi Code); billed-cost
   sources are next: [RunPod](https://github.com/pach-boop/tokencur/issues/6) and
   the [Anthropic and OpenAI admin APIs](https://github.com/pach-boop/tokencur/issues/7).
-- Fast mode, US inference geography and batch pricing are not applied yet; none
-  occur in the maintainer's logs ([#8](https://github.com/pach-boop/tokencur/issues/8)).
 - The ledger can only keep usage it has seen. Run tokencur more often than
   Claude Code's `cleanupPeriodDays`, or raise that setting in
   `~/.claude/settings.json`.
