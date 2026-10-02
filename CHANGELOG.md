@@ -159,6 +159,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- A malformed or corrupted log could crash a whole scan. Fuzz tests
+  found it in all three ingesters: a JSON line that is not an object,
+  invalid UTF-8 bytes, text where a count belongs, an out-of-range
+  Kimi timestamp. Others let wrong types into records (`True` or
+  `1.0` as a token count). Fields are now read through defensive
+  helpers (`tokencur.ingest.fields`): a malformed usage line is
+  skipped, never guessed at, and a bad byte spoils one line, not the
+  scan. Real logs parse byte-identically.
 - `pip install -e .[dev]` in the docs and workflows is now quoted
   (`".[dev]"`): unquoted, it is a shell glob, and zsh, the macOS
   default shell, rejects it with "no matches found".

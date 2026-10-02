@@ -9,11 +9,11 @@ model, an epoch-millisecond timestamp and per-turn token deltas
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tokencur.ingest.fields import Malformed, count, entry, text
 from tokencur.ingest.identity import fingerprint
 from tokencur.records import UsageRecord
 
@@ -29,39 +29,52 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
             (part for part in path.parts if part.startswith("session_")), ""
         )
         agent = path.parent.name  # .../agents/<agent>/wire.jsonl
-        with path.open(encoding="utf-8") as fh:
+        # errors="replace": a corrupted byte spoils one line, not the scan.
+        with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
                 if '"usage.record"' not in line:
                     continue
-                try:
-                    entry = json.loads(line)
-                except json.JSONDecodeError:
+                line_entry = entry(line)
+                if line_entry.get("type") != "usage.record":
                     continue
-                if entry.get("type") != "usage.record":
-                    continue
-                if entry.get("usageScope") != "turn":
+                if line_entry.get("usageScope") != "turn":
                     continue  # only per-turn deltas; avoid double counting
-                usage = entry.get("usage") or {}
-                yield UsageRecord(
-                    timestamp=_iso(entry.get("time")),
-                    workspace=workspace,
-                    session_id=session_id,
-                    model=entry.get("model", "unknown"),
-                    input_tokens=usage.get("inputOther", 0) or 0,
-                    output_tokens=usage.get("output", 0) or 0,
-                    cache_read_tokens=usage.get("inputCacheRead", 0) or 0,
-                    # Kimi reports one cache-creation figure; treated as the
-                    # base (5m-tier) write rate.
-                    cache_write_5m_tokens=usage.get("inputCacheCreation", 0) or 0,
-                    cache_write_1h_tokens=0,
-                    source="kimi-code",
-                    record_id=(
-                        f"{session_id}/{agent}@{entry.get('time')}#{fingerprint(usage)}"
-                    ),
-                )
+                usage = line_entry.get("usage") or {}
+                if not isinstance(usage, dict):
+                    continue  # malformed: not a usage object
+                try:
+                    record = UsageRecord(
+                        timestamp=_iso(line_entry.get("time")),
+                        workspace=workspace,
+                        session_id=session_id,
+                        model=text(line_entry.get("model"), "unknown"),
+                        input_tokens=count(usage.get("inputOther")),
+                        output_tokens=count(usage.get("output")),
+                        cache_read_tokens=count(usage.get("inputCacheRead")),
+                        # Kimi reports one cache-creation figure; treated as the
+                        # base (5m-tier) write rate.
+                        cache_write_5m_tokens=count(usage.get("inputCacheCreation")),
+                        cache_write_1h_tokens=0,
+                        source="kimi-code",
+                        record_id=(
+                            f"{session_id}/{agent}@{line_entry.get('time')}"
+                            f"#{fingerprint(usage)}"
+                        ),
+                    )
+                except Malformed:
+                    continue
+                yield record
 
 
-def _iso(epoch_ms: int | None) -> str:
-    if not epoch_ms:
+# Epoch milliseconds a log can plausibly carry: after 2000, before 2200.
+_EPOCH_MS_RANGE = (946_684_800_000, 7_258_118_400_000)
+
+
+def _iso(epoch_ms: object) -> str:
+    """The record's UTC timestamp, or "" (undated) when ``time`` is unusable."""
+    if type(epoch_ms) is not int:
+        return ""
+    low, high = _EPOCH_MS_RANGE
+    if not low <= epoch_ms < high:
         return ""
     return datetime.fromtimestamp(epoch_ms / 1000, tz=UTC).isoformat()
