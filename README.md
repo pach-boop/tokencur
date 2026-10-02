@@ -234,7 +234,10 @@ last rate), then regenerates this page from that history.
 ## Limitations (honest)
 
 - Local-log sources only so far (Claude Code, Codex CLI, Kimi Code); billed-cost
-  admin-API ingesters are pending.
+  sources are next: [RunPod](https://github.com/pach-boop/tokencur/issues/6) and
+  the [Anthropic and OpenAI admin APIs](https://github.com/pach-boop/tokencur/issues/7).
+- Fast mode, US inference geography and batch pricing are not applied yet; none
+  occur in the maintainer's logs ([#8](https://github.com/pach-boop/tokencur/issues/8)).
 - The ledger can only keep usage it has seen. Run tokencur more often than
   Claude Code's `cleanupPeriodDays`, or raise that setting in
   `~/.claude/settings.json`.
@@ -246,7 +249,8 @@ last rate), then regenerates this page from that history.
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
 - Rates are current, not point-in-time: when a provider moves a list price, past
   usage is revalued at the new rate, so a published total is reproducible only
-  with the rates date the report prints ([ADR 0007](docs/adr/0007-current-list-rates-not-point-in-time.md)).
+  with the rates date the report prints ([ADR 0007](docs/adr/0007-current-list-rates-not-point-in-time.md);
+  point-in-time pricing is [#5](https://github.com/pach-boop/tokencur/issues/5)).
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can

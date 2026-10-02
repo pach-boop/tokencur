@@ -26,4 +26,5 @@ recognized method, and it keeps a month comparable with the next.
 - Point-in-time pricing, with effective-dated rates in the card and
   rate history carried in the snapshot, is the planned replacement. It
   touches pricing, the FOCUS export and recommendations, which today
-  price aggregated tokens once.
+  price aggregated tokens once. Tracked in
+  [#5](https://github.com/pach-boop/tokencur/issues/5).
