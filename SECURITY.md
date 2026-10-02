@@ -35,6 +35,14 @@ built from this repository:
 gh attestation verify tokencur-X.Y.Z-py3-none-any.whl --repo pach-boop/tokencur
 ```
 
+The pricing snapshot every cost is computed from is published the same way,
+as `tokencur-pricing-snapshot-X.Y.Z.json` with its own attestation:
+
+```bash
+gh attestation verify tokencur-pricing-snapshot-X.Y.Z.json --repo pach-boop/tokencur
+sha256sum tokencur-pricing-snapshot-X.Y.Z.json   # equals what `tokencur doctor` prints
+```
+
 ## Supported versions
 
 The latest release and `main`. Older versions are not patched.
