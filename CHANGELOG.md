@@ -84,6 +84,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- **Codex usage was counted about twice.** Codex re-sends each
+  `token_count` report under a new timestamp (alongside rate-limit
+  updates), and tokencur counted every one. A call now counts only
+  when the session's running total moves; reports with no billable
+  tokens are skipped. On the maintainer's logs Codex drops from 16,130
+  to 8,031 calls and from $685.66 to $332.95 of API-equivalent value,
+  and all 94 rollouts now reconcile exactly with Codex's own running
+  total (a new test pins that reconciliation). Ledger schema 2 retires
+  the re-sends already stored: the upgrade backs the file up first,
+  and retired rows move to a `superseded` table with the reason, never
+  deleted. Every published figure that included Codex overstated it.
 - Undated usage is never given a date. A record with no timestamp
   was exported to FOCUS on 1970-01-01, which would also stretch the
   observatory's daily chart back to 1970, and a malformed timestamp
