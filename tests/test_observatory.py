@@ -262,6 +262,7 @@ def test_corrections_to_published_figures_are_disclosed():
     assert snap["corrections"][0]["date"] == "2026-10-02"
     assert "Correction · 2026-10-02" in html
     assert "$685.66" in html and "$332.95" in html
+    assert "$240.49" in html and "$96.59" in html  # outlay, plan by plan
 
 
 def test_billed_charges_are_shown_as_real_money_without_resource_ids():

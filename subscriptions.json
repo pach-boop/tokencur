@@ -1,9 +1,33 @@
 {
-  "note": "Flat monthly fees the maintainer actually pays — the only real money in the observatory. See README 'Money concepts'.",
-  "monthly_usd": {
-    "Claude Code": 20.0,
-    "Codex CLI": 20.0,
-    "Kimi Code": 10.0
+  "note": "Subscription fees the maintainer actually pays, plan by plan: with provider bills, the only real money in the observatory. A plan counts from its 'from' day (included) to its 'until' day (excluded). See README 'Money concepts'.",
+  "plans": {
+    "Claude Code": [
+      {
+        "monthly_usd": 20.0,
+        "from": "2026-09-24",
+        "until": "2026-10-02",
+        "note": "Pro for about a week before the upgrade, counted from 2026-09-24, the first day on record."
+      },
+      {
+        "monthly_usd": 100.0,
+        "from": "2026-10-02"
+      }
+    ],
+    "Codex CLI": [
+      {
+        "monthly_usd": 20.0,
+        "until": "2026-05-01",
+        "note": "ChatGPT Plus, no longer paid. Its cancellation date was not recorded, so it counts through April 2026, the month Codex CLI was last used."
+      }
+    ],
+    "Kimi Code": [
+      {
+        "monthly_usd": 10.0,
+        "from": "2026-06-21",
+        "until": "2026-10-01",
+        "note": "No longer paid. Its dates were not recorded, so it counts from the first day Kimi Code was used through September 2026, the month it was last used."
+      }
+    ]
   },
   "history_gaps": {
     "Claude Code": {
