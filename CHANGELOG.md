@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Property-based tests (Hypothesis, dev extra): generated records,
+  histories and log files check the promises the numbers rest on.
+  FOCUS rows add up to the record's cost; every row is internally
+  consistent (periods, unit price × quantity, the four cost columns
+  equal under showback). Cost is linear in tokens. A split day
+  divides a history without loss or overlap. The ledger keeps every
+  record exactly once. Fingerprints ignore key order. Codex counts
+  reconcile with the running total under random re-sends. A streamed
+  Claude message keeps each field's largest count.
 - Golden tests: synthetic logs shaped like each agent's real logs
   (`tests/fixtures/logs`), covering every case that broke or nearly
   broke an ingester, with the exact records and FOCUS CSV they must
