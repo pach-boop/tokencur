@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- The README's two links to the price-watch workflow were relative, so
+  they broke on PyPI, which shows the README as the project page. They
+  are absolute now, like the rest.
+
 ## [0.3.1] - 2026-10-02
 
 ### Added

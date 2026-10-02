@@ -48,7 +48,7 @@ after the agents delete their logs.
    vendored snapshot of the community-maintained
    [LiteLLM price database](https://github.com/BerriAI/litellm) as fallback (290+ live
    models across Anthropic, OpenAI, Gemini, DeepSeek, Kimi/Moonshot, GLM/Z.ai and
-   Ollama, refreshed daily by the [price-watch action](.github/workflows/price-watch.yml);
+   Ollama, refreshed daily by the [price-watch action](https://github.com/pach-boop/tokencur/blob/main/.github/workflows/price-watch.yml);
    models LiteLLM retires keep their last known rate, so historical usage stays priced).
    Unknown models surface as *unpriced usage* rather than silently costing $0.
    Rates are point-in-time: each call is valued at the list rate in force on its
@@ -295,7 +295,7 @@ built from the git history of the pricing snapshot:
 tokencur prices   # regenerates docs/prices/
 ```
 
-A daily [price-watch action](.github/workflows/price-watch.yml) refreshes the
+A daily [price-watch action](https://github.com/pach-boop/tokencur/blob/main/.github/workflows/price-watch.yml) refreshes the
 vendored snapshot and commits whenever it changes, with a message that names
 what moved (rate moves, models added, models retired upstream and kept at their
 last rate), then regenerates this page from that history.
