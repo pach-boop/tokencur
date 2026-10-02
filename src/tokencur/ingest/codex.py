@@ -28,22 +28,28 @@ from pathlib import Path
 
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.ingest.identity import content_key, fingerprint
+from tokencur.ingest.stats import ScanStats
 from tokencur.records import UsageRecord
 
 _INTERESTING = ('"token_count"', '"session_meta"', '"turn_context"')
 
 
-def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
+def iter_usage_records(
+    root: Path, stats: ScanStats | None = None
+) -> Iterator[UsageRecord]:
     """Yield one UsageRecord per model call reported by ``token_count``.
 
     A forked session can copy earlier reports into a new rollout. A call
     is recognised by its content key, the event timestamp plus the raw
     usage as logged; a key already seen in an earlier file (in path,
-    hence date, order) is a copy and is not counted again.
+    hence date, order) is a copy and is not counted again. ``stats``,
+    when given, counts what the scan saw (see ``tokencur.ingest.stats``).
     """
+    stats = stats if stats is not None else ScanStats()
     seen: set[str] = set()
     for path in sorted(root.rglob("*.jsonl")):
-        for record in _parse_file(path):
+        stats.files += 1
+        for record in _parse_file(path, stats):
             key = content_key(record.record_id)
             if key in seen:
                 continue
@@ -51,7 +57,7 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
             yield record
 
 
-def _parse_file(path: Path) -> Iterator[UsageRecord]:
+def _parse_file(path: Path, stats: ScanStats) -> Iterator[UsageRecord]:
     workspace = ""
     session_id = ""
     model = "unknown"
@@ -71,6 +77,7 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                 cwd = text(payload.get("cwd"))
                 workspace = Path(cwd).name if cwd else path.parent.name
                 model = text(payload.get("model")) or model
+                stats.saw_version(text(payload.get("cli_version")))
             elif line_entry.get("type") == "turn_context":
                 model = text(payload.get("model")) or model
             elif payload.get("type") == "token_count":
@@ -78,8 +85,10 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                 usage = info.get("last_token_usage")
                 if not usage:
                     continue  # rate-limit-only updates carry no usage
+                stats.usage_lines += 1
                 if not isinstance(usage, dict):
-                    continue  # malformed: not a usage object
+                    stats.malformed += 1
+                    continue
                 # A re-sent report leaves the running total where it was.
                 # Logs without a total fall back to skipping a consecutive
                 # report that is identical, timestamp included.
@@ -95,6 +104,7 @@ def _parse_file(path: Path) -> Iterator[UsageRecord]:
                     cached = count(usage.get("cached_input_tokens"))
                     output = count(usage.get("output_tokens"))
                 except Malformed:
+                    stats.malformed += 1
                     continue
                 if not (input_total or cached or output):
                     continue  # moved only total_tokens: no billable call

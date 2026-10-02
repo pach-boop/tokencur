@@ -15,12 +15,21 @@ from pathlib import Path
 
 from tokencur.ingest.fields import Malformed, count, entry, text
 from tokencur.ingest.identity import fingerprint
+from tokencur.ingest.stats import ScanStats
 from tokencur.records import UsageRecord
 
 
-def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
-    """Yield one UsageRecord per per-turn ``usage.record`` line."""
+def iter_usage_records(
+    root: Path, stats: ScanStats | None = None
+) -> Iterator[UsageRecord]:
+    """Yield one UsageRecord per per-turn ``usage.record`` line.
+
+    ``stats``, when given, counts what the scan saw (see
+    ``tokencur.ingest.stats``).
+    """
+    stats = stats if stats is not None else ScanStats()
     for path in sorted(root.rglob("*.jsonl")):
+        stats.files += 1
         workspace = next(
             (part for part in path.parts if part.startswith("wd_")),
             path.parent.name,
@@ -39,9 +48,11 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
                     continue
                 if line_entry.get("usageScope") != "turn":
                     continue  # only per-turn deltas; avoid double counting
+                stats.usage_lines += 1
                 usage = line_entry.get("usage") or {}
                 if not isinstance(usage, dict):
-                    continue  # malformed: not a usage object
+                    stats.malformed += 1
+                    continue
                 try:
                     record = UsageRecord(
                         timestamp=_iso(line_entry.get("time")),
@@ -62,6 +73,7 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
                         ),
                     )
                 except Malformed:
+                    stats.malformed += 1
                     continue
                 yield record
 
