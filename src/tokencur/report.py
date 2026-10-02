@@ -21,7 +21,7 @@ from pathlib import Path
 
 from tokencur.ingest import claude_code
 from tokencur.pricing import AS_OF, record_cost_usd
-from tokencur.records import UsageRecord
+from tokencur.records import UsageRecord, parse_timestamp
 from tokencur.sources import load_records
 
 
@@ -45,7 +45,7 @@ def summarize(records: list[UsageRecord]) -> str:
         agg["cache_read"] += r.cache_read_tokens
         agg["cache_write"] += r.cache_write_5m_tokens + r.cache_write_1h_tokens
         agg["cost"] += cost
-        by_day[r.date] += cost
+        by_day[r.date if parse_timestamp(r.timestamp) else "undated"] += cost
         total_cost += cost
 
     lines = [
@@ -67,7 +67,7 @@ def summarize(records: list[UsageRecord]) -> str:
             lines.append(f"  {source:<14}${cost:,.2f}")
     lines += ["", "daily cost (top 10 days):"]
     for day, cost in sorted(by_day.items(), key=lambda kv: -kv[1])[:10]:
-        lines.append(f"  {day}  ${cost:,.2f}")
+        lines.append(f"  {day:<10}  ${cost:,.2f}")
     lines += ["", f"API-EQUIVALENT TOTAL (showback): ${total_cost:,.2f}"]
     if unpriced:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(unpriced.items()))

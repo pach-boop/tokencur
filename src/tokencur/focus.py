@@ -9,7 +9,8 @@ Cost semantics (showback): local agent usage is not invoiced per token,
 so ``BilledCost``, ``EffectiveCost``, ``ContractedCost`` and
 ``ListCost`` all carry the API-equivalent list cost (see
 ``pricing.py``). Unpriced records are skipped and counted by the
-caller, never exported as $0.
+caller, never exported as $0; undated records likewise, never given
+an invented charge period.
 
 Column semantics follow the FOCUS specification
 (https://focus.finops.org); each mapping states its intent inline.
@@ -18,10 +19,10 @@ Column semantics follow the FOCUS specification
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from tokencur.pricing import ModelRates, rates_for
-from tokencur.records import UsageRecord
+from tokencur.records import UsageRecord, parse_timestamp
 
 FOCUS_VERSION = "1.2"
 
@@ -99,9 +100,10 @@ def to_focus_rows(records: Iterable[UsageRecord]) -> Iterator[dict]:
     """Yield FOCUS charge rows for every priced record."""
     for record in records:
         rates = rates_for(record.model)
-        if rates is None:
-            continue  # unpriced usage is surfaced by callers, not exported
-        yield from _record_rows(record, rates)
+        charge_start = parse_timestamp(record.timestamp)
+        if rates is None or charge_start is None:
+            continue  # surfaced by callers: never $0, never a made-up date
+        yield from _record_rows(record, rates, charge_start)
 
 
 def unpriced_models(records: Iterable[UsageRecord]) -> dict[str, int]:
@@ -113,8 +115,14 @@ def unpriced_models(records: Iterable[UsageRecord]) -> dict[str, int]:
     return counts
 
 
-def _record_rows(record: UsageRecord, rates: ModelRates) -> Iterator[dict]:
-    charge_start = _parse_ts(record.timestamp)
+def undated_count(records: Iterable[UsageRecord]) -> int:
+    """Count records that to_focus_rows would skip for want of a date."""
+    return sum(1 for r in records if parse_timestamp(r.timestamp) is None)
+
+
+def _record_rows(
+    record: UsageRecord, rates: ModelRates, charge_start: datetime
+) -> Iterator[dict]:
     charge_end = charge_start + timedelta(hours=1)
     period_start = charge_start.replace(
         day=1, hour=0, minute=0, second=0, microsecond=0
@@ -173,16 +181,6 @@ def _record_rows(record: UsageRecord, rates: ModelRates) -> Iterator[dict]:
             "SubAccountId": record.workspace or None,
             "SubAccountName": record.workspace or None,
         }
-
-
-def _parse_ts(timestamp: str) -> datetime:
-    if not timestamp:
-        return datetime(1970, 1, 1, tzinfo=UTC)
-    value = timestamp.replace("Z", "+00:00")
-    parsed = datetime.fromisoformat(value)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed.astimezone(UTC)
 
 
 def _floor_hour(moment: datetime) -> datetime:

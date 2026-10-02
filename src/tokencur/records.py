@@ -9,6 +9,7 @@ ingester, so no layer depends on how a particular agent logs.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 
 # slots: no per-instance __dict__. A full history is held in memory as
@@ -39,3 +40,20 @@ class UsageRecord:
     def date(self) -> str:
         """UTC calendar day of the call, as logged (``YYYY-MM-DD``)."""
         return self.timestamp[:10]
+
+
+def parse_timestamp(timestamp: str) -> datetime | None:
+    """A logged timestamp as an aware UTC datetime; None if missing or malformed.
+
+    None means *undated*: callers surface it and never substitute a date,
+    the same way unpriced usage is never valued at $0.
+    """
+    if not timestamp:
+        return None
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
