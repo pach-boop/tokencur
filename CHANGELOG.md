@@ -27,6 +27,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   Metadata only, owner-readable file, schema-versioned, stdlib
   `sqlite3` (still no runtime dependencies). Location:
   `$TOKENCUR_LEDGER`, else `$XDG_DATA_HOME/tokencur/ledger.sqlite3`.
+- Observatory history gaps: `subscriptions.json` can declare
+  `history_gaps` (usage that happened but whose logs were lost before
+  the ledger existed). The page discloses each gap in a note at the
+  top, and the affected subscription fee is not counted across it, so
+  lost records don't depress subscription leverage. Fees still count
+  over the whole window everywhere else — a paid month with no usage is
+  real money.
 
 - Price card page: `python -m tokencur.prices` renders `docs/prices/`
   (published via GitHub Pages) — the curated Anthropic rates, the

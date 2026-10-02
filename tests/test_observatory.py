@@ -1,7 +1,15 @@
 import json
+from datetime import date
+from pathlib import Path
 
 from tokencur.ingest.claude_code import UsageRecord
-from tokencur.observatory import render_html, snapshot, write_site
+from tokencur.observatory import (
+    DAYS_PER_MONTH,
+    load_subscriptions,
+    render_html,
+    snapshot,
+    write_site,
+)
 
 
 def _record(day: str, model: str = "claude-opus-4-8", output_tokens: int = 1000) -> UsageRecord:
@@ -45,16 +53,66 @@ def test_money_block_scales_subscriptions_to_the_window():
     same calendar window — flat fees scaled by span, not by active days."""
     records = [_record("2026-05-01"), _record("2026-06-30")]
 
-    snap = snapshot(records, subscriptions={"Claude Code": 50.0})
+    snap = snapshot(records, subscriptions={"monthly_usd": {"Claude Code": 50.0}})
 
     money = snap["money"]
     assert money["window_days"] == 61
     outlay = 50.0 * (61 / (365.25 / 12))
     assert money["estimated_outlay_usd"] == round(outlay, 2)
     assert money["leverage"] == round(snap["kpis"]["total_usd"] / outlay, 1)
+    assert "history_gaps" not in snap
     page = render_html(snap)
     assert "What is actually paid" in page
     assert "subscription leverage" in page
+    assert "History gap" not in page
+
+
+def test_history_gap_is_disclosed_and_its_fee_not_charged():
+    """Usage that happened but whose logs were lost must be disclosed,
+    and its fee must not count across the gap — a lost record is not a
+    month paid for nothing. Other fees still count over the full window."""
+    records = [_record("2026-05-01"), _record("2026-06-30")]  # 61-day window
+    subscriptions = {
+        "monthly_usd": {"Claude Code": 50.0, "Codex CLI": 20.0},
+        "history_gaps": {
+            "Claude Code": {"before": "2026-06-01", "why": "Logs were deleted."}
+        },
+    }
+
+    snap = snapshot(records, subscriptions)
+
+    [gap] = snap["history_gaps"]
+    assert (gap["service"], gap["excluded_days"]) == ("Claude Code", 31)
+    outlay = (50.0 * (61 - 31) + 20.0 * 61) / DAYS_PER_MONTH
+    assert snap["money"]["estimated_outlay_usd"] == round(outlay, 2)
+    page = render_html(snap)
+    assert "History gap · Claude Code" in page
+    assert "Logs were deleted." in page
+    assert "fees not counted across the history gap" in page
+
+
+def test_gap_outside_the_window_changes_nothing():
+    records = [_record("2026-05-01"), _record("2026-06-30")]
+    subscriptions = {
+        "monthly_usd": {"Claude Code": 50.0},
+        "history_gaps": {"Claude Code": {"before": "2026-01-01", "why": "old"}},
+    }
+
+    snap = snapshot(records, subscriptions)
+
+    assert "history_gaps" not in snap
+    assert snap["money"]["estimated_outlay_usd"] == round(50.0 * 61 / DAYS_PER_MONTH, 2)
+
+
+def test_published_subscriptions_file_is_valid():
+    """subscriptions.json is public data: fees must be positive and every
+    declared gap needs a real date and a reason readers can see."""
+    config = load_subscriptions(Path(__file__).parent.parent / "subscriptions.json")
+
+    assert config and all(fee > 0 for fee in config["monthly_usd"].values())
+    for gap in (config.get("history_gaps") or {}).values():
+        date.fromisoformat(gap["before"])
+        assert gap["why"].strip()
 
 
 def test_without_subscriptions_no_real_money_is_claimed():
