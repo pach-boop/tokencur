@@ -15,8 +15,7 @@ from tokencur.sources import load_records
 def main(argv: list[str]) -> int:
     records = load_records()
     if not records:
-        print("error: no usage in known log locations or the ledger",
-              file=sys.stderr)
+        print("error: no usage in known log locations or the ledger", file=sys.stderr)
         return 1
     print(render(recommendations(records)))
     return 0

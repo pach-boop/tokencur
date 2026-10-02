@@ -25,6 +25,30 @@ where = ["src"]
 [tool.setuptools.package-data]
 tokencur = ["pricing_data/*.json"]
 
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+# Same trap as .gitignore: global excludes such as *token* would hide the
+# whole package from ruff. Its built-in excludes (.venv, build...) still apply.
+respect-gitignore = false
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pyupgrade, bugbear, simplify, ruff-specific,
+# comprehensions, misc, perflint, return-statement hygiene.
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "C4", "PIE", "PERF", "RET"]
+# Line length is the formatter's job; the long lines left are prose in
+# the HTML templates, where wrapping would only churn generated pages.
+ignore = ["E501"]
+# Typographic signs are intended: counts such as `model ×3`, `− removed`.
+allowed-confusables = ["×", "−"]
+
+[tool.ruff.lint.flake8-comprehensions]
+# dict(key=value) reads better than a literal for keyword-style defaults.
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["tokencur"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

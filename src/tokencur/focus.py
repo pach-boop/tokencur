@@ -17,8 +17,8 @@ Column semantics follow the FOCUS specification
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Iterable, Iterator
+from collections.abc import Iterable, Iterator
+from datetime import UTC, datetime, timedelta
 
 from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import ModelRates, rates_for
@@ -80,10 +80,18 @@ _BUCKETS = (
     ("input_tokens", "input", "input tokens", "input"),
     ("output_tokens", "output", "output tokens", "output"),
     ("cache_read_tokens", "cache-read", "cache read tokens", "cache_read"),
-    ("cache_write_5m_tokens", "cache-write-5m", "cache write (5m TTL) tokens",
-     "cache_write_5m"),
-    ("cache_write_1h_tokens", "cache-write-1h", "cache write (1h TTL) tokens",
-     "cache_write_1h"),
+    (
+        "cache_write_5m_tokens",
+        "cache-write-5m",
+        "cache write (5m TTL) tokens",
+        "cache_write_5m",
+    ),
+    (
+        "cache_write_1h_tokens",
+        "cache-write-1h",
+        "cache write (1h TTL) tokens",
+        "cache_write_1h",
+    ),
 )
 
 
@@ -169,12 +177,12 @@ def _record_rows(record: UsageRecord, rates: ModelRates) -> Iterator[dict]:
 
 def _parse_ts(timestamp: str) -> datetime:
     if not timestamp:
-        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return datetime(1970, 1, 1, tzinfo=UTC)
     value = timestamp.replace("Z", "+00:00")
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _floor_hour(moment: datetime) -> datetime:

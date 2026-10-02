@@ -23,11 +23,11 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from collections.abc import Iterable
 from contextlib import closing
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
 
 from tokencur.ingest.claude_code import UsageRecord
 from tokencur.ingest.identity import fingerprint
@@ -87,7 +87,7 @@ def default_path() -> Path:
 
 def record(records: Iterable[UsageRecord], path: Path | None = None) -> int:
     """Upsert ``records`` into the ledger; return how many were new."""
-    first_seen = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    first_seen = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     rows = [(*_key_fields(r), first_seen) for r in records]
     if not rows:
         return 0  # nothing to keep: don't create an empty ledger
@@ -108,7 +108,7 @@ def read(path: Path | None = None) -> list[UsageRecord]:
             f"SELECT {', '.join(_FIELDS)} FROM usage "
             "ORDER BY timestamp, source, record_id"
         )
-        return [UsageRecord(**dict(zip(_FIELDS, row))) for row in cursor]
+        return [UsageRecord(**dict(zip(_FIELDS, row, strict=True))) for row in cursor]
 
 
 def _key_fields(r: UsageRecord) -> tuple:
@@ -117,9 +117,17 @@ def _key_fields(r: UsageRecord) -> tuple:
     # never collapse into one row under an empty id.
     record_id = r.record_id or "content:" + fingerprint(asdict(r))
     return (
-        r.source, record_id, r.timestamp, r.workspace, r.session_id, r.model,
-        r.input_tokens, r.output_tokens, r.cache_read_tokens,
-        r.cache_write_5m_tokens, r.cache_write_1h_tokens,
+        r.source,
+        record_id,
+        r.timestamp,
+        r.workspace,
+        r.session_id,
+        r.model,
+        r.input_tokens,
+        r.output_tokens,
+        r.cache_read_tokens,
+        r.cache_write_5m_tokens,
+        r.cache_write_1h_tokens,
     )
 
 

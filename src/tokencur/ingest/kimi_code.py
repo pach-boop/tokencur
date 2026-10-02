@@ -10,9 +10,9 @@ model, an epoch-millisecond timestamp and per-turn token deltas
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 from tokencur.ingest.claude_code import UsageRecord
 from tokencur.ingest.identity import fingerprint
@@ -56,8 +56,7 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
                     cache_write_1h_tokens=0,
                     source="kimi-code",
                     record_id=(
-                        f"{session_id}/{agent}@{entry.get('time')}"
-                        f"#{fingerprint(usage)}"
+                        f"{session_id}/{agent}@{entry.get('time')}#{fingerprint(usage)}"
                     ),
                 )
 
@@ -65,4 +64,4 @@ def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
 def _iso(epoch_ms: int | None) -> str:
     if not epoch_ms:
         return ""
-    return datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc).isoformat()
+    return datetime.fromtimestamp(epoch_ms / 1000, tz=UTC).isoformat()

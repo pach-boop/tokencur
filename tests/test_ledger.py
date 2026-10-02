@@ -116,4 +116,3 @@ def test_default_path_honours_overrides(tmp_path, monkeypatch):
     monkeypatch.delenv("TOKENCUR_LEDGER")
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
     assert ledger.default_path() == tmp_path / "xdg" / "tokencur" / "ledger.sqlite3"
-

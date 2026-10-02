@@ -11,9 +11,9 @@ timestamps). It never extracts message content.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
 #: Claude Code logs client-side placeholder messages (API-error stubs,
 #: interrupted turns) under this sentinel model, with all-zero usage.

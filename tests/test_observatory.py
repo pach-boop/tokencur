@@ -12,7 +12,9 @@ from tokencur.observatory import (
 )
 
 
-def _record(day: str, model: str = "claude-opus-4-8", output_tokens: int = 1000) -> UsageRecord:
+def _record(
+    day: str, model: str = "claude-opus-4-8", output_tokens: int = 1000
+) -> UsageRecord:
     return UsageRecord(
         timestamp=f"{day}T10:00:00.000Z",
         workspace="SECRET-workspace-name",
@@ -151,7 +153,7 @@ def test_render_html_is_self_contained():
     page = render_html(snapshot([_record("2026-07-01")]))
 
     assert "<svg" in page and "<style>" in page and "<script>" in page
-    for tag in ("src=\"http", "href=\"http://", "@import", "url(http"):
-        assert tag not in page or tag == "href=\"http://"
+    for tag in ('src="http', 'href="http://', "@import", "url(http"):
+        assert tag not in page or tag == 'href="http://'
     # The only http references are the footer links.
     assert page.count("https://") == 1  # repo link in footer
