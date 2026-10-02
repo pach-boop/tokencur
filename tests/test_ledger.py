@@ -5,7 +5,7 @@ from dataclasses import fields
 import pytest
 
 from tokencur import ledger
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 
 
 def _record(record_id: str, output_tokens: int = 50, **overrides) -> UsageRecord:

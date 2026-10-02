@@ -1,4 +1,4 @@
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 from tokencur.report import summarize
 
 

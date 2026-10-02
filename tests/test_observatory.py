@@ -2,7 +2,6 @@ import json
 from datetime import date
 from pathlib import Path
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.observatory import (
     DAYS_PER_MONTH,
     load_subscriptions,
@@ -10,6 +9,7 @@ from tokencur.observatory import (
     snapshot,
     write_site,
 )
+from tokencur.records import UsageRecord
 
 
 def _record(

@@ -20,8 +20,8 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import ModelRates, rates_for
+from tokencur.records import UsageRecord
 
 # Curated "one tier down" pairs. Only emitted when the sibling is
 # actually cheaper on both input and output at list rates.

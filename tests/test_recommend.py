@@ -1,7 +1,7 @@
 import pytest
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.recommend import caching_roi, model_rightsizing, recommendations, render
+from tokencur.records import UsageRecord
 
 
 def _record(model: str, **overrides) -> UsageRecord:

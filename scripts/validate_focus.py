@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from tokencur.export import export_csv
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 
 TOLERATED_OR_BRANCHES = {"InvoiceId-C-005-C"}
 

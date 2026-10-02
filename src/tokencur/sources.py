@@ -14,7 +14,7 @@ from pathlib import Path
 
 from tokencur import ledger
 from tokencur.ingest import claude_code, codex, kimi_code
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 
 Source = tuple[Path, Callable[[Path], Iterator[UsageRecord]]]
 

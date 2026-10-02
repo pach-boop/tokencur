@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from importlib import resources
 
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 
 AS_OF = "2026-07-06"
 SOURCE = "https://platform.claude.com/docs/en/pricing"

@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from tokencur.focus import FOCUS_COLUMNS, to_focus_rows
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 
 FIXTURE = Path(__file__).parent / "fixtures" / "focus_sample_official_slice.csv"
 

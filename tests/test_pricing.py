@@ -1,7 +1,7 @@
 import pytest
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import rates_for, record_cost_usd
+from tokencur.records import UsageRecord
 
 
 def _record(model: str) -> UsageRecord:
