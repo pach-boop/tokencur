@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   lint:
-    name: lint (ruff)
+    name: lint (ruff, actionlint)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -29,9 +29,13 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e .[dev] # ruff's pin lives in pyproject.toml
+      - run: pip install -e ".[dev]" # ruff's pin lives in pyproject.toml
       - run: ruff check --output-format=github .
       - run: ruff format --check .
+      # Workflows are code too: actionlint checks their syntax, expressions
+      # and permissions, and runs shellcheck on every `run:` script.
+      - run: pip install actionlint-py==1.7.12.25 shellcheck-py==0.11.0.1
+      - run: actionlint
 
   test:
     name: test (${{ matrix.os }}, ${{ matrix.python-version }})
@@ -62,8 +66,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e .[dev]
-      - run: pip install -e .[dashboard]
+      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dashboard]"
         if: matrix.coverage
       - run: pytest -q
         if: ${{ !matrix.coverage }}

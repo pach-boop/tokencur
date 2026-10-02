@@ -33,7 +33,7 @@ Python 3.11 or newer.
 git clone https://github.com/pach-boop/tokencur
 cd tokencur
 python -m venv .venv && source .venv/bin/activate
-pip install -e .[dev]
+pip install -e ".[dev]"
 pytest -q
 ```
 
@@ -96,6 +96,25 @@ hand-edit `litellm_snapshot.json`, run `scripts/update_pricing_snapshot.py`.
 - Add a line under `[Unreleased]` in `CHANGELOG.md`
   ([Keep a Changelog](https://keepachangelog.com)).
 - Fixtures are synthetic or redacted to metadata. No real logs.
+
+## Releasing (maintainer)
+
+1. In `CHANGELOG.md`, move `[Unreleased]` under `[X.Y.Z] - YYYY-MM-DD`, and set
+   `__version__` in `src/tokencur/__init__.py` to `X.Y.Z`. Merge that through a
+   pull request.
+2. Tag the merged commit and push the tag:
+
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+
+3. The release workflow checks that the tag matches `__version__`, builds the
+   sdist and wheel, attests their build provenance and drafts a GitHub release
+   with them. Write the notes from the changelog, then publish the draft.
+4. PyPI, once: on pypi.org add a trusted publisher (project `tokencur`, owner
+   `pach-boop`, repository `tokencur`, workflow `release.yml`, environment
+   `pypi`), then set the repository variable `PUBLISH_TO_PYPI` to `true`. From
+   then on, each tag also publishes to PyPI, with no token stored anywhere.
 
 ## Reporting a vulnerability
 

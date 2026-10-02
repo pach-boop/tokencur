@@ -1,0 +1,84 @@
+name: release
+
+# On a version tag (vX.Y.Z): build the sdist and wheel, attest their
+# build provenance, and open a draft GitHub release with them attached;
+# the maintainer writes the notes and publishes it. PyPI publishing is
+# wired for trusted publishing (no stored token) and stays off until
+# the repository variable PUBLISH_TO_PYPI is "true" and PyPI trusts
+# this workflow; see CONTRIBUTING.md, "Releasing".
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # sign the provenance attestation
+      attestations: write # store it with the repository
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: The tag names the version the package declares
+        run: |
+          version="$(python -c 'import re, pathlib; print(re.search(r"__version__ = \"([^\"]+)\"", pathlib.Path("src/tokencur/__init__.py").read_text(encoding="utf-8")).group(1))')"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match tokencur.__version__ $version"
+            exit 1
+          fi
+      - run: pip install build==1.6.1 twine==7.0.0
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the draft release
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      - name: Draft the release with the built, attested files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "$GITHUB_REF_NAME"
+          --notes "Draft: write the notes from CHANGELOG.md, then publish."
+
+  pypi:
+    needs: build
+    if: vars.PUBLISH_TO_PYPI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/p/tokencur
+    permissions:
+      id-token: write # trusted publishing: PyPI verifies this workflow, no token
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

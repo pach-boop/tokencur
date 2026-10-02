@@ -25,6 +25,16 @@ curated card that wins over the snapshot, retention of retired models at
 their last known rate, and the test suite running before any refresh is
 committed.
 
+## Verifying a release
+
+Release files are built by the release workflow, which signs a build
+provenance attestation for each one. Check that a file you downloaded was
+built from this repository:
+
+```bash
+gh attestation verify tokencur-X.Y.Z-py3-none-any.whl --repo pach-boop/tokencur
+```
+
 ## Supported versions
 
 The latest release and `main`. Older versions are not patched.

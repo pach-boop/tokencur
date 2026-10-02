@@ -99,7 +99,7 @@ For the visual version — daily trend, cost by model, token-type mix and unit
 economics, each view exposing the DuckDB SQL behind it:
 
 ```bash
-pip install -e .[dashboard]
+pip install -e ".[dashboard]"
 streamlit run src/tokencur/dashboard.py
 ```
 
