@@ -20,8 +20,8 @@ from collections import defaultdict
 from pathlib import Path
 
 from tokencur.ingest import claude_code
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import AS_OF, record_cost_usd
+from tokencur.records import UsageRecord
 from tokencur.sources import load_records
 
 

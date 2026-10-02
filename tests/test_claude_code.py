@@ -153,3 +153,12 @@ def test_record_id_survives_the_original_file(tmp_path):
 
     assert before.record_id == after.record_id == "req_1:msg_1"
     assert before.session_id != after.session_id
+
+
+def test_usage_record_keeps_its_original_import_path():
+    """The shared type moved to ``tokencur.records``; code that imported
+    it from the Claude Code ingester keeps working with the same class."""
+    from tokencur.ingest.claude_code import UsageRecord as legacy
+    from tokencur.records import UsageRecord
+
+    assert legacy is UsageRecord

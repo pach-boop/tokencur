@@ -20,8 +20,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from datetime import UTC, datetime, timedelta
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import ModelRates, rates_for
+from tokencur.records import UsageRecord
 
 FOCUS_VERSION = "1.2"
 

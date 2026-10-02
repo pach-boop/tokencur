@@ -21,8 +21,8 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.ingest.identity import fingerprint
+from tokencur.records import UsageRecord
 
 _INTERESTING = ('"token_count"', '"session_meta"', '"turn_context"')
 

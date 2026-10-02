@@ -56,6 +56,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
+- `UsageRecord` moved to its own module, `tokencur.records`: pricing,
+  the FOCUS normalizer, the ledger and every ingester now depend on a
+  shared type instead of on the Claude Code ingester. The old import
+  path `tokencur.ingest.claude_code.UsageRecord` still works (same
+  class, pinned by a test).
 - Honest labeling throughout: the report prints `API-EQUIVALENT TOTAL
   (showback)`, and the observatory/dashboard say "usage value", "avoided
   by provider caching (counterfactual)" and "right-sizing headroom" —

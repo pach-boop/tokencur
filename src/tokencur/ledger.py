@@ -29,8 +29,8 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.ingest.identity import fingerprint
+from tokencur.records import UsageRecord
 
 SCHEMA_VERSION = 1
 

@@ -12,37 +12,16 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
-from dataclasses import dataclass
 from pathlib import Path
+
+# Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
+# ``tokencur.records`` and stays importable from here.
+from tokencur.records import UsageRecord
 
 #: Claude Code logs client-side placeholder messages (API-error stubs,
 #: interrupted turns) under this sentinel model, with all-zero usage.
 #: They are not API traffic and must not surface as unpriced rows.
 SYNTHETIC_MODEL = "<synthetic>"
-
-
-@dataclass(frozen=True)
-class UsageRecord:
-    """Token usage for one assistant message, before pricing."""
-
-    timestamp: str  # ISO 8601, as logged
-    workspace: str  # project directory the session ran in
-    session_id: str
-    model: str
-    input_tokens: int
-    output_tokens: int
-    cache_read_tokens: int
-    cache_write_5m_tokens: int
-    cache_write_1h_tokens: int
-    source: str = "claude-code"  # which ingester produced the record
-    #: Identity of the usage event across scans, built by each ingester
-    #: from raw source fields (see ``tokencur.ingest.identity``). The
-    #: ledger deduplicates on (source, record_id).
-    record_id: str = ""
-
-    @property
-    def date(self) -> str:
-        return self.timestamp[:10]
 
 
 def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
@@ -100,6 +79,7 @@ def _parse_line(
         cache_read_tokens=usage.get("cache_read_input_tokens", 0) or 0,
         cache_write_5m_tokens=write_5m,
         cache_write_1h_tokens=write_1h,
+        source="claude-code",
         # The dedup key above is already the API request's identity.
         record_id=f"{key[0]}:{key[1]}",
     )

@@ -1,8 +1,8 @@
 import pytest
 
 from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, unpriced_models
-from tokencur.ingest.claude_code import UsageRecord
 from tokencur.pricing import record_cost_usd
+from tokencur.records import UsageRecord
 
 
 def _record(**overrides) -> UsageRecord:

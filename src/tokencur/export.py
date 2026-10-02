@@ -17,7 +17,7 @@ from pathlib import Path
 
 from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, unpriced_models
 from tokencur.ingest import claude_code
-from tokencur.ingest.claude_code import UsageRecord
+from tokencur.records import UsageRecord
 from tokencur.sources import load_records
 
 
