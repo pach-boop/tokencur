@@ -1,7 +1,7 @@
 """Local cost dashboard over the FOCUS dataset.
 
 Usage:
-    pip install -e .[dashboard]
+    pip install -e ".[dashboard]"
     streamlit run src/tokencur/dashboard.py
 
 Loads the full usage history (every known local source, through the

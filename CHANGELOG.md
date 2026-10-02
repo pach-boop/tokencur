@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- Release workflow: a `vX.Y.Z` tag that matches `__version__` builds
+  the sdist and wheel, attests their build provenance (verifiable with
+  `gh attestation verify`) and drafts a GitHub release with them.
+  PyPI trusted publishing is wired but off until the maintainer
+  registers the publisher and sets `PUBLISH_TO_PYPI`. The CI lint job
+  now also runs actionlint, with shellcheck, over every workflow.
 - `scripts/benchmark.py`: a reproducible benchmark that times scan,
   ledger write, rescan, ledger read, report and FOCUS export on N
   synthetic messages. One million messages: linear time, 6.3 s to
@@ -149,6 +155,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Fixed
 
+- `pip install -e .[dev]` in the docs and workflows is now quoted
+  (`".[dev]"`): unquoted, it is a shell glob, and zsh, the macOS
+  default shell, rejects it with "no matches found".
 - A Claude Code message streamed over several log lines kept its
   first line's counts, which can hold a partial output count. Each
   token count is now the largest across the message's lines (streamed
