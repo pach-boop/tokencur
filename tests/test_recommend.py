@@ -107,3 +107,28 @@ def test_recommendations_accepts_a_one_shot_iterable():
 
     assert {r.kind for r in from_list} == {"achieved", "potential"}
     assert from_generator == from_list
+
+
+def test_rightsizing_covers_the_current_claude_lineup():
+    """Each current Claude model has a curated cheaper sibling, so the
+    heaviest current usage is never left without a what-if."""
+    from tokencur.pricing import rates_for
+    from tokencur.recommend import DOWNSIZE
+
+    for model in (
+        "claude-fable-5-1",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-opus-5",
+    ):
+        sibling = rates_for(DOWNSIZE[model])
+        assert sibling.input < rates_for(model).input
+        assert sibling.output < rates_for(model).output
+
+    records = [
+        _record("claude-opus-5-5", input_tokens=1_000_000, output_tokens=1_000_000)
+    ]
+    (rec,) = model_rightsizing(records)
+    # $4 + $20 on Opus 5.5 vs $2 + $10 on Sonnet 5.5.
+    assert rec.title == "Right-size claude-opus-5-5 → claude-sonnet-5-5"
+    assert rec.savings_usd == pytest.approx(12.0)

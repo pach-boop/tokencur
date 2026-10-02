@@ -56,6 +56,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
+- Right-sizing knows the current Claude lineup: Fable 5.1 → Opus 5.5,
+  Opus 5.5 → Sonnet 5.5, Sonnet 5.5 → Haiku 4.5 and Opus 5 → Sonnet 5
+  join the curated pairs, so the heaviest current usage gets a what-if.
 - The curated Anthropic card mirrors Anthropic's pricing page as of
   2026-10-02 (was 2026-07-06): adds Claude Opus 5.5, Fable 5.1,
   Mythos 5 and 5.1, Opus 5, Sonnet 5.5 and the retired Opus 4,
