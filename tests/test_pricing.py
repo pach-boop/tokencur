@@ -69,3 +69,66 @@ def test_snapshot_uses_explicit_provider_cache_rates():
     rates = rates_for("gpt-4o")
     assert rates is not None
     assert rates.cache_read == pytest.approx(rates.input * 0.5)
+
+
+def test_cache_reads_follow_each_models_published_multiplier():
+    """Most Claude models read cache at 0.1x input, but not all: the card
+    must carry the exceptions the pricing page states."""
+    read = {
+        m: rates_for(m).cache_read
+        for m in (
+            "claude-opus-5-5",
+            "claude-fable-5-1",
+            "claude-mythos-5-1",
+            "claude-fable-5",
+            "claude-opus-5",
+        )
+    }
+
+    assert read == pytest.approx(
+        {
+            "claude-opus-5-5": 0.20,  # 0.05x of $4
+            "claude-fable-5-1": 0.25,  # 0.025x of $10
+            "claude-mythos-5-1": 0.25,
+            "claude-fable-5": 1.00,  # the standard 0.1x
+            "claude-opus-5": 0.50,
+        }
+    )
+
+
+def test_sonnet_5_is_valued_at_its_standard_price():
+    """$2/$10 began as an introductory price and became the standard one;
+    the card used to value Sonnet 5 at the cancelled $3/$15."""
+    rates = rates_for("claude-sonnet-5")
+    assert (rates.input, rates.output) == (2.00, 10.00)
+
+
+def test_retired_models_resolve_from_their_dated_ids():
+    from tokencur.pricing import RATE_CARD
+
+    assert rates_for("claude-opus-4-20250514") is RATE_CARD["claude-opus-4"]
+    assert rates_for("claude-3-5-haiku-20241022") is RATE_CARD["claude-3-5-haiku"]
+
+
+def test_curated_card_agrees_with_the_community_snapshot():
+    """Two independent sources for one price must say the same thing.
+
+    The curated card always wins, so a disagreement never changes a
+    number by itself; it means one source moved and a human must look.
+    Sonnet 5 sat at $3/$15 here while the snapshot already had $2/$10.
+    The daily price-watch run executes this test, so a provider price
+    move on a curated model stops the refresh until the card is updated.
+    """
+    from dataclasses import astuple
+
+    from tokencur.pricing import _DATE_SUFFIX, RATE_CARD, _snapshot_rates
+
+    disagreements = []
+    for name, snapshot in _snapshot_rates().items():
+        curated = RATE_CARD.get(_DATE_SUFFIX.sub("", name))
+        if curated and astuple(curated) != pytest.approx(astuple(snapshot)):
+            disagreements.append(
+                f"{name}: card {astuple(curated)} vs snapshot {astuple(snapshot)}"
+            )
+
+    assert not disagreements, "\n".join(disagreements)

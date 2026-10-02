@@ -289,8 +289,8 @@ footer a {{ color:var(--ink-2) }}
 they moved. Prices in USD per million tokens (MTok).</p>
 
 <h2>Curated rates — Anthropic (the layer that wins)</h2>
-<p class="muted">Hand-maintained and sourced, as of {AS_OF}. Cache reads are 0.1× input;
-writes 1.25× (5-min) / 2× (1-hour).</p>
+<p class="muted">Hand-maintained and sourced, as of {AS_OF}. Cache reads are 0.1× input
+(0.05× on Opus 5.5, 0.025× on Fable 5.1 and Mythos 5.1); writes 1.25× (5-min) / 2× (1-hour).</p>
 {_card_table(rows)}
 
 <h2>Extended coverage</h2>
