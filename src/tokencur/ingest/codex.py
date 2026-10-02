@@ -27,16 +27,28 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
-from tokencur.ingest.identity import fingerprint
+from tokencur.ingest.identity import content_key, fingerprint
 from tokencur.records import UsageRecord
 
 _INTERESTING = ('"token_count"', '"session_meta"', '"turn_context"')
 
 
 def iter_usage_records(root: Path) -> Iterator[UsageRecord]:
-    """Yield one UsageRecord per model call reported by ``token_count``."""
+    """Yield one UsageRecord per model call reported by ``token_count``.
+
+    A forked session can copy earlier reports into a new rollout. A call
+    is recognised by its content key, the event timestamp plus the raw
+    usage as logged; a key already seen in an earlier file (in path,
+    hence date, order) is a copy and is not counted again.
+    """
+    seen: set[str] = set()
     for path in sorted(root.rglob("*.jsonl")):
-        yield from _parse_file(path)
+        for record in _parse_file(path):
+            key = content_key(record.record_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield record
 
 
 def _parse_file(path: Path) -> Iterator[UsageRecord]:

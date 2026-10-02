@@ -243,9 +243,10 @@ last rate), then regenerates this page from that history.
   `~/.claude/settings.json`.
 - Codex calls are counted when the session's running total moves; per session,
   the counted calls reconcile exactly with Codex's own running total (all 94 of
-  the maintainer's rollouts). Codex ids include the session id, so a fork that
-  copied earlier reports into a new rollout would count them again; none of
-  those 94 rollouts share an event.
+  the maintainer's rollouts). A forked session that re-copies earlier calls
+  counts them once, in a scan and in the ledger, even after the original log is
+  gone: a copy is recognized by its timestamp and raw usage, so two distinct
+  calls identical to the millisecond would also count once (never observed).
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
 - Rates are current, not point-in-time: when a provider moves a list price, past
   usage is revalued at the new rate, so a published total is reproducible only
