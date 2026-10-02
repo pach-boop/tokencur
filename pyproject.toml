@@ -15,6 +15,7 @@ tokencur = "tokencur.cli:main"
 dev = [
     "pytest>=8",
     "pytest-cov>=7",
+    "hypothesis>=6.168",
     # Pinned: formatter output must be identical on every machine and in CI.
     "ruff==0.16.10",
 ]
