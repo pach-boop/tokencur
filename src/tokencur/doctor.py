@@ -18,17 +18,15 @@ The result is a list of problems; the CLI exits 1 when there is any.
 
 from __future__ import annotations
 
-import hashlib
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass, field
-from importlib import resources
 from pathlib import Path
 
 from tokencur import ledger
 from tokencur.ingest import claude_code
 from tokencur.ingest.stats import ScanStats
-from tokencur.pricing import AS_OF, rates_for
+from tokencur.pricing import provenance, rates_for
 from tokencur.reconcile import Reconciliation, reconcile
 from tokencur.records import UsageRecord
 from tokencur.sources import DEFAULT_SOURCES, Source
@@ -41,8 +39,6 @@ MALFORMED_ALERT = 0.01
 #: value accounts for. Below the floor, calls are going missing; above
 #: the ceiling, calls are being counted twice (as Codex's once were).
 RECONCILE_FLOOR, RECONCILE_CEILING = 0.85, 1.05
-
-_SNAPSHOT = "pricing_data/litellm_snapshot.json"
 
 
 @dataclass
@@ -91,18 +87,17 @@ def diagnose(
         if ingest is claude_code.iter_usage_records and check.present:
             reconciliation = reconcile(records, claude_code.session_counters(root))
     kept = _check_ledger(ledger_path or ledger.default_path())
-    snapshot = resources.files("tokencur").joinpath(_SNAPSHOT).read_bytes()
-    meta = _snapshot_meta(snapshot)
+    pricing = provenance()
     problems = [p for check in checks for p in _source_problems(check)]
     problems += _ledger_problems(kept)
     problems += _reconciliation_problems(reconciliation)
     return Diagnosis(
         sources=checks,
         ledger=kept,
-        card_as_of=AS_OF,
-        snapshot_fetched=meta[0],
-        snapshot_models=meta[1],
-        snapshot_sha256=hashlib.sha256(snapshot).hexdigest(),
+        card_as_of=pricing.curated_card,
+        snapshot_fetched=pricing.snapshot_fetched,
+        snapshot_models=pricing.snapshot_models,
+        snapshot_sha256=pricing.snapshot_sha256,
         problems=problems,
         reconciliation=reconciliation,
     )
@@ -201,13 +196,6 @@ def _ledger_problems(check: LedgerCheck) -> list[str]:
             f"this one reads up to {ledger.SCHEMA_VERSION}"
         ]
     return []
-
-
-def _snapshot_meta(raw: bytes) -> tuple[str, int]:
-    import json
-
-    data = json.loads(raw)
-    return data.get("_meta", {}).get("fetched", "unknown"), len(data.get("models", {}))
 
 
 def _version_key(version: str) -> tuple:

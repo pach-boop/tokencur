@@ -68,7 +68,9 @@ def test_table_columns_never_run_together():
         )
     ]
 
-    header, row = summarize(records).splitlines()[2:4]
+    lines = summarize(records).splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("model"))
+    header, row = lines[start : start + 2]
 
     assert row.split() == [
         "moonshot-ai/kimi-k2.7-code-highspeed",
@@ -80,3 +82,32 @@ def test_table_columns_never_run_together():
         row.split()[-1],
     ]
     assert len(header) == len(row)
+
+
+def test_the_report_names_what_reproduces_it():
+    """Version, curated card date and the pricing snapshot's hash: the same
+    file each release publishes and attests."""
+    import hashlib
+    from importlib import resources
+
+    from tokencur import __version__
+    from tokencur.pricing import AS_OF
+
+    raw = resources.files("tokencur").joinpath("pricing_data/litellm_snapshot.json")
+    sha = hashlib.sha256(raw.read_bytes()).hexdigest()
+    record = UsageRecord(
+        timestamp="2026-10-01T10:00:00.000Z",
+        workspace="w",
+        session_id="s",
+        model="claude-opus-4-8",
+        input_tokens=1,
+        output_tokens=1,
+        cache_read_tokens=0,
+        cache_write_5m_tokens=0,
+        cache_write_1h_tokens=0,
+    )
+
+    line = summarize([record]).splitlines()[1]
+
+    assert line.startswith(f"reproducible with tokencur {__version__}, ")
+    assert f"curated card {AS_OF}" in line and f"pricing snapshot {sha[:12]}" in line

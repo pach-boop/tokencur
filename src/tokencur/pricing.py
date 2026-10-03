@@ -20,6 +20,7 @@ Two layers, curated first:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, fields
@@ -28,6 +29,7 @@ from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 
+from tokencur import __version__
 from tokencur.records import UsageRecord, parse_timestamp
 
 AS_OF = "2026-10-02"
@@ -147,11 +149,49 @@ def _from_entry(entry: dict) -> ModelRates:
     )
 
 
+_SNAPSHOT_FILE = "pricing_data/litellm_snapshot.json"
+
+
 @lru_cache(maxsize=1)
 def _snapshot() -> tuple[dict[str, ModelRates], dict[str, History]]:
     """Current rates and rate history from the vendored LiteLLM snapshot."""
-    path = resources.files("tokencur").joinpath("pricing_data/litellm_snapshot.json")
+    path = resources.files("tokencur").joinpath(_SNAPSHOT_FILE)
     return parse_snapshot(json.loads(path.read_text(encoding="utf-8"))["models"])
+
+
+@dataclass(frozen=True)
+class Provenance:
+    """What a figure was computed with, so anyone can reproduce it: the
+    tokencur version, the curated card's date, and the pricing snapshot
+    by fetch date and SHA-256. Each release publishes and attests that
+    same snapshot file, so the hash names data anyone can download."""
+
+    tokencur: str
+    curated_card: str
+    snapshot_fetched: str
+    snapshot_models: int
+    snapshot_sha256: str
+
+    def __str__(self) -> str:
+        return (
+            f"tokencur {self.tokencur}, curated card {self.curated_card}, "
+            f"pricing snapshot {self.snapshot_sha256[:12]} "
+            f"(fetched {self.snapshot_fetched})"
+        )
+
+
+@lru_cache(maxsize=1)
+def provenance() -> Provenance:
+    """The provenance of every figure this tokencur computes."""
+    raw = resources.files("tokencur").joinpath(_SNAPSHOT_FILE).read_bytes()
+    data = json.loads(raw)
+    return Provenance(
+        tokencur=__version__,
+        curated_card=AS_OF,
+        snapshot_fetched=data.get("_meta", {}).get("fetched", "unknown"),
+        snapshot_models=len(data.get("models", {})),
+        snapshot_sha256=hashlib.sha256(raw).hexdigest(),
+    )
 
 
 def parse_snapshot(

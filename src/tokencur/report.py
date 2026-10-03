@@ -19,7 +19,7 @@ import sys
 from collections import defaultdict
 
 from tokencur.focus import provider_for
-from tokencur.pricing import AS_OF, record_cost_usd
+from tokencur.pricing import provenance, record_cost_usd
 from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 from tokencur.terminal import table
 
@@ -83,8 +83,8 @@ def summarize(
     lines = [
         f"tokencur report — {len(records)} model call{'s' * (len(records) != 1)}"
         f"{f' {period}' if period else ''}, "
-        f"list rates in force on each call's day, curated card {AS_OF} "
-        "(API-equivalent list cost)",
+        "list rates in force on each call's day (API-equivalent list cost)",
+        f"reproducible with {provenance()}",
         "",
         *table(header, rows),
     ]
