@@ -37,11 +37,12 @@ from __future__ import annotations
 import html
 import json
 import sys
+from dataclasses import asdict
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from tokencur.focus import to_focus_rows, unpriced_models
-from tokencur.pricing import AS_OF
+from tokencur.pricing import AS_OF, provenance
 from tokencur.recommend import recommendations
 
 DEFAULT_OUTPUT = Path("docs") / "observatory"
@@ -227,6 +228,7 @@ def snapshot(
     snap = {
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         "rates_as_of": AS_OF,
+        "provenance": asdict(provenance()),
         "kpis": {
             "total_usd": round(total, 2),
             "days": days,
@@ -290,6 +292,16 @@ def snapshot(
 
 def _usd(x: float) -> str:
     return f"${x:,.2f}"
+
+
+def _provenance_text(snap: dict) -> str:
+    p = snap.get("provenance") or {}
+    if not p:
+        return "an earlier tokencur"
+    return (
+        f"tokencur {p['tokencur']} and pricing snapshot "
+        f"{p['snapshot_sha256'][:12]} (fetched {p['snapshot_fetched']})"
+    )
 
 
 def _plan_terms(plans: list[dict]) -> str:
@@ -650,6 +662,7 @@ it would save real money only on API billing.</p>
 {rec_table}
 {unpriced}
 <footer>API-equivalent list prices (showback) over local agent logs · rates as of {html.escape(snap["rates_as_of"])}
+· computed with {html.escape(_provenance_text(snap))}
 · generated {html.escape(snap["generated_at"])} · <a href="https://github.com/pach-boop/tokencur">tokencur</a>
 · <a href="data.json">data.json</a></footer>
 <div id="tip"></div>

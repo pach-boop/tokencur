@@ -125,6 +125,13 @@ def test_an_explicit_root_is_read_but_never_stored(tmp_path, capsys):
     assert "does not exist" in capsys.readouterr().err
 
 
+def test_export_names_what_reproduces_it(tmp_path, logs, capsys):
+    from tokencur.pricing import provenance
+
+    assert cli.main(["export", str(tmp_path / "out.csv")]) == 0
+    assert f"({provenance()})" in capsys.readouterr().err
+
+
 def test_export_reports_what_it_skipped(tmp_path, capsys):
     root = tmp_path / "logs" / "workspace"
     _session(root / "ok.jsonl", "req_ok", "2026-09-15T12:00:00.000Z")

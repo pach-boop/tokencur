@@ -23,7 +23,7 @@ from tokencur import __version__, doctor, ledger, observatory, outcomes, prices
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
 from tokencur.ingest import claude_code, runpod
-from tokencur.pricing import ConfigError, load_discounts
+from tokencur.pricing import ConfigError, load_discounts, provenance
 from tokencur.recommend import recommendations, render
 from tokencur.records import UsageRecord, in_period
 from tokencur.report import summarize
@@ -258,7 +258,10 @@ def _export(args: argparse.Namespace) -> int:
     if records is None:
         return 1
     rows = export_csv(records, args.output, discounts, _charges(args))
-    print(f"wrote {rows} FOCUS charge rows to {args.output}", file=sys.stderr)
+    print(
+        f"wrote {rows} FOCUS charge rows to {args.output} ({provenance()})",
+        file=sys.stderr,
+    )
     skipped = unpriced_models(records)
     if skipped:
         pairs = ", ".join(f"{m} x{n}" for m, n in sorted(skipped.items()))

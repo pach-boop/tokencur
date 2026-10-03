@@ -291,3 +291,16 @@ def test_billed_charges_are_shown_as_real_money_without_resource_ids():
     }
     assert "billed by providers" in html and "stay out of subscription leverage" in html
     assert "SECRET" not in html and "SECRET" not in json.dumps(snap)
+
+
+def test_the_page_names_what_reproduces_its_figures():
+    from tokencur import __version__
+    from tokencur.pricing import provenance
+
+    snap = snapshot([_record("2026-07-01")])
+
+    assert snap["provenance"]["tokencur"] == __version__
+    assert snap["provenance"]["snapshot_sha256"] == provenance().snapshot_sha256
+    page = render_html(snap)
+    assert f"computed with tokencur {__version__} and pricing snapshot" in page
+    assert provenance().snapshot_sha256[:12] in page

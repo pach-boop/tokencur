@@ -24,6 +24,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   twice). On the maintainer's sessions tokencur sees 93.6%: the rest is
   internal calls for web search, web fetch and session titles, plus
   main-model calls such as compaction. The README states the gap.
+- **Reproducible figures.** The report's second line, the export's
+  closing message and the observatory's footer and `data.json` name what
+  produced the numbers: the tokencur version, the curated card's date
+  and the pricing snapshot's SHA-256, the same file each release
+  attests. `pricing.provenance()` is the one source; `doctor` uses it
+  too.
 
 ### Fixed
 
