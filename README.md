@@ -321,12 +321,14 @@ last rate), then regenerates this page from that history.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1 | Repo, thesis, related work | ✅ |
-| 2 | Ingest real usage: local agent logs; Anthropic/OpenAI admin-API exports | 🔨 Claude Code, Codex CLI and Kimi Code done; API exports pending |
+| 2 | Ingest real usage: local agent logs, and billed cost from provider exports | 🔨 Claude Code, Codex CLI, Kimi Code and RunPod billing done; Anthropic and OpenAI admin cost APIs next ([#7](https://github.com/pach-boop/tokencur/issues/7)); Gemini CLI ([#9](https://github.com/pach-boop/tokencur/issues/9)) |
 | 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
-| 6 | Serverless AWS deployment, documented, with its own measured running cost | ⏳ |
-| 7 | PR to `focus_converters` + bilingual (EN/ES) case study | ⏳ |
+| 6 | Numbers nobody can question: point-in-time rates, reconciliation with each source's own counters, reproducible figures | ✅ v0.4 |
+| 7 | Unit economics: usage value per commit, then per successful task | 🔨 per commit done (v0.3); per successful task next ([#15](https://github.com/pach-boop/tokencur/issues/15)) |
+| 8 | Serverless AWS deployment, documented, with its own measured running cost | ⏳ |
+| 9 | PR to `focus_converters` ([#10](https://github.com/pach-boop/tokencur/issues/10)) + bilingual (EN/ES) case study | ⏳ |
 
 ## Limitations (honest)
 
