@@ -5,8 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
-    """Columns as wide as their widest cell: first column left, the rest right.
+def table(
+    header: tuple[str, ...], rows: list[tuple[str, ...]], left: int = 1
+) -> list[str]:
+    """Columns as wide as their widest cell: the first ``left`` columns
+    (labels) aligned left, the rest (numbers) right.
 
     Fixed widths broke once real totals passed a billion tokens or a
     model id ran long, and adjacent columns ran together.
@@ -16,11 +19,10 @@ def table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
     ]
 
     def line(cells: tuple[str, ...]) -> str:
-        first = cells[0].ljust(widths[0])
-        rest = (
-            cell.rjust(width) for cell, width in zip(cells[1:], widths[1:], strict=True)
-        )
-        return "  ".join((first, *rest)).rstrip()
+        return "  ".join(
+            cell.ljust(width) if i < left else cell.rjust(width)
+            for i, (cell, width) in enumerate(zip(cells, widths, strict=True))
+        ).rstrip()
 
     return [line(header), *(line(row) for row in rows)]
 

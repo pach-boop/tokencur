@@ -17,3 +17,12 @@ def _no_host_logs(monkeypatch):
     logs point the sources at fixtures."""
     monkeypatch.setattr(sources, "DEFAULT_SOURCES", ())
     monkeypatch.setattr(doctor, "DEFAULT_SOURCES", ())
+
+
+@pytest.fixture(autouse=True)
+def _no_host_git_config(monkeypatch, tmp_path_factory):
+    """A test's git repositories carry their own identity, never the host's."""
+    empty = tmp_path_factory.mktemp("gitconfig") / "config"
+    empty.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")

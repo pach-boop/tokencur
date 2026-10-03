@@ -171,14 +171,27 @@ class SessionCounters:
 
     When a session ends, Claude Code writes a ``cost-state`` line with
     the cost it counted for each model, including calls it never writes
-    to the transcript. ``costs`` maps each session to the last such
-    line's per-model cost in USD. A session continued in another one
-    (``continued-in`` lines) hands its counters on to it: ``continued``
-    maps each session to the one it continued in. Ids and numbers only.
+    to the transcript, and the time its API calls took. ``costs`` maps
+    each session to the last such line's per-model cost in USD, and
+    ``api_ms`` to its API time in milliseconds, with and without retries.
+    A session continued in another one (``continued-in`` lines) hands
+    those counters on to it: ``continued`` maps each session to the one
+    it continued in. ``prompts`` counts, per session, the messages a
+    person typed (see ``_is_prompt``). Ids and numbers only.
     """
 
     costs: dict[str, dict[str, float]] = field(default_factory=dict)
+    api_ms: dict[str, tuple[float, float]] = field(default_factory=dict)
     continued: dict[str, str] = field(default_factory=dict)
+    prompts: dict[str, int] = field(default_factory=dict)
+
+    def chain_end(self, session: str) -> str:
+        """The last session of the chain ``session`` continued into."""
+        seen = {session}
+        while session in self.continued and self.continued[session] not in seen:
+            session = self.continued[session]
+            seen.add(session)
+        return session
 
 
 def session_counters(root: Path) -> SessionCounters:
@@ -196,7 +209,32 @@ def session_counters(root: Path) -> SessionCounters:
                         after = text(line_entry.get("continuedInSessionId"))
                         if before and after and before != after:
                             counters.continued[before] = after
+                elif '"user"' in line and '"tool_result"' not in line:
+                    line_entry = entry(line)
+                    session = text(line_entry.get("sessionId"))
+                    if session and _is_prompt(line_entry):
+                        counters.prompts[session] = counters.prompts.get(session, 0) + 1
     return counters
+
+
+def _is_prompt(line_entry: dict) -> bool:
+    """A message a person typed. Claude Code marks one with
+    ``origin.kind == "human"`` (a task notification says otherwise); a
+    line from before that field counts when it is neither tool output, nor
+    injected, nor a compaction summary. Only the kind is read, never text."""
+    if line_entry.get("type") != "user":
+        return False
+    if any(line_entry.get(f) for f in ("isSidechain", "isMeta", "isCompactSummary")):
+        return False
+    origin = line_entry.get("origin")
+    if isinstance(origin, dict) and "kind" in origin:
+        return origin.get("kind") == "human"
+    content = obj(line_entry.get("message")).get("content")
+    if isinstance(content, str):
+        return True
+    return isinstance(content, list) and not any(
+        obj(block).get("type") == "tool_result" for block in content
+    )
 
 
 def _read_cost_state(line_entry: dict, counters: SessionCounters) -> None:
@@ -209,6 +247,10 @@ def _read_cost_state(line_entry: dict, counters: SessionCounters) -> None:
         if _is_amount(cost):
             costs[model] = float(cost)
     counters.costs[session] = costs  # the last line of a session wins
+    total = line_entry.get("totalAPIDuration")
+    net = line_entry.get("totalAPIDurationWithoutRetries")
+    if _is_amount(total) and _is_amount(net) and net <= total:
+        counters.api_ms[session] = (float(total), float(net))
 
 
 def _is_amount(value: object) -> bool:

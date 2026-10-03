@@ -18,3 +18,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0009](0009-billed-charges-next-to-showback.md) | Billed charges sit next to showback, never mixed into it | Accepted |
 | [0010](0010-usage-value-per-commit.md) | Usage value per commit: attribute each call by where it ran | Accepted |
 | [0011](0011-curated-rates-change-only-on-the-record.md) | Curated rates change only through dated history or a declared correction | Accepted |
+| [0012](0012-usage-value-per-successful-change.md) | Usage value per successful change, session by session | Accepted |

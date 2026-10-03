@@ -10,8 +10,12 @@
   content is never parsed, stored or logged. A test asserts that none of
   it reaches the public observatory output, and working directories stay
   in the ledger: never in the FOCUS export or the observatory.
-- **Runs git**, read-only, for `tokencur outcomes`: `git log` and
-  `git config user.email` in the repositories the agents worked in.
+- **Runs git**, read-only, for `tokencur outcomes`: `git log`, `git rev-list`,
+  `git patch-id` and `git config user.email` in the repositories the agents
+  worked in. Commit messages are read only to find reverts; nothing from a
+  repository is stored or published.
+- **Message origin**: for `outcomes --sessions`, whether a person typed each
+  Claude Code message, which Claude Code records as metadata; never the text.
 - **Writes** one file: the ledger at `~/.local/share/tokencur/ledger.sqlite3`
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`).
