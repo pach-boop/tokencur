@@ -166,6 +166,11 @@ Time grows linearly. The benchmark holds the scanned and the stored history at
 once, so its peak memory is about twice what one command needs. Reproduce with
 `python scripts/benchmark.py --messages 1000000 --files 2000`.
 
+The FOCUS export is the bottleneck, at about 14 µs per row, and every command
+holds the full history in memory. That suits one developer's logs. A team-scale
+pipeline would stream from the ledger in batches and write Parquet or DuckDB
+instead of one CSV; that is not built yet.
+
 ## Ledger
 
 Coding agents treat their logs as disposable: Claude Code deletes session
