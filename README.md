@@ -238,6 +238,12 @@ and prints the pricing snapshot's SHA-256. It exits 1 when anything needs
 attention. A malformed line is skipped, never guessed at, and never stops a
 scan.
 
+It also reconciles tokencur with Claude Code's own accounting. When a session
+ends, Claude Code writes the cost it counted for each model, including calls it
+never writes to the transcript. `doctor` compares that with tokencur's value of
+the same sessions, and flags a gap either way: below 85% means calls are going
+missing, above 105% means calls are being counted twice.
+
 ## Money concepts (read before quoting numbers)
 
 tokencur's headline figures are **not** a bill. Three money concepts, kept
@@ -328,6 +334,12 @@ last rate), then regenerates this page from that history.
   gone: a copy is recognized by its timestamp and raw usage, so two distinct
   calls identical to the millisecond would also count once (never observed).
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
+- Claude Code makes calls it never writes to its transcripts: internal calls to
+  smaller models for web search, web fetch and session titles, and some
+  main-model calls such as compaction. Its own end-of-session counters show
+  tokencur's Claude Code value is a slight underestimate: on the maintainer's
+  sessions, tokencur sees 93.6% of the cost Claude Code counted.
+  `tokencur doctor` measures this on your own logs.
 - Usage value per commit counts commits on the checked-out branch, and a commit
   says nothing about size or quality. Usage logged before tokencur 0.3 kept no
   working directory; it is attributed only if its log is still on disk.

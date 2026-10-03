@@ -5,7 +5,8 @@
 - **Reads**, read-only, the local logs of coding agents
   (`~/.claude/projects`, `~/.codex/sessions`, `~/.kimi-code/sessions`) and
   only their usage metadata: token counts, model ids, timestamps,
-  workspace and session ids, and the directory each call ran in. Message
+  workspace and session ids, the directory each call ran in, and the cost
+  counters Claude Code writes when a session ends. Message
   content is never parsed, stored or logged. A test asserts that none of
   it reaches the public observatory output, and working directories stay
   in the ledger: never in the FOCUS export or the observatory.

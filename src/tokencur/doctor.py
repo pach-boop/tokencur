@@ -9,7 +9,9 @@ ledger):
 - the ledger: schema, records per source, retired rows, SQLite integrity,
   how many records name the directory they ran in (cost per commit);
 - pricing: the curated card's date, the snapshot's fetch date and its
-  SHA-256 (compare it with the attested release asset), unpriced models.
+  SHA-256 (compare it with the attested release asset), unpriced models;
+- reconciliation: tokencur's value of Claude Code sessions against the
+  cost Claude Code itself counted for them (see ``tokencur.reconcile``).
 
 The result is a list of problems; the CLI exits 1 when there is any.
 """
@@ -24,13 +26,21 @@ from importlib import resources
 from pathlib import Path
 
 from tokencur import ledger
+from tokencur.ingest import claude_code
 from tokencur.ingest.stats import ScanStats
 from tokencur.pricing import AS_OF, rates_for
+from tokencur.reconcile import Reconciliation, reconcile
+from tokencur.records import UsageRecord
 from tokencur.sources import DEFAULT_SOURCES, Source
 from tokencur.terminal import home_relative
 
 #: Share of unreadable usage lines above which a source is flagged.
 MALFORMED_ALERT = 0.01
+
+#: Bounds on the share of Claude Code's own counted cost that tokencur's
+#: value accounts for. Below the floor, calls are going missing; above
+#: the ceiling, calls are being counted twice (as Codex's once were).
+RECONCILE_FLOOR, RECONCILE_CEILING = 0.85, 1.05
 
 _SNAPSHOT = "pricing_data/litellm_snapshot.json"
 
@@ -68,19 +78,24 @@ class Diagnosis:
     snapshot_models: int
     snapshot_sha256: str
     problems: list[str]
+    reconciliation: Reconciliation | None = None
 
 
 def diagnose(
     sources: tuple[Source, ...] | None = None, ledger_path: Path | None = None
 ) -> Diagnosis:
-    checks = [
-        _check_source(root, ingest) for root, ingest in sources or DEFAULT_SOURCES
-    ]
+    checks, reconciliation = [], None
+    for root, ingest in sources or DEFAULT_SOURCES:
+        check, records = _check_source(root, ingest)
+        checks.append(check)
+        if ingest is claude_code.iter_usage_records and check.present:
+            reconciliation = reconcile(records, claude_code.session_counters(root))
     kept = _check_ledger(ledger_path or ledger.default_path())
     snapshot = resources.files("tokencur").joinpath(_SNAPSHOT).read_bytes()
     meta = _snapshot_meta(snapshot)
     problems = [p for check in checks for p in _source_problems(check)]
     problems += _ledger_problems(kept)
+    problems += _reconciliation_problems(reconciliation)
     return Diagnosis(
         sources=checks,
         ledger=kept,
@@ -89,16 +104,35 @@ def diagnose(
         snapshot_models=meta[1],
         snapshot_sha256=hashlib.sha256(snapshot).hexdigest(),
         problems=problems,
+        reconciliation=reconciliation,
     )
 
 
-def _check_source(root: Path, ingest) -> SourceCheck:
+def _check_source(root: Path, ingest) -> tuple[SourceCheck, list[UsageRecord]]:
     name = ingest.__module__.rsplit(".", 1)[-1].replace("_", "-")
     stats = ScanStats()
     if not root.exists():
-        return SourceCheck(name, root, present=False, stats=stats)
-    records = sum(1 for _ in ingest(root, stats=stats))
-    return SourceCheck(name, root, present=True, stats=stats, records=records)
+        return SourceCheck(name, root, present=False, stats=stats), []
+    records = list(ingest(root, stats=stats))
+    check = SourceCheck(name, root, present=True, stats=stats, records=len(records))
+    return check, records
+
+
+def _reconciliation_problems(r: Reconciliation | None) -> list[str]:
+    if r is None or r.coverage is None:
+        return []
+    if r.coverage < RECONCILE_FLOOR:
+        return [
+            f"claude-code: tokencur accounts for {r.coverage:.0%} of the cost "
+            f"Claude Code counted in {r.sessions} sessions; calls are going "
+            "missing, and the log format may have changed"
+        ]
+    if r.coverage > RECONCILE_CEILING:
+        return [
+            f"claude-code: tokencur values {r.coverage:.0%} of the cost Claude "
+            f"Code counted in {r.sessions} sessions; calls may be counted twice"
+        ]
+    return []
 
 
 def _source_problems(check: SourceCheck) -> list[str]:
@@ -180,6 +214,29 @@ def _version_key(version: str) -> tuple:
     return tuple(int(p) if p.isdigit() else -1 for p in version.split("."))
 
 
+def _render_reconciliation(r: Reconciliation | None) -> list[str]:
+    if r is None:
+        return []
+    lines = ["", "reconciliation with Claude Code's own counters"]
+    if not r.sessions:
+        return [*lines, "  no session has closed with Claude Code's counters yet"]
+    lines.append(
+        f"  {r.sessions:,} sessions closed with counters: tokencur values their "
+        f"calls at ${r.tokencur_usd:,.2f}, Claude Code counted ${r.agent_usd:,.2f}"
+    )
+    lines.append(
+        f"  tokencur sees {r.coverage:.1%}; the rest is in calls the "
+        "transcripts never record:"
+    )
+    lines.append(
+        f"    main models: ${r.counted_usd - r.tokencur_usd:,.2f} beyond the "
+        "calls their transcripts hold"
+    )
+    for model, cost in r.unseen_usd.items():
+        lines.append(f"    {model}: ${cost:,.2f}, no call in any transcript")
+    return lines
+
+
 def render(d: Diagnosis) -> str:
     lines = ["tokencur doctor", "", "log sources"]
     width = max(len(c.name) for c in d.sources) if d.sources else 0
@@ -198,6 +255,7 @@ def render(d: Diagnosis) -> str:
             f"{head}  {s.files:,} files · {s.usage_lines:,} usage lines · "
             f"{c.records:,} records · {s.malformed:,} malformed{versions}"
         )
+    lines += _render_reconciliation(d.reconciliation)
     k = d.ledger
     lines += ["", "ledger", f"  {home_relative(k.path)}"]
     if not k.present:

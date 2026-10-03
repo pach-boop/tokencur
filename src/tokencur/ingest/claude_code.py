@@ -4,14 +4,19 @@ Claude Code writes one JSONL transcript per session under
 ``~/.claude/projects/<workspace>/<session-id>.jsonl``. Each assistant
 message line carries a ``message.usage`` object with token counts.
 
+It also reads Claude Code's own per-session cost counters
+(``session_counters``), which ``tokencur.reconcile`` checks tokencur against.
+
 Privacy: this module reads usage metadata only (tokens, model,
-timestamps, the working directory). It never extracts message content.
+timestamps, the working directory, cost counters). It never extracts
+message content.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterator
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
@@ -158,3 +163,56 @@ def _cache_writes(usage: dict) -> tuple[int, int]:
             count(breakdown.get("ephemeral_1h_input_tokens")),
         )
     return count(usage.get("cache_creation_input_tokens")), 0
+
+
+@dataclass(frozen=True)
+class SessionCounters:
+    """Claude Code's own accounting, as its transcripts record it.
+
+    When a session ends, Claude Code writes a ``cost-state`` line with
+    the cost it counted for each model, including calls it never writes
+    to the transcript. ``costs`` maps each session to the last such
+    line's per-model cost in USD. A session continued in another one
+    (``continued-in`` lines) hands its counters on to it: ``continued``
+    maps each session to the one it continued in. Ids and numbers only.
+    """
+
+    costs: dict[str, dict[str, float]] = field(default_factory=dict)
+    continued: dict[str, str] = field(default_factory=dict)
+
+
+def session_counters(root: Path) -> SessionCounters:
+    """Read Claude Code's own per-session counters under ``root``."""
+    counters = SessionCounters()
+    for path in sorted(root.rglob("*.jsonl")):
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"cost-state"' in line:
+                    _read_cost_state(entry(line), counters)
+                elif '"continued-in"' in line:
+                    line_entry = entry(line)
+                    if line_entry.get("type") == "continued-in":
+                        before = text(line_entry.get("sessionId"))
+                        after = text(line_entry.get("continuedInSessionId"))
+                        if before and after and before != after:
+                            counters.continued[before] = after
+    return counters
+
+
+def _read_cost_state(line_entry: dict, counters: SessionCounters) -> None:
+    session = text(line_entry.get("sessionId"))
+    if line_entry.get("type") != "cost-state" or not session:
+        return
+    costs = {}
+    for model, usage in obj(line_entry.get("modelUsage")).items():
+        cost = obj(usage).get("costUSD")
+        if _is_amount(cost):
+            costs[model] = float(cost)
+    counters.costs[session] = costs  # the last line of a session wins
+
+
+def _is_amount(value: object) -> bool:
+    """A finite, non-negative number (booleans are not amounts)."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return False
+    return math.isfinite(value) and value >= 0
