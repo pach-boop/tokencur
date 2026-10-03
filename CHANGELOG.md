@@ -5,6 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-02
+
+### Added
+
+- **Usage value per successful change, session by session** (ADR 0012,
+  closes #15). `tokencur outcomes --sessions` shows each agent session's
+  usage value, the prompts a person typed, its API time and the share
+  lost to retries (Claude Code), and its changes: landed on the default
+  branch, reverted, or pending. A change goes to the last session that
+  worked in its repository in the day before; a rebased copy is the same
+  change, by patch id; a revert commit is a correction, not a change.
+  The headline is usage value per change that landed and stayed: $1.89
+  on tokencur's own repository.
+- Claude Code's counters now include each session's API time, with and
+  without retries, and the prompts a person typed, read from each
+  message's origin, never its text.
+
+### Changed
+
+- The git plumbing behind `outcomes` moved to `tokencur.gitlog`, shared
+  by the repository and session views. `outcomes.OutcomesError` is the
+  same class as `gitlog.GitError`.
+- Terminal tables can align several label columns to the left.
+
 ## [0.4.0] - 2026-10-02
 
 ### Added
