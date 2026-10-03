@@ -1,13 +1,20 @@
 {
- "generated_at": "2026-10-02 22:53 UTC",
+ "generated_at": "2026-10-03 00:26 UTC",
  "rates_as_of": "2026-10-02",
+ "provenance": {
+  "tokencur": "0.4.0",
+  "curated_card": "2026-10-02",
+  "snapshot_fetched": "2026-10-01",
+  "snapshot_models": 345,
+  "snapshot_sha256": "ac4cf4f63ed7975a04402d9cfc23dd106777e32ecd0ce9b90a46bc09ca273adf"
+ },
  "kpis": {
-  "total_usd": 920.18,
-  "days": 52,
-  "avg_day_usd": 17.7,
-  "messages": 11398,
-  "achieved_savings_usd": 6339.98,
-  "potential_savings_usd": 208.47
+  "total_usd": 950.17,
+  "days": 53,
+  "avg_day_usd": 17.93,
+  "messages": 11579,
+  "achieved_savings_usd": 6704.73,
+  "potential_savings_usd": 213.81
  },
  "daily": [
   {
@@ -319,15 +326,21 @@
   {
    "day": "2026-10-02",
    "services": {
-    "Claude Code": 169.526
+    "Claude Code": 189.0234
+   }
+  },
+  {
+   "day": "2026-10-03",
+   "services": {
+    "Claude Code": 10.4912
    }
   }
  ],
  "by_model": [
   {
    "model": "claude-opus-5-5",
-   "cost_usd": 573.72,
-   "tokens": 1377096895
+   "cost_usd": 603.71,
+   "tokens": 1474504594
   },
   {
    "model": "gpt-5.4",
@@ -373,19 +386,19 @@
  "by_bucket": [
   {
    "bucket": "cache-read",
-   "cost_usd": 415.07
+   "cost_usd": 434.38
   },
   {
    "bucket": "cache-write-1h",
-   "cost_usd": 195.99
+   "cost_usd": 200.28
   },
   {
    "bucket": "output",
-   "cost_usd": 174.8
+   "cost_usd": 181.19
   },
   {
    "bucket": "input",
-   "cost_usd": 134.16
+   "cost_usd": 134.17
   },
   {
    "bucket": "cache-write-5m",
@@ -396,8 +409,8 @@
   {
    "kind": "achieved",
    "title": "Prompt caching on claude-opus-5-5",
-   "savings_usd": 5026.52,
-   "savings_pct": 91.6
+   "savings_usd": 5391.27,
+   "savings_pct": 91.8
   },
   {
    "kind": "achieved",
@@ -414,8 +427,8 @@
   {
    "kind": "potential",
    "title": "Right-size claude-opus-5-5 → claude-sonnet-5-5",
-   "savings_usd": 152.09,
-   "savings_pct": 26.5
+   "savings_usd": 157.43,
+   "savings_pct": 26.1
   },
   {
    "kind": "potential",
@@ -514,8 +527,8 @@
     "monthly_usd": 100.0,
     "from": "2026-10-02",
     "until": null,
-    "days_counted": 1,
-    "outlay_usd": 3.29
+    "days_counted": 2,
+    "outlay_usd": 6.57
    },
    {
     "service": "Codex CLI",
@@ -540,10 +553,10 @@
    "Claude Code": 100.0
   },
   "monthly_total_usd": 100.0,
-  "window_days": 238,
-  "window_months": 7.82,
-  "estimated_outlay_usd": 96.59,
-  "api_equivalent_usd": 920.18,
+  "window_days": 239,
+  "window_months": 7.85,
+  "estimated_outlay_usd": 99.88,
+  "api_equivalent_usd": 950.17,
   "leverage": 9.5,
   "effective_discount_pct": 89.5
  }
