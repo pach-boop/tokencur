@@ -1,0 +1,202 @@
+{
+ "claude-3-5-haiku": {
+  "current": {
+   "cache_read": 0.08,
+   "cache_write_1h": 1.6,
+   "cache_write_5m": 1.0,
+   "input": 0.8,
+   "output": 4.0
+  },
+  "history": []
+ },
+ "claude-fable-5": {
+  "current": {
+   "cache_read": 1.0,
+   "cache_write_1h": 20.0,
+   "cache_write_5m": 12.5,
+   "input": 10.0,
+   "output": 50.0
+  },
+  "history": []
+ },
+ "claude-fable-5-1": {
+  "current": {
+   "cache_read": 0.25,
+   "cache_write_1h": 20.0,
+   "cache_write_5m": 12.5,
+   "input": 10.0,
+   "output": 50.0
+  },
+  "history": []
+ },
+ "claude-haiku-4-5": {
+  "current": {
+   "cache_read": 0.1,
+   "cache_write_1h": 2.0,
+   "cache_write_5m": 1.25,
+   "input": 1.0,
+   "output": 5.0
+  },
+  "history": []
+ },
+ "claude-mythos-5": {
+  "current": {
+   "cache_read": 1.0,
+   "cache_write_1h": 20.0,
+   "cache_write_5m": 12.5,
+   "input": 10.0,
+   "output": 50.0
+  },
+  "history": []
+ },
+ "claude-mythos-5-1": {
+  "current": {
+   "cache_read": 0.25,
+   "cache_write_1h": 20.0,
+   "cache_write_5m": 12.5,
+   "input": 10.0,
+   "output": 50.0
+  },
+  "history": []
+ },
+ "claude-opus-4": {
+  "current": {
+   "cache_read": 1.5,
+   "cache_write_1h": 30.0,
+   "cache_write_5m": 18.75,
+   "input": 15.0,
+   "output": 75.0
+  },
+  "history": []
+ },
+ "claude-opus-4-1": {
+  "current": {
+   "cache_read": 1.5,
+   "cache_write_1h": 30.0,
+   "cache_write_5m": 18.75,
+   "input": 15.0,
+   "output": 75.0
+  },
+  "history": []
+ },
+ "claude-opus-4-5": {
+  "current": {
+   "cache_read": 0.5,
+   "cache_write_1h": 10.0,
+   "cache_write_5m": 6.25,
+   "input": 5.0,
+   "output": 25.0
+  },
+  "history": []
+ },
+ "claude-opus-4-6": {
+  "current": {
+   "cache_read": 0.5,
+   "cache_write_1h": 10.0,
+   "cache_write_5m": 6.25,
+   "input": 5.0,
+   "output": 25.0
+  },
+  "history": []
+ },
+ "claude-opus-4-7": {
+  "current": {
+   "cache_read": 0.5,
+   "cache_write_1h": 10.0,
+   "cache_write_5m": 6.25,
+   "input": 5.0,
+   "output": 25.0
+  },
+  "history": []
+ },
+ "claude-opus-4-8": {
+  "current": {
+   "cache_read": 0.5,
+   "cache_write_1h": 10.0,
+   "cache_write_5m": 6.25,
+   "input": 5.0,
+   "output": 25.0
+  },
+  "history": []
+ },
+ "claude-opus-5": {
+  "current": {
+   "cache_read": 0.5,
+   "cache_write_1h": 10.0,
+   "cache_write_5m": 6.25,
+   "input": 5.0,
+   "output": 25.0
+  },
+  "history": []
+ },
+ "claude-opus-5-5": {
+  "current": {
+   "cache_read": 0.2,
+   "cache_write_1h": 8.0,
+   "cache_write_5m": 5.0,
+   "input": 4.0,
+   "output": 20.0
+  },
+  "history": []
+ },
+ "claude-sonnet-4": {
+  "current": {
+   "cache_read": 0.3,
+   "cache_write_1h": 6.0,
+   "cache_write_5m": 3.75,
+   "input": 3.0,
+   "output": 15.0
+  },
+  "history": []
+ },
+ "claude-sonnet-4-5": {
+  "current": {
+   "cache_read": 0.3,
+   "cache_write_1h": 6.0,
+   "cache_write_5m": 3.75,
+   "input": 3.0,
+   "output": 15.0
+  },
+  "history": []
+ },
+ "claude-sonnet-4-6": {
+  "current": {
+   "cache_read": 0.3,
+   "cache_write_1h": 6.0,
+   "cache_write_5m": 3.75,
+   "input": 3.0,
+   "output": 15.0
+  },
+  "history": []
+ },
+ "claude-sonnet-5": {
+  "current": {
+   "cache_read": 0.2,
+   "cache_write_1h": 4.0,
+   "cache_write_5m": 2.5,
+   "input": 2.0,
+   "output": 10.0
+  },
+  "history": []
+ },
+ "claude-sonnet-5-5": {
+  "current": {
+   "cache_read": 0.2,
+   "cache_write_1h": 4.0,
+   "cache_write_5m": 2.5,
+   "input": 2.0,
+   "output": 10.0
+  },
+  "history": []
+ },
+ "kimi-k2.7-code-highspeed": {
+  "current": {
+   "cache_read": 0.16,
+   "cache_write_1h": 0.0,
+   "cache_write_5m": 0.0,
+   "input": 0.95,
+   "output": 4.0
+  },
+  "history": []
+ }
+}

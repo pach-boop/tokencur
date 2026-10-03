@@ -335,6 +335,10 @@ last rate), then regenerates this page from that history.
   UTC day ([ADR 0008](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0008-point-in-time-list-rates.md)). Rate history
   starts with the snapshot on 2026-07-06, so earlier usage is valued at the first
   rate observed, and a move is dated by the day the price-watch bot saw it.
+  Curated Anthropic rates have no history yet because none has moved; a test
+  fails on any curated rate that changes without a dated history entry or a
+  declared correction
+  ([ADR 0011](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0011-curated-rates-change-only-on-the-record.md)).
 - Older log formats don't break down cache writes by TTL; totals are attributed to the
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
