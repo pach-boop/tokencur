@@ -15,6 +15,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   price does, for curated and snapshot rates alike. Replaying every
   version of the card in git found no curated price move so far; the one
   change, Sonnet 5 in 0.3.0, is now declared as a correction.
+- **Reconciliation with Claude Code's own counters** (ADR 0005, updated).
+  When a session ends, Claude Code writes the cost it counted for each
+  model, including calls it never writes to the transcript. `tokencur
+  doctor` compares those counters with tokencur's value of the same
+  sessions, treating a chain of continued sessions as one, and flags
+  coverage below 85% (calls going missing) or above 105% (calls counted
+  twice). On the maintainer's sessions tokencur sees 93.6%: the rest is
+  internal calls for web search, web fetch and session titles, plus
+  main-model calls such as compaction. The README states the gap.
 
 ### Fixed
 
