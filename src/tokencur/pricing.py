@@ -74,7 +74,8 @@ RATE_CARD: dict[str, ModelRates] = {
     "claude-sonnet-5-5": _anthropic_rates(2.00, 10.00),
     # Launched at $2/$10 as an introductory price through 2026-08-31;
     # Anthropic made it the standard price and cancelled the scheduled
-    # rise to $3/$15. (This card had valued Sonnet 5 at $3/$15.)
+    # rise to $3/$15. (This card had valued Sonnet 5 at $3/$15: see
+    # RATE_CARD_CORRECTIONS.)
     "claude-sonnet-5": _anthropic_rates(2.00, 10.00),
     "claude-sonnet-4-6": _anthropic_rates(3.00, 15.00),
     "claude-sonnet-4-5": _anthropic_rates(3.00, 15.00),
@@ -101,9 +102,26 @@ RATE_CARD: dict[str, ModelRates] = {
 
 #: Rates the curated card held before a price move, per model, oldest
 #: first: ``(until, rates)`` where ``until`` is the first day (UTC,
-#: ``YYYY-MM-DD``) the card's current rate applied. Empty until Anthropic
-#: moves a curated price; then the old rate goes here, not away.
+#: ``YYYY-MM-DD``) the next rate applied. Empty because no curated price
+#: has moved since the card began on 2026-07-06; the one change so far
+#: was a correction (below). When Anthropic moves a curated price, the
+#: old rate comes here, never away: tests/test_rate_history.py fails on
+#: a curated rate that leaves the card any other way (ADR 0011).
 RATE_CARD_HISTORY: dict[str, tuple[tuple[str, ModelRates], ...]] = {}
+
+#: Curated rates found wrong after they were published, per model: the
+#: day the card was corrected, the (input, output) rates it wrongly held,
+#: and why. A correction is not a price move, because the wrong rate
+#: never applied: it stays out of RATE_CARD_HISTORY and is disclosed
+#: here and in the changelog instead.
+RATE_CARD_CORRECTIONS: dict[str, tuple[str, tuple[float, float], str]] = {
+    "claude-sonnet-5": (
+        "2026-10-02",
+        (3.00, 15.00),
+        "the card used a scheduled rise Anthropic cancelled; the $2/$10 "
+        "launch price became the standard price",
+    ),
+}
 
 _DATE_SUFFIX = re.compile(r"-20\d{6}$")
 _PER_TOKEN_TO_MTOK = 1_000_000
@@ -133,7 +151,13 @@ def _from_entry(entry: dict) -> ModelRates:
 def _snapshot() -> tuple[dict[str, ModelRates], dict[str, History]]:
     """Current rates and rate history from the vendored LiteLLM snapshot."""
     path = resources.files("tokencur").joinpath("pricing_data/litellm_snapshot.json")
-    models = json.loads(path.read_text(encoding="utf-8"))["models"]
+    return parse_snapshot(json.loads(path.read_text(encoding="utf-8"))["models"])
+
+
+def parse_snapshot(
+    models: dict[str, dict],
+) -> tuple[dict[str, ModelRates], dict[str, History]]:
+    """A snapshot's ``models`` as current rates and rate history."""
     rates = {name: _from_entry(entry) for name, entry in models.items()}
     history = {
         name: tuple((item["until"], _from_entry(item)) for item in entry["history"])

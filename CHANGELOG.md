@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **Curated rates can only change on the record** (ADR 0011). Every rate
+  the hand-maintained Anthropic card holds is recorded, and a test fails
+  when one leaves the card any way but into its dated history, a price
+  move, or through a declared correction of a rate that never applied.
+  Tests also show that a September figure never moves when an October
+  price does, for curated and snapshot rates alike. Replaying every
+  version of the card in git found no curated price move so far; the one
+  change, Sonnet 5 in 0.3.0, is now declared as a correction.
+
 ### Fixed
 
 - The README's two links to the price-watch workflow were relative, so
