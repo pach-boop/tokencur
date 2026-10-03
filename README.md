@@ -96,6 +96,7 @@ tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing p
 tokencur doctor                # read-only health check: log formats, ledger, pricing
 tokencur import runpod FILE    # billed cost: a RunPod billing export
 tokencur outcomes [REPO...]    # usage value per commit, repository by repository
+tokencur outcomes --sessions   # usage value per change that landed and stayed
 ```
 
 `tokencur --help` lists every command, and `python -m tokencur` works the same.
@@ -211,7 +212,7 @@ export gains Compute rows whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
 ([ADR 0009](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0009-billed-charges-next-to-showback.md)).
 
-## Unit economics: usage value per commit
+## Unit economics: usage value per commit and per successful change
 
 Cost alone does not say whether usage paid off. `tokencur outcomes` sets it
 against the commits it went into, per git repository:
@@ -236,6 +237,25 @@ comparison is a repository with itself over time. Quality, latency and
 reliability are the next layers
 ([ADR 0010](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0010-usage-value-per-commit.md)); the plan is in
 [#15](https://github.com/pach-boop/tokencur/issues/15).
+
+`tokencur outcomes --sessions` goes one step further, toward cost per successful
+task: one row per agent session, with what a person put in and what stayed.
+
+```
+session   started (UTC)     repository            calls  usage value  prompts  API time  retries  landed  reverted  per success
+58cb4580  2026-10-01 20:20  ~/Proyectos/tokencur    119       $16.99        9       36m     5.1%       6         0        $2.83
+```
+
+- **Success means it stayed.** A change succeeds when it reaches the default
+  branch and is never reverted; a rebased copy is the same change.
+- **A change goes to the session behind it:** the last one that worked in its
+  repository in the day before the commit.
+- **What a person put in:** prompts count the messages a person typed, and API
+  time and retries come from Claude Code's own counters.
+
+On tokencur's own repository that comes to $1.89 of usage value per successful
+change
+([ADR 0012](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0012-usage-value-per-successful-change.md)).
 
 ## When an agent changes its logs
 
@@ -326,7 +346,7 @@ last rate), then regenerates this page from that history.
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
 | 6 | Numbers nobody can question: point-in-time rates, reconciliation with each source's own counters, reproducible figures | ✅ v0.4 |
-| 7 | Unit economics: usage value per commit, then per successful task | 🔨 per commit done (v0.3); per successful task next ([#15](https://github.com/pach-boop/tokencur/issues/15)) |
+| 7 | Unit economics: usage value per commit, then per successful change | ✅ per commit (v0.3) and per successful change, session by session (v0.5); quality signals from tests and CI next |
 | 8 | Serverless AWS deployment, documented, with its own measured running cost | ⏳ |
 | 9 | PR to `focus_converters` ([#10](https://github.com/pach-boop/tokencur/issues/10)) + bilingual (EN/ES) case study | ⏳ |
 

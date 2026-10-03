@@ -19,7 +19,16 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from tokencur import __version__, doctor, ledger, observatory, outcomes, prices
+from tokencur import (
+    __version__,
+    doctor,
+    ledger,
+    observatory,
+    outcomes,
+    prices,
+    sessions,
+    sources,
+)
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
 from tokencur.ingest import claude_code, runpod
@@ -103,6 +112,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--all-authors",
         action="store_true",
         help="count every author's commits, not only your git user.email's",
+    )
+    unit.add_argument(
+        "--sessions",
+        action="store_true",
+        help="one row per agent session: usage value per change that landed and stayed",
+    )
+    unit.add_argument(
+        "--top",
+        type=int,
+        default=20,
+        metavar="N",
+        help="with --sessions, show the N sessions of most usage value (0: all)",
     )
     unit.set_defaults(handler=_outcomes)
 
@@ -289,6 +310,18 @@ def _outcomes(args: argparse.Namespace) -> int:
     records = _records(args)
     if records is None:
         return 1
+    if args.sessions:
+        result = sessions.session_outcomes(
+            records,
+            _claude_code_counters(),
+            repos=args.repos,
+            since=args.since,
+            until=args.until,
+            all_authors=args.all_authors,
+            period=_period(args),
+        )
+        print(sessions.render(result, top=args.top))
+        return 0
     result = outcomes.outcomes(
         records,
         repos=args.repos,
@@ -299,6 +332,14 @@ def _outcomes(args: argparse.Namespace) -> int:
     )
     print(outcomes.render(result))
     return 0
+
+
+def _claude_code_counters() -> claude_code.SessionCounters:
+    """Claude Code's own counters, from its logs where tokencur reads them."""
+    for root, ingest in sources.DEFAULT_SOURCES:
+        if ingest is claude_code.iter_usage_records and root.exists():
+            return claude_code.session_counters(root)
+    return claude_code.SessionCounters()
 
 
 def _observatory(args: argparse.Namespace) -> int:

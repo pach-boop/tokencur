@@ -1,16 +1,20 @@
 """Usage value per commit: attribution by working directory, commits by git."""
 
 import json
-import os
 import re
 import shutil
 import subprocess
 from datetime import date
 
 import pytest
+from gitrepos import TRAILER
+from gitrepos import at as _at
+from gitrepos import call as _call
+from gitrepos import commit as _commit
+from gitrepos import git as _git
+from gitrepos import make_repo as _repo
 
-from tokencur import cli, sources
-from tokencur import outcomes as outcomes_module
+from tokencur import cli, gitlog, sources
 from tokencur.ingest import claude_code
 from tokencur.outcomes import (
     AGENT,
@@ -22,73 +26,8 @@ from tokencur.outcomes import (
     outcomes,
     render,
 )
-from tokencur.records import UsageRecord
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
-
-YOU = "you@example.com"
-TRAILER = "\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-
-
-@pytest.fixture(autouse=True)
-def _no_git_config(monkeypatch, tmp_path_factory):
-    """Each test's repositories carry their own identity, never the host's."""
-    empty = tmp_path_factory.mktemp("gitconfig") / "config"
-    empty.write_text("", encoding="utf-8")
-    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
-    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
-
-
-def _git(repo, *args, **env):
-    subprocess.run(
-        ["git", "-C", str(repo), *args],
-        check=True,
-        capture_output=True,
-        env={**os.environ, **env},
-    )
-
-
-def _repo(path, email=YOU):
-    path.mkdir(parents=True, exist_ok=True)
-    _git(path, "init", "-q")
-    if email:
-        _git(path, "config", "user.email", email)
-    _git(path, "config", "user.name", "You")
-    _git(path, "config", "commit.gpgsign", "false")
-    return path
-
-
-def _at(when):
-    """Environment that dates a git commit at ``when`` (UTC)."""
-    stamp = f"{when} +0000"
-    return {"GIT_AUTHOR_DATE": stamp, "GIT_COMMITTER_DATE": stamp}
-
-
-def _commit(repo, when, lines=1, email=YOU, message="change"):
-    """A commit by ``email``, authored at ``when`` (UTC), adding ``lines`` lines."""
-    target = repo / "file.txt"
-    old = target.read_text(encoding="utf-8") if target.exists() else ""
-    target.write_text(old + "line\n" * lines, encoding="utf-8")
-    _git(repo, "add", "file.txt")
-    who = {"GIT_AUTHOR_EMAIL": email, "GIT_COMMITTER_EMAIL": email}
-    _git(repo, "commit", "-q", "-m", message, **who, **_at(when))
-
-
-def _call(cwd, timestamp="2026-09-10T12:00:00Z", model="claude-opus-4-8"):
-    """A $5.00 call (1M input tokens on claude-opus-4-8) that ran in ``cwd``."""
-    return UsageRecord(
-        timestamp=timestamp,
-        workspace="w",
-        session_id="s",
-        model=model,
-        input_tokens=1_000_000,
-        output_tokens=0,
-        cache_read_tokens=0,
-        cache_write_5m_tokens=0,
-        cache_write_1h_tokens=0,
-        record_id=f"{cwd}@{timestamp}",
-        cwd=str(cwd),
-    )
 
 
 def test_a_call_belongs_to_the_repository_it_ran_in(tmp_path):
@@ -309,11 +248,11 @@ def test_a_repository_git_cannot_read_is_reported_not_raised(
 ):
     repo = _repo(tmp_path / "app")
     _commit(repo, "2026-09-10 08:00:00")
-    real = outcomes_module._run_git
+    real = gitlog.run_git
     monkeypatch.setattr(
-        outcomes_module,
-        "_run_git",
-        lambda root, *args: log if args[0] == "log" else real(root, *args),
+        gitlog,
+        "run_git",
+        lambda root, *args, stdin=None: log if args[0] == "log" else real(root, *args),
     )
 
     result = outcomes([_call(repo)])
@@ -330,7 +269,7 @@ def test_missing_git_is_a_clear_error(tmp_path, monkeypatch):
     def no_git(*args, **kwargs):
         raise FileNotFoundError("git")
 
-    monkeypatch.setattr(outcomes_module.subprocess, "run", no_git)
+    monkeypatch.setattr(gitlog.subprocess, "run", no_git)
 
     (r,) = outcomes([_call(repo)]).repos
 
@@ -342,7 +281,7 @@ def test_a_git_error_is_not_mistaken_for_an_empty_repository(tmp_path, monkeypat
     refused = subprocess.CompletedProcess(
         [], 128, "", "fatal: detected dubious ownership in repository\n"
     )
-    monkeypatch.setattr(outcomes_module, "_run_git", lambda root, *args: refused)
+    monkeypatch.setattr(gitlog, "run_git", lambda root, *args, stdin=None: refused)
 
     (r,) = outcomes([_call(repo)]).repos
 

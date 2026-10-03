@@ -28,12 +28,13 @@ outside those days had no recorded usage, so they carry no known cost.
 from __future__ import annotations
 
 import re
-import subprocess
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+from tokencur import gitlog
+from tokencur.gitlog import GONE, NO_DIRECTORY, NOT_A_REPOSITORY
 from tokencur.pricing import record_cost_usd
 from tokencur.records import UsageRecord, parse_timestamp
 from tokencur.terminal import home_relative, table
@@ -49,11 +50,10 @@ AGENT = re.compile(
     re.IGNORECASE,
 )
 
-# Why a call is not attributed to a repository.
-NO_DIRECTORY = "no working directory logged"
-GONE = "directory no longer exists"
-NOT_A_REPOSITORY = "not in a git repository"
+# Why a call is not attributed to a repository, besides the reasons
+# gitlog gives for a directory: no directory, gone, not a repository.
 NOT_ASKED = "in other repositories"
+__all__ = ["GONE", "NOT_ASKED", "NOT_A_REPOSITORY", "NO_DIRECTORY", "OutcomesError"]
 
 # One commit per record: hash, author name, author email, author date
 # (strict ISO 8601) and Co-authored-by values; --shortstat follows it.
@@ -64,8 +64,8 @@ _FORMAT = (
 _LINES = re.compile(r"(\d+) (?:insertion|deletion)")
 
 
-class OutcomesError(RuntimeError):
-    """A repository cannot be read: not a repository, or git is missing."""
+#: A repository cannot be read: not a repository, or git is missing.
+OutcomesError = gitlog.GitError
 
 
 @dataclass(frozen=True)
@@ -107,44 +107,6 @@ class Outcomes:
         return sum(r.value_usd for r in self.repos)
 
 
-class _Repositories:
-    """Finds the repository a directory belongs to, remembering each answer."""
-
-    def __init__(self) -> None:
-        self._answers: dict[str, Path | str] = {}
-        self._found: dict[Path, Path | None] = {}
-
-    def root(self, directory: str) -> Path | str:
-        """The repository root holding ``directory``, or why there is none."""
-        if directory not in self._answers:
-            self._answers[directory] = self._answer(directory)
-        return self._answers[directory]
-
-    def _answer(self, directory: str) -> Path | str:
-        if not directory:
-            return NO_DIRECTORY
-        path = Path(directory)
-        if not path.is_dir():
-            return GONE
-        root = self._lookup(path)
-        return root if root is not None else NOT_A_REPOSITORY
-
-    def _lookup(self, path: Path) -> Path | None:
-        walked = []
-        root = None
-        for candidate in (path, *path.parents):
-            if candidate in self._found:
-                root = self._found[candidate]
-                break
-            walked.append(candidate)
-            if (candidate / ".git").exists():
-                root = candidate.resolve()
-                break
-        for candidate in walked:
-            self._found[candidate] = root
-        return root
-
-
 def outcomes(
     records: Iterable[UsageRecord],
     repos: Sequence[Path] = (),
@@ -157,7 +119,7 @@ def outcomes(
     agents worked in when none are named. ``records`` are the period's
     calls; ``since`` and ``until`` bound the commits (UTC days, ``until``
     excluded), and default to each repository's days with usage."""
-    finder = _Repositories()
+    finder = gitlog.Repositories()
     asked: set[Path] = set()
     for repo in repos:
         path = Path(repo).expanduser().absolute()
@@ -220,11 +182,7 @@ def _repo_outcome(
         outcome.commits = Commits()  # no usage and no period: no window
         return outcome
     try:
-        author = (
-            None
-            if all_authors
-            else _run_git(root, "config", "user.email").stdout.strip()
-        )
+        author = None if all_authors else gitlog.user_email(root)
         outcome.everyone = not author
         outcome.commits = commits(root, first, end, author or None)
     except OutcomesError as exc:
@@ -235,13 +193,12 @@ def _repo_outcome(
 def commits(root: Path, since: date, until: date, author: str | None) -> Commits:
     """Non-merge commits in ``root`` authored on a UTC day in
     ``[since, until)``, by ``author`` (an email) or, with None, by anyone."""
-    # Exit 1 means no HEAD yet; any other failure surfaces from git log.
-    if _run_git(root, "rev-parse", "--quiet", "--verify", "HEAD").returncode == 1:
-        return Commits()  # a repository with no commits yet
+    if not gitlog.has_commits(root):
+        return Commits()
     # git filters on the commit date, which normally comes after the
     # author date; the day of margin keeps the prefilter on the safe side.
     margin = since - timedelta(days=1)
-    out = _git(
+    out = gitlog.git(
         root,
         "log",
         "--no-merges",
@@ -268,29 +225,6 @@ def commits(root: Path, since: date, until: date, author: str | None) -> Commits
         by_agent += any(AGENT.search(who) for who in signed)
         lines += sum(int(n) for n in _LINES.findall(stat))
     return Commits(total, by_agent, lines)
-
-
-def _git(root: Path, *args: str) -> str:
-    """git's output; OutcomesError with git's own reason when it fails."""
-    done = _run_git(root, *args)
-    if done.returncode != 0:
-        reason = (done.stderr.strip().splitlines() or ["unknown error"])[-1]
-        raise OutcomesError(f"git {args[0]} failed: {reason}")
-    return done.stdout
-
-
-def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            ["git", "-C", str(root), *args],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
-    except FileNotFoundError:
-        raise OutcomesError("git is not installed or not on PATH") from None
 
 
 def render(result: Outcomes) -> str:
