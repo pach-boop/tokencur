@@ -234,7 +234,8 @@ repository                              days  calls  usage value  commits  agent
 A commit is a coarse unit: it measures output, not quality. The useful
 comparison is a repository with itself over time. Quality, latency and
 reliability are the next layers
-([ADR 0010](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0010-usage-value-per-commit.md)).
+([ADR 0010](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0010-usage-value-per-commit.md)); the plan is in
+[#15](https://github.com/pach-boop/tokencur/issues/15).
 
 ## When an agent changes its logs
 
