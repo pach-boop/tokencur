@@ -35,7 +35,7 @@ from pathlib import Path
 
 from tokencur import gitlog
 from tokencur.gitlog import GONE, NO_DIRECTORY, NOT_A_REPOSITORY
-from tokencur.pricing import record_cost_usd
+from tokencur.pricing import provenance, record_cost_usd
 from tokencur.records import UsageRecord, parse_timestamp
 from tokencur.terminal import home_relative, table
 
@@ -239,6 +239,7 @@ def render(result: Outcomes) -> str:
         "tokencur outcomes — AI usage value per commit "
         "(API-equivalent list value, not money paid)",
         f"commits: {authors}, merges left out; window: {window}",
+        f"reproducible with {provenance()}",
         "",
     ]
     header = (

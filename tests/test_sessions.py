@@ -175,6 +175,16 @@ def test_the_view_shows_each_session_and_the_totals(tmp_path):
     assert "sessions with no landed change: 2 of 3, $10.00 of usage value" in text
 
 
+def test_the_view_names_what_reproduces_it():
+    """As the report does: the version, the curated card and the pricing
+    snapshot behind every value in the table."""
+    from tokencur.pricing import provenance
+
+    text = render(session_outcomes([], SessionCounters()))
+
+    assert text.splitlines()[2] == f"reproducible with {provenance()}"
+
+
 def test_the_sessions_command_end_to_end(tmp_path, monkeypatch, capsys):
     repo = make_repo(tmp_path / "app")
     commit(repo, "2026-09-10 10:30:00")
