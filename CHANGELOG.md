@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **CI on each change's own code** (ADR 0013). `outcomes --sessions` now
+  says which successes passed CI: a change passed when a run tested
+  exactly its code (the same git tree, which a rebase onto an unmoved
+  base keeps), and failed when any run on it failed. A change CI tested
+  only together with later commits gets no result of its own, so a
+  failure a later commit fixed stays visible. Next to the headline, never
+  instead of it, a new line gives usage value per change that also
+  passed its own CI, always with how many changes CI tested that way. On
+  tokencur's own repository: 30 of 61, 26 passed and 4 failed. A column
+  shows each session's passed and failed changes, and the capture is
+  named with what reproduces the figures.
+- `scripts/fetch_github_ci.py` captures one GitHub Actions workflow's
+  runs, keeping nine fields per run and never a commit message, name,
+  email, branch or job log. `tokencur import github-ci FILE` keeps them
+  in the ledger's new `ci_runs` table (schema 6; the ledger is backed up
+  before the upgrade, as always). tokencur itself still makes no network
+  calls.
+
 ### Fixed
 
 - `tokencur outcomes` and `outcomes --sessions` now name what reproduces
