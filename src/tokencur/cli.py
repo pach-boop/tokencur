@@ -323,6 +323,7 @@ def _outcomes(args: argparse.Namespace) -> int:
             until=args.until,
             all_authors=args.all_authors,
             period=_period(args),
+            ci_runs=ledger.read_ci_runs(),
         )
         print(sessions.render(result, top=args.top))
         return 0

@@ -239,12 +239,12 @@ def test_a_rebase_keeps_the_author_date_so_attribution_holds(tmp_path):
     git(repo, "merge", "-q", "--ff-only", "feature")
     git(repo, "branch", "-q", "-D", "feature")
 
-    changes = gitlog.changes(
+    changes = gitlog.history(
         repo,
         datetime(2026, 9, 10, 10, tzinfo=UTC),
         datetime(2026, 9, 11, tzinfo=UTC),
         "you@example.com",
-    )
+    ).changes
 
     assert [(c.authored.hour, c.landed) for c in changes] == [(10, True)]
 
@@ -265,7 +265,7 @@ def test_a_repository_git_cannot_read_is_named_not_fatal(tmp_path, monkeypatch):
     def refuse(*args, **kwargs):
         raise gitlog.GitError("git log failed: fatal: bad object HEAD")
 
-    monkeypatch.setattr(gitlog, "changes", refuse)
+    monkeypatch.setattr(gitlog, "history", refuse)
 
     result = session_outcomes([call(repo, session="s")], SessionCounters())
 
