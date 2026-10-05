@@ -3,10 +3,11 @@
 import json
 import re
 import shutil
+import subprocess
 from datetime import UTC, datetime
 
 import pytest
-from gitrepos import at, call, commit, git, make_repo
+from gitrepos import YOU, at, call, commit, git, make_repo
 
 from tokencur import cli, gitlog, sources
 from tokencur.ingest import claude_code
@@ -270,6 +271,45 @@ def test_a_repository_git_cannot_read_is_named_not_fatal(tmp_path, monkeypatch):
 
     assert result.errors == {repo.resolve(): "git log failed: fatal: bad object HEAD"}
     assert "fatal: bad object HEAD" in render(result)
+
+
+def _git_version():
+    out = subprocess.run(["git", "--version"], capture_output=True, text=True).stdout
+    return tuple(int(n) for n in re.findall(r"\d+", out)[:2])
+
+
+@pytest.mark.skipif(
+    shutil.which("git") is None or _git_version() < (2, 45),
+    reason="git 2.45 added GIT_NO_LAZY_FETCH",
+)
+def test_a_partial_clone_is_never_fetched_from(tmp_path):
+    """A blobless clone would download what a diff needs from its remote;
+    tokencur reports the repository instead of going online."""
+    origin = make_repo(tmp_path / "origin")
+    commit(origin, "2026-09-10 09:00:00")
+    commit(origin, "2026-09-10 09:10:00")  # the first version is left out
+    git(origin, "config", "uploadpack.allowFilter", "true")
+    clone = tmp_path / "clone"
+    git(tmp_path, "clone", "-q", "--filter=blob:none", origin.as_uri(), str(clone))
+    for key, value in (
+        ("user.email", YOU),
+        ("user.name", "You"),
+        ("commit.gpgsign", "false"),
+    ):
+        git(clone, "config", key, value)  # a clone does not copy them
+    commit(clone, "2026-09-10 10:00:00", lines=3, name="new.txt")  # a new blob
+
+    def missing():
+        objects = gitlog.git(clone, "rev-list", "--objects", "--missing=print", "--all")
+        return sum(line.startswith("?") for line in objects.splitlines())
+
+    before = missing()
+    result = session_outcomes(
+        [call(clone, "2026-09-10T09:30:00Z", session="s")], SessionCounters()
+    )
+
+    assert before and missing() == before
+    assert list(result.errors) == [clone.resolve()]
 
 
 def test_the_totals_say_what_did_not_land_or_had_no_agent(tmp_path):

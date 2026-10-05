@@ -13,13 +13,18 @@
 - **Runs git**, read-only, for `tokencur outcomes`: `git log`, `git rev-list`,
   `git patch-id` and `git config user.email` in the repositories the agents
   worked in. Commit messages are read only to find reverts; nothing from a
-  repository is stored or published.
+  repository is stored or published. tokencur never runs `git fetch`, and
+  `outcomes` runs git with `GIT_NO_LAZY_FETCH`: with git 2.45 or newer, a
+  partial clone is reported as unreadable rather than left to download the
+  objects it is missing.
 - **Message origin**: for `outcomes --sessions`, whether a person typed each
   Claude Code message, which Claude Code records as metadata; never the text.
 - **Writes** one file: the ledger at `~/.local/share/tokencur/ledger.sqlite3`
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`).
-- **Network**: none at runtime. Two scripts go online when you run them:
+- **Network**: none at runtime, with one exception: in a partial clone,
+  git downloads the past versions of the pricing snapshot that
+  `tokencur prices` asks for. Two scripts go online when you run them:
   `scripts/update_pricing_snapshot.py` downloads the LiteLLM price database
   (also run by the daily price-watch action), and
   `scripts/fetch_runpod_billing.py` downloads your RunPod billing history,

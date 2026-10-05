@@ -11,6 +11,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   their figures, as the report, the export and the observatory already
   did: the tokencur version, the curated card's date and the pricing
   snapshot's SHA-256.
+- In a partial clone, `tokencur outcomes` could make git download the
+  objects the clone left out: a network call SECURITY.md says never
+  happens. Its git commands now run with `GIT_NO_LAZY_FETCH`, so with
+  git 2.45 or newer such a repository is reported as unreadable instead.
+  `tokencur prices` still lets git download the snapshot's past versions,
+  which its page needs, and SECURITY.md says so.
 
 ## [0.5.0] - 2026-10-02
 
