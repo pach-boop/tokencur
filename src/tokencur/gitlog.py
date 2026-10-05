@@ -9,6 +9,7 @@ nothing from a repository is stored or published.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -21,6 +22,13 @@ GONE = "directory no longer exists"
 NOT_A_REPOSITORY = "not in a git repository"
 
 _REVERTS = re.compile(r"This reverts commit ([0-9a-f]{7,64})")
+
+
+def environment() -> dict[str, str]:
+    """git's environment. A partial clone downloads the objects it left
+    out when a diff needs them; with this set, git 2.45 and newer fail
+    instead, so tokencur never goes online."""
+    return {**os.environ, "GIT_NO_LAZY_FETCH": "1"}
 
 
 class GitError(RuntimeError):
@@ -86,6 +94,7 @@ def run_git(
             encoding="utf-8",
             errors="replace",
             check=False,
+            env=environment(),
         )
     except FileNotFoundError:
         raise GitError("git is not installed or not on PATH") from None
