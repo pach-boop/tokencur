@@ -6,7 +6,7 @@ from dataclasses import fields
 import pytest
 
 from tokencur import ledger
-from tokencur.records import UsageRecord
+from tokencur.records import CIRun, UsageRecord
 
 
 def _record(record_id: str, output_tokens: int = 50, **overrides) -> UsageRecord:
@@ -290,3 +290,69 @@ def test_the_working_directory_is_not_part_of_a_records_identity(tmp_path):
 
     assert added == 0
     assert [r.cwd for r in ledger.read(path)] == ["/home/dev/app"]
+
+
+def _ci_run(run_id=1, attempt=1, **overrides):
+    fields = dict(
+        repo="you/app",
+        workflow="ci.yml",
+        run_id=run_id,
+        attempt=attempt,
+        event="push",
+        status="completed",
+        conclusion="success",
+        head_sha="a" * 40,
+        tree="b" * 40,
+        created_at="2026-09-28T10:00:00Z",
+        updated_at="2026-09-28T10:05:00Z",
+        captured_at="2026-09-28T15:00:00Z",
+    )
+    fields.update(overrides)
+    return CIRun(**fields)
+
+
+def test_ci_runs_round_trip_and_each_attempt_is_its_own_row(tmp_path):
+    path = tmp_path / "ledger.sqlite3"
+    runs = [_ci_run(attempt=1, conclusion="failure"), _ci_run(attempt=2)]
+
+    assert ledger.record_ci_runs(runs, path) == 2
+    assert ledger.record_ci_runs(runs, path) == 0
+
+    assert ledger.read_ci_runs(path) == runs
+
+
+def test_an_older_capture_never_overwrites_a_newer_one(tmp_path):
+    path = tmp_path / "ledger.sqlite3"
+    done = _ci_run(conclusion="failure", captured_at="2026-09-28T16:00:00Z")
+    running = _ci_run(
+        status="in_progress", conclusion="", captured_at="2026-09-28T15:00:00Z"
+    )
+
+    ledger.record_ci_runs([done], path)
+    ledger.record_ci_runs([running], path)
+
+    assert ledger.read_ci_runs(path) == [done]
+
+
+def test_schema_5_gains_the_ci_runs_table_and_keeps_its_rows(tmp_path, capsys):
+    path = tmp_path / "ledger.sqlite3"
+    old = _record("req_1:msg_1", cwd="/home/dev/app")
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(ledger._V2_USAGE)
+        conn.execute(ledger._V2_SUPERSEDED)
+        conn.execute("PRAGMA user_version = 2")
+    with closing(sqlite3.connect(path)) as conn:
+        for step in (2, 3, 4):
+            ledger._MIGRATIONS[step](conn)
+        with conn:
+            conn.execute(
+                f"INSERT INTO usage VALUES ({', '.join('?' * 14)})",
+                (*ledger._key_fields(old)[:11], "2026-07-01T00:00:00Z", "", old.cwd),
+            )
+
+    assert ledger.read(path) == [old]
+    assert "schema 6: added the ci_runs table" in capsys.readouterr().err
+    assert (tmp_path / "ledger.sqlite3.schema-5.bak").exists()
+    assert ledger.read_ci_runs(path) == []
+    ledger.record_ci_runs([_ci_run()], path)
+    assert ledger.read_ci_runs(path) == [_ci_run()]

@@ -18,6 +18,9 @@ Location: ``$TOKENCUR_LEDGER`` if set, else
 ``$XDG_DATA_HOME/tokencur/ledger.sqlite3`` (``~/.local/share/...``).
 Deleting the file resets history to whatever the logs still hold.
 
+Billed charges (``charges``) and CI runs (``ci_runs``) are imported
+from captures into tables of their own, never mixed with usage.
+
 The schema is versioned (``PRAGMA user_version``) and migrated in place,
 one step at a time, after a backup copy (see ``_migrate``). Rows a later
 version finds were not usage are moved to the ``superseded`` table with
@@ -36,9 +39,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
-from tokencur.records import BilledCharge, UsageRecord
+from tokencur.records import BilledCharge, CIRun, UsageRecord
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 class LedgerError(RuntimeError):
@@ -120,6 +123,36 @@ _UPSERT_CHARGE = (
     + ", ".join(f"{f} = excluded.{f}" for f in _CHARGE_FIELDS[2:])
 )
 
+# CI runs (schema 6): which code a forge's CI tested and how that went,
+# from captures a script outside the package makes (ADR 0013). A capture
+# refreshes a run an earlier capture listed, which may have been running;
+# importing an older capture after a newer one changes nothing.
+_CI_FIELDS = tuple(f.name for f in fields(CIRun))
+_V6_CI_RUNS = """CREATE TABLE IF NOT EXISTS ci_runs (
+    repo        TEXT    NOT NULL,
+    workflow    TEXT    NOT NULL,
+    run_id      INTEGER NOT NULL,
+    attempt     INTEGER NOT NULL,
+    event       TEXT    NOT NULL,
+    status      TEXT    NOT NULL,
+    conclusion  TEXT    NOT NULL,
+    head_sha    TEXT    NOT NULL,
+    tree        TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL,
+    updated_at  TEXT    NOT NULL,
+    captured_at TEXT    NOT NULL,
+    first_seen  TEXT    NOT NULL,
+    PRIMARY KEY (repo, run_id, attempt)
+)"""
+_CI_KEY = ("repo", "run_id", "attempt")
+_UPSERT_CI_RUN = (
+    f"INSERT INTO ci_runs ({', '.join(_CI_FIELDS)}, first_seen) "
+    f"VALUES ({', '.join('?' * (len(_CI_FIELDS) + 1))}) "
+    f"ON CONFLICT ({', '.join(_CI_KEY)}) DO UPDATE SET "
+    + ", ".join(f"{f} = excluded.{f}" for f in _CI_FIELDS if f not in _CI_KEY)
+    + " WHERE excluded.captured_at >= ci_runs.captured_at"
+)
+
 # A rescan refreshes a stored row from the latest parse, except that a
 # working directory, once known, is never forgotten by a parse that
 # cannot see it.
@@ -192,6 +225,32 @@ def read_charges(path: Path | None = None) -> list[BilledCharge]:
             "ORDER BY period_start, source, record_id"
         )
         return [BilledCharge(*row) for row in cursor]
+
+
+def record_ci_runs(runs: Iterable[CIRun], path: Path | None = None) -> int:
+    """Upsert CI runs into the ledger; return how many were new."""
+    first_seen = _utc_now()
+    rows = [(*(getattr(r, f) for f in _CI_FIELDS), first_seen) for r in runs]
+    if not rows:
+        return 0  # nothing to keep: don't create an empty ledger
+    with closing(_connect(path or default_path())) as conn, conn:
+        before = conn.execute("SELECT COUNT(*) FROM ci_runs").fetchone()[0]
+        conn.executemany(_UPSERT_CI_RUN, rows)
+        after = conn.execute("SELECT COUNT(*) FROM ci_runs").fetchone()[0]
+    return after - before
+
+
+def read_ci_runs(path: Path | None = None) -> list[CIRun]:
+    """Every CI run in the ledger, oldest first."""
+    target = path or default_path()
+    if not target.exists():
+        return []
+    with closing(_connect(target)) as conn:
+        cursor = conn.execute(
+            f"SELECT {', '.join(_CI_FIELDS)} FROM ci_runs "
+            "ORDER BY created_at, repo, run_id, attempt"
+        )
+        return [CIRun(*row) for row in cursor]
 
 
 def _without_copies(conn: sqlite3.Connection, rows: list[tuple]) -> list[tuple]:
@@ -404,8 +463,17 @@ def _v4_to_v5(conn: sqlite3.Connection) -> str:
     )
 
 
+def _v5_to_v6(conn: sqlite3.Connection) -> str:
+    """Schema 6: the ``ci_runs`` table, for the CI results a forge reports
+    (``tokencur import github-ci``), kept apart from usage (ADR 0013)."""
+    with conn:
+        conn.execute(_V6_CI_RUNS)
+        conn.execute("PRAGMA user_version = 6")
+    return "added the ci_runs table for CI results (tokencur import github-ci)"
+
+
 # Step from version N to N + 1, keyed by N.
-_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
+_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6}
 
 
 def _utc_now() -> str:

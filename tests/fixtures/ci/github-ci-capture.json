@@ -1,0 +1,120 @@
+{
+ "captured_at": "2026-09-28T15:00:00Z",
+ "repo": "you/app",
+ "workflow": "ci.yml",
+ "request_urls": [
+  "https://api.github.com/repos/you/app/actions/workflows/ci.yml/runs?per_page=100"
+ ],
+ "runs": [
+  {
+   "id": 101,
+   "run_attempt": 1,
+   "event": "push",
+   "status": "completed",
+   "conclusion": "success",
+   "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "created_at": "2026-09-28T10:00:00Z",
+   "updated_at": "2026-09-28T10:05:00Z",
+   "tree_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  {
+   "id": 102,
+   "run_attempt": 1,
+   "event": "pull_request",
+   "status": "completed",
+   "conclusion": "failure",
+   "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+   "created_at": "2026-09-28T11:00:00Z",
+   "updated_at": "2026-09-28T11:04:00Z",
+   "tree_id": "dddddddddddddddddddddddddddddddddddddddd"
+  },
+  {
+   "id": 103,
+   "run_attempt": 2,
+   "event": "pull_request",
+   "status": "completed",
+   "conclusion": "success",
+   "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+   "created_at": "2026-09-28T11:10:00Z",
+   "updated_at": "2026-09-28T11:15:00Z",
+   "tree_id": "dddddddddddddddddddddddddddddddddddddddd"
+  },
+  {
+   "id": 104,
+   "run_attempt": 1,
+   "event": "push",
+   "status": "in_progress",
+   "conclusion": null,
+   "head_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+   "created_at": "2026-09-28T12:00:00Z",
+   "updated_at": "2026-09-28T12:00:00Z",
+   "tree_id": "ffffffffffffffffffffffffffffffffffffffff"
+  },
+  {
+   "id": 105,
+   "run_attempt": 1,
+   "event": "push",
+   "status": "completed",
+   "conclusion": "cancelled",
+   "head_sha": "1111111111111111111111111111111111111111",
+   "created_at": "2026-09-28T13:00:00Z",
+   "updated_at": "2026-09-28T13:01:00Z",
+   "tree_id": "2222222222222222222222222222222222222222"
+  },
+  {
+   "id": "106",
+   "run_attempt": 1,
+   "event": "push",
+   "status": "completed",
+   "conclusion": "success",
+   "head_sha": "3333333333333333333333333333333333333333",
+   "created_at": "2026-09-28T14:00:00Z",
+   "updated_at": "2026-09-28T14:00:00Z",
+   "tree_id": "4444444444444444444444444444444444444444"
+  },
+  {
+   "id": 107,
+   "run_attempt": 1,
+   "event": "push",
+   "status": "completed",
+   "conclusion": "success",
+   "head_sha": "5555555555555555555555555555555555555555",
+   "created_at": "2026-09-28T14:00:00Z",
+   "updated_at": "2026-09-28T14:00:00Z",
+   "tree_id": null
+  },
+  {
+   "id": 108,
+   "run_attempt": 1,
+   "event": "push",
+   "status": "completed",
+   "conclusion": "success",
+   "head_sha": "abc123",
+   "created_at": "2026-09-28T14:00:00Z",
+   "updated_at": "2026-09-28T14:00:00Z",
+   "tree_id": "6666666666666666666666666666666666666666"
+  },
+  {
+   "id": 109,
+   "run_attempt": 0,
+   "event": "push",
+   "status": "completed",
+   "conclusion": "success",
+   "head_sha": "7777777777777777777777777777777777777777",
+   "created_at": "2026-09-28T14:00:00Z",
+   "updated_at": "2026-09-28T14:00:00Z",
+   "tree_id": "8888888888888888888888888888888888888888"
+  },
+  {
+   "id": 110,
+   "run_attempt": 1,
+   "event": "push",
+   "status": "completed",
+   "conclusion": 1,
+   "head_sha": "9999999999999999999999999999999999999999",
+   "created_at": "2026-09-28T14:00:00Z",
+   "updated_at": "2026-09-28T14:00:00Z",
+   "tree_id": "0000000000000000000000000000000000000000"
+  }
+ ]
+}
