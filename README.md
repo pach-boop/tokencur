@@ -196,7 +196,7 @@ history:
   usage move to a `superseded` table with when and why. Schema 2 retired the
   Codex re-sent reports earlier versions double counted (see the changelog);
   schema 3 records each call's price-changing request options, schema 4 billed
-  charges, and schema 5 the directory each call ran in.
+  charges, schema 5 the directory each call ran in, and schema 6 CI runs.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -257,6 +257,36 @@ session   started (UTC)     repository            calls  usage value  prompts  A
 On tokencur's own repository that comes to $1.89 of usage value per successful
 change
 ([ADR 0012](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0012-usage-value-per-successful-change.md)).
+
+### CI on each change's own code
+
+A change can land with its tests failing. To see which successes passed CI,
+capture a GitHub Actions workflow's runs and import them:
+
+```bash
+python scripts/fetch_github_ci.py --workflow ci.yml   # in the repository; goes online
+tokencur import github-ci ~/.local/share/tokencur/raw/github-ci/<capture>.json
+```
+
+`outcomes --sessions` then adds a column with each session's changes that
+passed and failed, and two lines under the headline:
+
+```
+usage value per change that also passed its own CI: $7.40 ($192.30 over 26 changes)
+CI tested the code of 30 of 61 changes: 26 passed, 4 failed; 31 tested only with later commits
+```
+
+- **Its own code, nothing else.** A run counts for a change when it tested
+  exactly the change's code: the same git tree, which a rebase onto an
+  unmoved base keeps. A result is never borrowed from a later commit, which
+  would hide failures that a later commit fixed.
+- **Always with its coverage.** A push tests only its newest commit, so CI
+  covers part of the changes; the figure says how many.
+- **The script keeps nine fields per run** (ids, event, status, conclusion,
+  commit, tree, times): no commit message, name, email or branch, and no job
+  log. A token is optional for public repositories and never written.
+  tokencur itself stays offline
+  ([ADR 0013](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0013-ci-results-per-change-matched-by-tree.md)).
 
 ## When an agent changes its logs
 
@@ -347,7 +377,7 @@ last rate), then regenerates this page from that history.
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
 | 6 | Numbers nobody can question: point-in-time rates, reconciliation with each source's own counters, reproducible figures | ✅ v0.4 |
-| 7 | Unit economics: usage value per commit, then per successful change | ✅ per commit (v0.3) and per successful change, session by session (v0.5); quality signals from tests and CI next |
+| 7 | Unit economics: usage value per commit, then per successful change | ✅ per commit (v0.3) and per successful change, session by session (v0.5); 🔨 CI on each change's own code (unreleased), more quality signals next |
 | 8 | Serverless AWS deployment, documented, with its own measured running cost | ⏳ |
 | 9 | PR to `focus_converters` ([#10](https://github.com/pach-boop/tokencur/issues/10)) + bilingual (EN/ES) case study | ⏳ |
 
@@ -367,6 +397,9 @@ last rate), then regenerates this page from that history.
   gone: a copy is recognized by its timestamp and raw usage, so two distinct
   calls identical to the millisecond would also count once (never observed).
 - Costs are list-price showback, not invoices. Subscription plans bill differently.
+- CI results come from GitHub Actions only, one named workflow per capture, and
+  a run's conclusion covers all its jobs: a failed run may have failed lint,
+  not tests.
 - Claude Code makes calls it never writes to its transcripts: internal calls to
   smaller models for web search, web fetch and session titles, and some
   main-model calls such as compaction. Its own end-of-session counters show

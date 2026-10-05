@@ -20,10 +20,13 @@
   `git config user.email` in the repositories the agents worked in. From
   each commit it reads the hash, the author's name, email and date, the
   `Co-authored-by` trailers and the lines changed, to count commits,
-  agent signatures and lines; the whole message only to find
+  agent signatures and lines; the tree hash, to match CI runs to the
+  code they tested; the whole message only to find
   `This reverts commit <sha>`; and the diff only as input to
-  `git patch-id`, to recognise a rebased copy. Nothing from a repository
-  is stored or published. `tokencur prices` also runs `git log` and
+  `git patch-id`, to recognise a rebased copy. When the ledger holds CI
+  runs, `outcomes --sessions` also runs `git remote get-url origin`, to
+  know which repository's runs apply. Nothing from a repository is
+  stored or published. `tokencur prices` also runs `git log` and
   `git show` in the current directory, on the pricing snapshot's history
   in a tokencur checkout. tokencur never runs `git fetch`, and
   `outcomes` runs git with `GIT_NO_LAZY_FETCH`: with git 2.45 or newer, a
@@ -38,21 +41,33 @@
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`). Before a schema upgrade it
   copies the ledger next to itself as `<name>.schema-<N>.bak`, also
-  `0600`. `export` writes the CSV you name, and `observatory` and
+  `0600`. CI runs you import are kept there too. `export` writes the CSV
+  you name, and `observatory` and
   `prices` write their pages where you point them (by default
   `docs/observatory` and `docs/prices` under the current directory).
 - **Network**: none at runtime, with one exception: in a partial clone,
   git downloads the past versions of the pricing snapshot that
-  `tokencur prices` asks for. Two scripts go online when you run them:
+  `tokencur prices` asks for. Three scripts go online when you run them:
   `scripts/update_pricing_snapshot.py` downloads the LiteLLM price database
-  (also run by the daily price-watch action), and
+  (also run by the daily price-watch action);
   `scripts/fetch_runpod_billing.py` downloads your RunPod billing history,
-  sending the API key only in the Authorization header and never writing it.
-- **Billing exports** saved by that script stay in
+  sending the API key only in the Authorization header and never writing
+  it; and `scripts/fetch_github_ci.py` lists one GitHub Actions workflow's
+  runs. It runs `git remote get-url origin` to find the repository unless
+  you name it, and it needs no token for a public repository. A token
+  you set in `$GITHUB_TOKEN` or `$GH_TOKEN` goes only to api.github.com,
+  in a header dropped on any redirect, and is never written.
+- **Billing exports and CI captures** saved by those scripts stay in
   `~/.local/share/tokencur/raw/`, readable by their owner only.
   `tokencur import runpod FILE` keeps from each row the pod id, the
   billing period, the amount, the GPU time and the disk billed, in the
-  ledger. The published pages make no external requests.
+  ledger. A CI capture holds, for each run, only its id and attempt, its
+  event, status and conclusion, the commit it checked out with that
+  commit's tree hash, and its times: never a commit message, a name, an
+  email, a branch or a job log. `tokencur import github-ci FILE` keeps
+  those fields, with the repository's owner/name, the workflow and the
+  capture time, in the ledger; they are never exported or published.
+  The published pages make no external requests.
 - **Dependencies**: none at runtime. Optional extras and dev tools are
   tracked by Dependabot; GitHub Actions are pinned to commit SHAs and run
   with least-privilege tokens.
