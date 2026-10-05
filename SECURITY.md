@@ -5,23 +5,42 @@
 - **Reads**, read-only, the local logs of coding agents
   (`~/.claude/projects`, `~/.codex/sessions`, `~/.kimi-code/sessions`) and
   only their usage metadata: token counts, model ids, timestamps,
-  workspace and session ids, the directory each call ran in, and the cost
-  counters Claude Code writes when a session ends. Message
-  content is never parsed, stored or logged. A test asserts that none of
+  workspace and session ids, the request and message ids that keep a call
+  from counting twice, the agent's version, the request options that
+  change a call's price, the directory each call ran in (for Kimi Code,
+  the `cwd` field of each session's `state.json`), and the cost and
+  API-time counters Claude Code writes when a session ends, with the
+  session each one continued in. Log lines and Kimi Code's `state.json`
+  files are decoded as JSON to reach those fields; message content is
+  never read into a record, stored or logged. A test asserts that none of
   it reaches the public observatory output, and working directories stay
   in the ledger: never in the FOCUS export or the observatory.
-- **Runs git**, read-only, for `tokencur outcomes`: `git log`, `git rev-list`,
-  `git patch-id` and `git config user.email` in the repositories the agents
-  worked in. Commit messages are read only to find reverts; nothing from a
-  repository is stored or published. tokencur never runs `git fetch`, and
+- **Runs git**, read-only, for `tokencur outcomes`: `git log`,
+  `git rev-list`, `git patch-id`, `git rev-parse`, `git symbolic-ref` and
+  `git config user.email` in the repositories the agents worked in. From
+  each commit it reads the hash, the author's name, email and date, the
+  `Co-authored-by` trailers and the lines changed, to count commits,
+  agent signatures and lines; the whole message only to find
+  `This reverts commit <sha>`; and the diff only as input to
+  `git patch-id`, to recognise a rebased copy. Nothing from a repository
+  is stored or published. `tokencur prices` also runs `git log` and
+  `git show` in the current directory, on the pricing snapshot's history
+  in a tokencur checkout. tokencur never runs `git fetch`, and
   `outcomes` runs git with `GIT_NO_LAZY_FETCH`: with git 2.45 or newer, a
-  partial clone is reported as unreadable rather than left to download the
-  objects it is missing.
-- **Message origin**: for `outcomes --sessions`, whether a person typed each
-  Claude Code message, which Claude Code records as metadata; never the text.
-- **Writes** one file: the ledger at `~/.local/share/tokencur/ledger.sqlite3`
+  partial clone is reported as unreadable rather than left to download
+  the objects it is missing.
+- **Message origin**: for `outcomes --sessions`, and whenever `doctor`
+  reads Claude Code's counters, whether a person typed each Claude Code
+  message: the line's sidechain, meta and compaction flags, the origin
+  Claude Code records or, on lines from before it recorded one, whether
+  the content is plain text and the types of its blocks. Never the text.
+- **Writes** the ledger at `~/.local/share/tokencur/ledger.sqlite3`
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
-  its owner only (`0600`, directory `0700`).
+  its owner only (`0600`, directory `0700`). Before a schema upgrade it
+  copies the ledger next to itself as `<name>.schema-<N>.bak`, also
+  `0600`. `export` writes the CSV you name, and `observatory` and
+  `prices` write their pages where you point them (by default
+  `docs/observatory` and `docs/prices` under the current directory).
 - **Network**: none at runtime, with one exception: in a partial clone,
   git downloads the past versions of the pricing snapshot that
   `tokencur prices` asks for. Two scripts go online when you run them:
@@ -30,8 +49,10 @@
   `scripts/fetch_runpod_billing.py` downloads your RunPod billing history,
   sending the API key only in the Authorization header and never writing it.
 - **Billing exports** saved by that script stay in
-  `~/.local/share/tokencur/raw/`, readable by their owner only. The
-  published pages make no external requests.
+  `~/.local/share/tokencur/raw/`, readable by their owner only.
+  `tokencur import runpod FILE` keeps from each row the pod id, the
+  billing period, the amount, the GPU time and the disk billed, in the
+  ledger. The published pages make no external requests.
 - **Dependencies**: none at runtime. Optional extras and dev tools are
   tracked by Dependabot; GitHub Actions are pinned to commit SHAs and run
   with least-privilege tokens.

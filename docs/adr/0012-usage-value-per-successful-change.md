@@ -56,3 +56,24 @@ Three signals are available as metadata:
 - This is still not quality. A change that landed can be wrong. Test
   results would need message content (ADR 0006), and CI status the
   forge's API; both wait on a decision.
+
+## Update, 2026-10-03: timings, and two more reads
+
+The decision above says Codex and Kimi Code record no timings. Kimi
+Code does, step by step: each model step in its log carries the time to
+the first token and the time spent streaming (`llmFirstTokenLatencyMs`,
+`llmStreamDurationMs`, on all 168 steps in the maintainer's logs).
+Codex 0.125 records each turn's duration and, on some turns, the time
+to the first token; the earlier versions in those logs, 0.98 to 0.104,
+record none. Unlike Claude Code's counters, neither keeps a session
+total with and without retries, so their sessions still show no API
+time or retry share. Reading their timings would be a new read, left
+for a later decision.
+
+The decision names two new reads; the feature makes two more, never
+stored or published either. Each commit's diff is read as input to
+`git patch-id`, to recognise a rebased copy. And telling a typed prompt
+from other Claude Code messages also reads each line's sidechain, meta
+and compaction flags and, on lines from before `origin` existed,
+whether the content is plain text and the types of its blocks; never
+the text. SECURITY.md lists both.

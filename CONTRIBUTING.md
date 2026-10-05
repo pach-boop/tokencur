@@ -5,9 +5,10 @@ it that way.
 
 ## Ground rules
 
-1. **Metadata only.** Ingesters read token counts, model ids, timestamps,
-   workspace and session ids, and the directory each call ran in. They
-   never read, store or log message content. A change that does is
+1. **Metadata only.** Ingesters keep token counts, model ids, timestamps,
+   the ids of workspaces, sessions and calls, and the directory each call
+   ran in; [SECURITY.md](SECURITY.md) has the full list. Message content
+   never reaches a record, the ledger or a log. A change that lets it is
    declined.
 2. **Unpriced is never $0.** A model with no rate surfaces as *unpriced
    usage*. Silently valuing it at zero is the one bug this project exists

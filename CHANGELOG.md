@@ -17,6 +17,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   git 2.45 or newer such a repository is reported as unreadable instead.
   `tokencur prices` still lets git download the snapshot's past versions,
   which its page needs, and SECURITY.md says so.
+- SECURITY.md describes the log reads, git commands and writes as the
+  code makes them: request and message ids, Kimi Code's `state.json`,
+  author names, `Co-authored-by` trailers and lines changed, diffs read
+  only as `git patch-id` input, `git rev-parse` and `git symbolic-ref`,
+  the git history `tokencur prices` reads, what a RunPod import keeps,
+  and the ledger's backup before a schema upgrade. 0.5.0 said prompts
+  are told apart by each message's origin; tokencur also reads each
+  line's flags and, on lines from before Claude Code recorded an origin,
+  whether the content is plain text and the types of its blocks, never
+  the text. Lines are decoded as JSON; message content never reaches a
+  record. CONTRIBUTING says the same.
+- ADR 0012 said Codex and Kimi Code record no timings. Kimi Code times
+  each model step and Codex 0.125 each turn, though neither keeps a
+  session total with and without retries. A dated update says so, and
+  names the two reads the decision left out.
 
 ## [0.5.0] - 2026-10-02
 

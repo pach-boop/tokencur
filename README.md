@@ -38,7 +38,7 @@ after the agents delete their logs.
 
 ## Design principles
 
-1. **Privacy by construction** — ingestion reads usage metadata only (tokens, models,
+1. **Privacy by construction** — ingestion keeps usage metadata only (tokens, models,
    timestamps). Conversation content is never extracted.
 2. **Measure existing spend, don't generate spend to measure** — the first data source is
    local Claude Code session logs, which already exist on disk. Budget: ~$0.
@@ -150,7 +150,7 @@ API-EQUIVALENT TOTAL (showback): $817.90
 
 On the maintainer's machine the full pipeline reads 10.7k model calls from
 ~400 MB of real logs in 1.8 s. Real transcripts carry the conversations,
-which tokencur skips. For scale,
+which tokencur decodes but never keeps. For scale,
 [`scripts/benchmark.py`](https://github.com/pach-boop/tokencur/blob/main/scripts/benchmark.py) times every stage on synthetic
 metadata-only logs (Python 3.13, Intel i7-1355U, Linux):
 
