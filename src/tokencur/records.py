@@ -1,9 +1,11 @@
-"""The record type every layer shares.
+"""The record types every layer shares.
 
 An ingester turns one source's log lines into ``UsageRecord`` values;
 the ledger stores them; pricing, the FOCUS normalizer, reports and
 recommendations read them. The type lives here, not inside any one
-ingester, so no layer depends on how a particular agent logs.
+ingester, so no layer depends on how a particular agent logs. Billed
+charges and CI runs, imported from captures, live here for the same
+reason.
 """
 
 from __future__ import annotations
@@ -74,6 +76,30 @@ class BilledCharge:
     unit: str  # FOCUS ConsumedUnit, e.g. "Hours"
     amount_usd: float  # what was billed
     detail: str = ""  # a note for people, e.g. "50 GB disk"
+
+
+@dataclass(frozen=True, slots=True)
+class CIRun:
+    """One attempt of a CI run, as the forge listed it: which code it
+    tested and how that went (see ADR 0013).
+
+    ``tree`` is the git tree hash of the commit the run checked out. It
+    names the code itself, so a change still matches the run that tested
+    it after a rebase gave the change a new commit hash.
+    """
+
+    repo: str  # owner/name on the forge
+    workflow: str  # the workflow named at capture, e.g. "ci.yml"
+    run_id: int
+    attempt: int  # 1 for the first run, 2 and up for re-runs
+    event: str  # what started it, e.g. "push", "pull_request"
+    status: str  # e.g. "completed", "in_progress"
+    conclusion: str  # e.g. "success", "failure"; "" while it runs
+    head_sha: str  # the commit it checked out
+    tree: str  # that commit's tree hash
+    created_at: str  # ISO 8601 UTC
+    updated_at: str  # ISO 8601 UTC
+    captured_at: str  # when the capture listing it was made, ISO 8601 UTC
 
 
 def parse_timestamp(timestamp: str) -> datetime | None:

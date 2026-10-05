@@ -2,7 +2,8 @@
 
 Everything here runs ``git`` on local repositories and nothing else:
 which repository a directory belongs to, who the repository's author
-is, and which changes landed on the default branch or were reverted.
+is, which changes landed on the default branch or were reverted, and
+where ``origin`` points.
 Commit messages are read only to find ``This reverts commit <sha>``;
 nothing from a repository is stored or published.
 """
@@ -15,6 +16,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 # Why a directory has no repository.
 NO_DIRECTORY = "no working directory logged"
@@ -22,6 +24,11 @@ GONE = "directory no longer exists"
 NOT_A_REPOSITORY = "not in a git repository"
 
 _REVERTS = re.compile(r"This reverts commit ([0-9a-f]{7,64})")
+
+# git's scp-like remote syntax, [user@]host:path. A one-letter host is a
+# Windows drive (C:\repo), which is a local path.
+_SCP = re.compile(r"(?:[^@/:]+@)?([^@/:\\]{2,}):(.+)")
+_URL_SCHEMES = {"https", "http", "ssh", "git", "git+ssh", "ssh+git"}
 
 
 def environment() -> dict[str, str]:
@@ -109,6 +116,37 @@ def has_commits(root: Path) -> bool:
     """False for a repository with no commits yet. Exit 1 means no HEAD;
     any other failure is left for the next git command to report."""
     return run_git(root, "rev-parse", "--quiet", "--verify", "HEAD").returncode != 1
+
+
+def origin(root: Path) -> tuple[str, str] | None:
+    """Where the repository's ``origin`` remote points, as (host,
+    "owner/name"), or None when it has none or it is not hosted."""
+    done = run_git(root, "remote", "get-url", "origin")
+    return parse_remote(done.stdout) if done.returncode == 0 else None
+
+
+def parse_remote(url: str) -> tuple[str, str] | None:
+    """A remote URL as (host, "owner/name"); None for a local path, a
+    ``file://`` URL, or a path that is not owner/name. Credentials and
+    ports are dropped; an ssh host alias comes back as written."""
+    url = url.strip()
+    if "://" in url:
+        parts = urlsplit(url)
+        if parts.scheme not in _URL_SCHEMES:
+            return None
+        host, path = parts.hostname or "", parts.path
+    else:
+        scp = _SCP.fullmatch(url)
+        if scp is None:
+            return None
+        host, path = scp.groups()
+    path = path.strip("/")
+    if path.lower().endswith(".git"):
+        path = path[:-4]
+    owner, _, name = path.partition("/")
+    if not (host and owner and name) or "/" in name:
+        return None
+    return host.lower(), f"{owner}/{name}"
 
 
 @dataclass(frozen=True)

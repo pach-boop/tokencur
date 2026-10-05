@@ -31,7 +31,7 @@ from tokencur import (
 )
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
-from tokencur.ingest import claude_code, runpod
+from tokencur.ingest import claude_code, github_ci, runpod
 from tokencur.pricing import ConfigError, load_discounts, provenance
 from tokencur.recommend import recommendations, render
 from tokencur.records import UsageRecord, in_period
@@ -151,10 +151,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     keep = commands.add_parser(
         "import",
-        help="keep a provider's billing export (billed cost) in the ledger",
+        help="keep a billing export (billed cost) or a CI capture in the ledger",
     )
-    keep.add_argument("provider", choices=["runpod"])
-    keep.add_argument("files", nargs="+", type=Path, help="exports to import")
+    keep.add_argument(
+        "provider",
+        choices=["runpod", "github-ci"],
+        help="runpod: a billing export; github-ci: a CI capture (ADR 0013)",
+    )
+    keep.add_argument("files", nargs="+", type=Path, help="files to import")
     keep.set_defaults(handler=_import)
 
     check = commands.add_parser(
@@ -374,11 +378,14 @@ def _doctor(args: argparse.Namespace) -> int:
 
 
 def _import(args: argparse.Namespace) -> int:
-    charges = []
     for path in args.files:
         if not path.exists():
             _fail(f"{path} does not exist")
             return 1
+    if args.provider == "github-ci":
+        return _import_ci(args.files)
+    charges = []
+    for path in args.files:
         charges.extend(runpod.iter_charges(path))
     if not charges:
         _fail("no billed charges in those files")
@@ -390,4 +397,16 @@ def _import(args: argparse.Namespace) -> int:
         f"{len(charges)} billed charges ({added} new), ${total:,.2f} from "
         f"{providers} — {ledger.default_path()}"
     )
+    return 0
+
+
+def _import_ci(files: list[Path]) -> int:
+    runs = [run for path in files for run in github_ci.iter_runs(path)]
+    if not runs:
+        _fail("no CI runs in those files")
+        return 1
+    added = ledger.record_ci_runs(runs)
+    captures = sorted({(r.repo, r.workflow, r.captured_at) for r in runs})
+    named = "; ".join(f"{repo} {wf}, captured {when}" for repo, wf, when in captures)
+    print(f"{len(runs)} CI runs ({added} new) from {named} — {ledger.default_path()}")
     return 0
