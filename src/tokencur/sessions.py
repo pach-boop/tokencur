@@ -8,8 +8,9 @@ is showback, API-equivalent list value, as everywhere in tokencur.
 A session is the agent's own. Claude Code sessions continued into one
 another count once, as a chain, and the chain carries Claude Code's own
 counters: API time, with and without retries. Codex and Kimi Code
-sessions bring usage value and changes only, since they record no
-timings.
+sessions bring usage value and changes only: Kimi Code times each model
+step and Codex 0.125 each turn, but neither keeps a session total with
+and without retries.
 
 A change goes to the last session that worked in its repository before
 it was committed, if that was within the preceding day. Otherwise it was

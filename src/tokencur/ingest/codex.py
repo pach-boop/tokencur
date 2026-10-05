@@ -6,7 +6,7 @@ arrives as ``event_msg`` lines with a ``token_count`` payload whose
 ``info.last_token_usage`` reports the most recent model call; the
 active model and working directory come from ``session_meta`` /
 ``turn_context`` lines.
-Only usage metadata is read — never message content.
+Only usage metadata is kept — never message content.
 
 Mapping notes:
 - OpenAI's ``input_tokens`` includes cached tokens; the non-cached

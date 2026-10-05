@@ -7,9 +7,9 @@ message line carries a ``message.usage`` object with token counts.
 It also reads Claude Code's own per-session cost counters
 (``session_counters``), which ``tokencur.reconcile`` checks tokencur against.
 
-Privacy: this module reads usage metadata only (tokens, model,
-timestamps, the working directory, cost counters). It never extracts
-message content.
+Privacy: this module keeps usage metadata only (tokens, model,
+timestamps, the working directory, cost counters); SECURITY.md lists
+every field it reads. It never extracts message content.
 """
 
 from __future__ import annotations
@@ -221,7 +221,8 @@ def _is_prompt(line_entry: dict) -> bool:
     """A message a person typed. Claude Code marks one with
     ``origin.kind == "human"`` (a task notification says otherwise); a
     line from before that field counts when it is neither tool output, nor
-    injected, nor a compaction summary. Only the kind is read, never text."""
+    injected, nor a compaction summary. Only the kind, the line's flags
+    and the content's shape are read, never text."""
     if line_entry.get("type") != "user":
         return False
     if any(line_entry.get(f) for f in ("isSidechain", "isMeta", "isCompactSummary")):

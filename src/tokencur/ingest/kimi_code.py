@@ -4,7 +4,7 @@ Kimi Code writes wire-protocol JSONL logs under
 ``~/.kimi-code/sessions/<workspace>/<session>/agents/<agent>/wire.jsonl``.
 Token usage arrives as dedicated ``usage.record`` lines carrying the
 model, an epoch-millisecond timestamp and per-turn token deltas
-(``usageScope: "turn"``) — no message content is ever read.
+(``usageScope: "turn"``) — no message content reaches a record.
 
 The working directory comes from the ``cwd`` field of the session's
 ``state.json``, the only field tokencur takes from that file. Sessions
