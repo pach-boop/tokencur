@@ -57,10 +57,11 @@ after the agents delete their logs.
    (1.1x) and the Batch API (0.5x).
 4. **Explainable over clever** — every line that ships is one the maintainer fully
    understands and can defend.
-5. **Reproducible figures** — the report, the export and the observatory name what
-   produced each number: the tokencur version, the curated card's date and the
-   pricing snapshot's SHA-256. Each release publishes and attests that same snapshot
-   file, so anyone can rerun a figure on the exact prices behind it.
+5. **Reproducible figures** — the report, the export, the outcomes views and the
+   observatory name what produced each number: the tokencur version, the curated
+   card's date and the pricing snapshot's SHA-256. Each release publishes and
+   attests that same snapshot file, so anyone can rerun a figure on the exact
+   prices behind it.
 
 ## Architecture
 

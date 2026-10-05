@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- `tokencur outcomes` and `outcomes --sessions` now name what reproduces
+  their figures, as the report, the export and the observatory already
+  did: the tokencur version, the curated card's date and the pricing
+  snapshot's SHA-256.
+
 ## [0.5.0] - 2026-10-02
 
 ### Added

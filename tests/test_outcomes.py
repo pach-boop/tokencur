@@ -189,6 +189,16 @@ def test_people_and_ci_bots_are_not_agents(who):
     assert not AGENT.search(who)
 
 
+def test_the_view_names_what_reproduces_it():
+    """As the report does: the version, the curated card and the pricing
+    snapshot behind every value in the table."""
+    from tokencur.pricing import provenance
+
+    text = render(outcomes([]))
+
+    assert text.splitlines()[2] == f"reproducible with {provenance()}"
+
+
 def test_the_outcomes_command_end_to_end(tmp_path, monkeypatch, capsys):
     repo = _repo(tmp_path / "app")
     _commit(repo, "2026-09-10 08:00:00", lines=10, message="feat" + TRAILER)

@@ -28,7 +28,7 @@ from pathlib import Path
 
 from tokencur import gitlog
 from tokencur.ingest.claude_code import SessionCounters
-from tokencur.pricing import record_cost_usd
+from tokencur.pricing import provenance, record_cost_usd
 from tokencur.records import UsageRecord, parse_timestamp
 from tokencur.terminal import home_relative, table
 
@@ -204,6 +204,7 @@ def render(result: SessionsResult, top: int = 20) -> str:
         "(API-equivalent list value, not money paid)",
         "success: a change reached the default branch and was never reverted; "
         f"changes: {authors}" + (f"; window: {result.period}" if result.period else ""),
+        f"reproducible with {provenance()}",
         "",
     ]
     header = (
