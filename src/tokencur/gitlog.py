@@ -2,8 +2,8 @@
 
 Everything here runs ``git`` on local repositories and nothing else:
 which repository a directory belongs to, who the repository's author
-is, which changes landed on the default branch or were reverted, and
-where ``origin`` points.
+is, which changes landed on the default branch or were reverted, the
+code each one holds (its tree hash), and where ``origin`` points.
 Commit messages are read only to find ``This reverts commit <sha>``;
 nothing from a repository is stored or published.
 """
@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -158,17 +158,29 @@ class Change:
     authored: datetime  # UTC
     landed: bool  # some copy is on the default branch
     reverted: bool  # a commit on the default branch reverts some copy
+    copies: frozenset[str] = frozenset()  # its copies on the default branch
 
 
-def changes(
+@dataclass(frozen=True)
+class History:
+    """A repository's changes in a window, and its default branch."""
+
+    changes: list[Change]
+    #: The default branch from a day before the window on: each commit's
+    #: tree hash, which names the code it holds, and its parents.
+    trees: dict[str, str] = field(default_factory=dict)
+    parents: dict[str, tuple[str, ...]] = field(default_factory=dict)
+
+
+def history(
     root: Path, since: datetime, until: datetime, author: str | None
-) -> list[Change]:
+) -> History:
     """Non-merge changes in ``root`` authored in ``[since, until)`` by
     ``author`` (an email; None for everyone), on any local or remote
     branch, with whether each landed on the default branch and stayed.
     A commit that reverts another is a correction, not a change."""
     if not has_commits(root):
-        return []
+        return History([])
     # git filters on the commit date, which comes after the author date
     # (a rebase moves it later still); a day of margin keeps it safe.
     floor = (since - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
@@ -194,7 +206,7 @@ def changes(
             continue
         commits[sha] = authored
     if not commits:
-        return []
+        return History([])
 
     patches = git(
         root, "log", "--no-merges", after, "-p", "--format=commit %H", *everywhere
@@ -204,7 +216,12 @@ def changes(
         patch, sha = line.split()
         patch_of[sha] = patch
     main = default_refs(root)
-    landed = set(git(root, "rev-list", after, *main).split())
+    # rev-list prints a "commit <sha>" line before each formatted one.
+    trees, parents = {}, {}
+    for line in git(root, "rev-list", after, "--format=%H %T %P", *main).splitlines():
+        if not line.startswith("commit "):
+            sha, tree, *up = line.split()
+            trees[sha], parents[sha] = tree, tuple(up)
     reverted = set()
     for message in git(
         root, "log", "--no-merges", after, "--format=%B%x1e", *main
@@ -214,14 +231,18 @@ def changes(
     groups: dict[str, list[str]] = {}
     for sha in commits:
         groups.setdefault(patch_of.get(sha, sha), []).append(sha)
-    return [
-        Change(
-            authored=min(commits[sha] for sha in shas),
-            landed=any(sha in landed for sha in shas),
-            reverted=any(sha.startswith(r) for sha in shas for r in reverted),
+    changes = []
+    for shas in groups.values():
+        on_main = frozenset(sha for sha in shas if sha in trees)
+        changes.append(
+            Change(
+                authored=min(commits[sha] for sha in shas),
+                landed=bool(on_main),
+                reverted=any(sha.startswith(r) for sha in shas for r in reverted),
+                copies=on_main,
+            )
         )
-        for shas in groups.values()
-    ]
+    return History(changes, trees, parents)
 
 
 def default_refs(root: Path) -> list[str]:

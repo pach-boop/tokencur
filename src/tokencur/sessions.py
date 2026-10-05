@@ -16,6 +16,12 @@ A change goes to the last session that worked in its repository before
 it was committed, if that was within the preceding day. Otherwise it was
 made without an agent session. A change succeeded when it reached the
 default branch and was never reverted (see ``tokencur.gitlog``).
+
+With CI runs in the ledger (``tokencur import github-ci``), each success
+in a repository they cover also says whether CI tested its own code and
+how that went (ADR 0013, ``tokencur.ci``). The per-change figure for
+those that passed stands next to the headline, never instead of it, with
+how many changes CI tested that way.
 """
 
 from __future__ import annotations
@@ -27,10 +33,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
-from tokencur import gitlog
+from tokencur import ci, gitlog
 from tokencur.ingest.claude_code import SessionCounters
 from tokencur.pricing import provenance, record_cost_usd
-from tokencur.records import UsageRecord, parse_timestamp
+from tokencur.records import CIRun, UsageRecord, parse_timestamp
 from tokencur.terminal import home_relative, table
 
 #: How long after a session's last call in a repository a change made
@@ -52,6 +58,7 @@ class SessionOutcome:
     landed: int = 0  # changes that reached the default branch
     reverted: int = 0  # of those, later reverted
     pending: int = 0  # changes not on the default branch (yet)
+    ci: Counter = field(default_factory=Counter)  # successes by CI verdict
 
     @property
     def successes(self) -> int:
@@ -76,6 +83,11 @@ class SessionsResult:
     errors: dict[Path, str] = field(default_factory=dict)
     all_authors: bool = False
     period: str | None = None
+    #: Repositories with CI runs captured, and the usage value of the
+    #: calls made in them: the CI figure's numerator.
+    ci_repos: set[Path] = field(default_factory=set)
+    ci_value_usd: float = 0.0
+    ci_captures: list[str] = field(default_factory=list)
 
     @property
     def value_usd(self) -> float:
@@ -94,14 +106,17 @@ def session_outcomes(
     until: date | None = None,
     all_authors: bool = False,
     period: str | None = None,
+    ci_runs: Sequence[CIRun] = (),
 ) -> SessionsResult:
     """Usage value and changes per session. ``records`` are the period's
     calls; with ``repos``, only the calls and changes in those
-    repositories count, and sessions that never worked there drop out."""
+    repositories count, and sessions that never worked there drop out.
+    ``ci_runs`` judge the successes in the repositories they cover."""
     finder = gitlog.Repositories()
     asked = {_root(finder, repo) for repo in repos}
     sessions: dict[str, SessionOutcome] = {}
     calls_in: dict[Path, list[tuple[datetime, str]]] = defaultdict(list)
+    value_in: Counter = Counter()
     for record in records:
         root = finder.root(record.cwd)
         in_repo = isinstance(root, Path)
@@ -122,6 +137,7 @@ def session_outcomes(
             outcome.start = moment
         if in_repo:
             outcome.calls_by_repo[root] += 1
+            value_in[root] += cost or 0.0
             if moment:
                 calls_in[root].append((moment, key))
 
@@ -130,9 +146,15 @@ def session_outcomes(
     result.period = period
     start = datetime.combine(since, time(), UTC) if since else None
     end = datetime.combine(until, time(), UTC) if until else None
+    captured = []
     for root, calls in sorted(calls_in.items()):
         calls.sort()
-        _attribute(root, calls, sessions, result, start, end)
+        runs = _attribute(root, calls, sessions, result, start, end, ci_runs)
+        if runs:
+            result.ci_repos.add(root)
+            result.ci_value_usd += value_in[root]
+            captured += runs
+    result.ci_captures = ci.captures(captured)
     result.sessions.sort(key=lambda s: -s.value_usd)
     return result
 
@@ -168,19 +190,23 @@ def _attribute(
     result: SessionsResult,
     start: datetime | None,
     end: datetime | None,
-) -> None:
+    ci_runs: Sequence[CIRun],
+) -> list[CIRun]:
     """Give each change in ``root`` to the last session that worked there
-    within ``ATTRIBUTION_WINDOW`` before it was committed."""
+    within ``ATTRIBUTION_WINDOW`` before it was committed. Return the CI
+    runs that judged them, if any were captured for ``root``."""
     first = start or calls[0][0]
     last = end or calls[-1][0] + ATTRIBUTION_WINDOW
     try:
         author = None if result.all_authors else gitlog.user_email(root) or None
-        changes = gitlog.changes(root, first, last, author)
+        history = gitlog.history(root, first, last, author)
+        runs = ci.runs_for(root, ci_runs) if ci_runs else []
     except gitlog.GitError as exc:
         result.errors[root] = str(exc)
-        return
+        return []
+    judged = ci.verdicts(history, runs) if runs else [None] * len(history.changes)
     times = [moment for moment, _ in calls]
-    for change in changes:
+    for change, verdict in zip(history.changes, judged, strict=True):
         i = bisect_right(times, change.authored) - 1
         if i < 0 or change.authored - times[i] > ATTRIBUTION_WINDOW:
             result.without_agent += 1
@@ -191,6 +217,9 @@ def _attribute(
             outcome.reverted += change.reverted
         else:
             outcome.pending += 1
+        if verdict:
+            outcome.ci[verdict] += 1
+    return runs
 
 
 def render(result: SessionsResult, top: int = 20) -> str:
@@ -200,12 +229,15 @@ def render(result: SessionsResult, top: int = 20) -> str:
         if result.all_authors
         else "yours (each repository's git user.email)"
     )
+    reproduce = f"reproducible with {provenance()}"
+    if result.ci_captures:
+        reproduce += "; CI runs: " + ", ".join(result.ci_captures)
     lines = [
         "tokencur outcomes --sessions — usage value per successful change "
         "(API-equivalent list value, not money paid)",
         "success: a change reached the default branch and was never reverted; "
         f"changes: {authors}" + (f"; window: {result.period}" if result.period else ""),
-        f"reproducible with {provenance()}",
+        reproduce,
         "",
     ]
     header = (
@@ -221,8 +253,11 @@ def render(result: SessionsResult, top: int = 20) -> str:
         "reverted",
         "per success",
     )
+    with_ci = bool(result.ci_repos)
+    if with_ci:
+        header += ("CI pass/fail",)
     shown = result.sessions if top <= 0 else result.sessions[:top]
-    rows = [_row(s) for s in shown]
+    rows = [_row(s, with_ci) for s in shown]
     lines += table(header, rows, left=3) if rows else ["no sessions"]
     hidden = result.sessions[len(shown) :]
     if hidden:
@@ -235,17 +270,22 @@ def render(result: SessionsResult, top: int = 20) -> str:
         "prompts are messages a person typed; API time and retries come from "
         "Claude Code's own counters and cover whole sessions (ADR 0012)."
     )
+    if with_ci:
+        lines.append(
+            "CI: a change passed when a run tested its exact code (the same git "
+            "tree); a failed run may have failed lint, not tests (ADR 0013)."
+        )
     return "\n".join(lines)
 
 
-def _row(s: SessionOutcome) -> tuple[str, ...]:
+def _row(s: SessionOutcome, with_ci: bool = False) -> tuple[str, ...]:
     repos = [root for root, _ in s.calls_by_repo.most_common()]
     where = home_relative(repos[0]) if repos else "-"
     if len(repos) > 1:
         where += f" +{len(repos) - 1}"
     retries = s.retry_share
     per = s.per_success
-    return (
+    cells = (
         s.session[:8],
         s.start.strftime("%Y-%m-%d %H:%M") if s.start else "undated",
         where,
@@ -258,6 +298,9 @@ def _row(s: SessionOutcome) -> tuple[str, ...]:
         f"{s.reverted:,}",
         f"${per:,.2f}" if per is not None else "n/a",
     )
+    if with_ci:
+        cells += (f"{s.ci[ci.PASSED]}/{s.ci[ci.FAILED]}" if s.ci else "-",)
+    return cells
 
 
 def _duration(ms: float) -> str:
@@ -276,6 +319,8 @@ def _totals(result: SessionsResult) -> list[str]:
         )
     else:
         lines.append("no change landed and stayed in the window")
+    if result.ci_repos:
+        lines += _ci_totals(result)
     idle = [s for s in result.sessions if not s.landed]
     if idle:
         value = sum(s.value_usd for s in idle)
@@ -293,4 +338,34 @@ def _totals(result: SessionsResult) -> list[str]:
     unpriced = sum(s.unpriced for s in result.sessions)
     if unpriced:
         lines.append(f"unpriced models: {unpriced:,} calls not valued")
+    return lines
+
+
+def _ci_totals(result: SessionsResult) -> list[str]:
+    """The CI figure, always with how many changes CI tested that way."""
+    judged: Counter = Counter()
+    for s in result.sessions:
+        judged.update(s.ci)
+    passed, failed = judged[ci.PASSED], judged[ci.FAILED]
+    covered = sum(judged.values())
+    if passed:
+        lines = [
+            f"usage value per change that also passed its own CI: "
+            f"${result.ci_value_usd / passed:,.2f} "
+            f"(${result.ci_value_usd:,.2f} over {passed:,} changes)"
+        ]
+    else:
+        lines = ["no change that landed and stayed passed its own CI"]
+    coverage = (
+        f"CI tested the code of {passed + failed:,} of {covered:,} changes: "
+        f"{passed:,} passed, {failed:,} failed"
+    )
+    if judged[ci.LATER]:
+        coverage += f"; {judged[ci.LATER]:,} tested only with later commits"
+    if judged[ci.UNTESTED]:
+        coverage += f"; {judged[ci.UNTESTED]:,} never tested"
+    lines.append(coverage)
+    elsewhere = result.successes - covered
+    if elsewhere:
+        lines.append(f"changes in repositories with no CI captured: {elsewhere:,}")
     return lines
