@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-06
+
 ### Added
 
 - **CI on each change's own code** (ADR 0013). `outcomes --sessions` now
@@ -15,9 +17,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   failure a later commit fixed stays visible. Next to the headline, never
   instead of it, a new line gives usage value per change that also
   passed its own CI, always with how many changes CI tested that way. On
-  tokencur's own repository: 30 of 61, 26 passed and 4 failed. A column
-  shows each session's passed and failed changes, and the capture is
-  named with what reproduces the figures.
+  tokencur's own repository on 2026-10-05: 30 of 61, 26 passed and 4
+  failed. A column shows each session's passed and failed changes, and
+  the capture is named with what reproduces the figures.
 - `scripts/fetch_github_ci.py` captures one GitHub Actions workflow's
   runs, keeping nine fields per run and never a commit message, name,
   email, branch or job log. `tokencur import github-ci FILE` keeps them

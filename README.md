@@ -377,7 +377,7 @@ last rate), then regenerates this page from that history.
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
 | 6 | Numbers nobody can question: point-in-time rates, reconciliation with each source's own counters, reproducible figures | ✅ v0.4 |
-| 7 | Unit economics: usage value per commit, then per successful change | ✅ per commit (v0.3) and per successful change, session by session (v0.5); 🔨 CI on each change's own code (unreleased), more quality signals next |
+| 7 | Unit economics: usage value per commit, then per successful change | ✅ per commit (v0.3), per successful change, session by session (v0.5), and CI on each change's own code (v0.6); more quality signals next |
 | 8 | Serverless AWS deployment, documented, with its own measured running cost | ⏳ |
 | 9 | PR to `focus_converters` ([#10](https://github.com/pach-boop/tokencur/issues/10)) + bilingual (EN/ES) case study | ⏳ |
 
