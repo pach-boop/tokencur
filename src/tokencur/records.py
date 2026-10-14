@@ -4,8 +4,7 @@ An ingester turns one source's log lines into ``UsageRecord`` values;
 the ledger stores them; pricing, the FOCUS normalizer, reports and
 recommendations read them. The type lives here, not inside any one
 ingester, so no layer depends on how a particular agent logs. Billed
-charges and CI runs, imported from captures, live here for the same
-reason.
+charges, CI runs and plan limit hits live here for the same reason.
 """
 
 from __future__ import annotations
@@ -100,6 +99,23 @@ class CIRun:
     created_at: str  # ISO 8601 UTC
     updated_at: str  # ISO 8601 UTC
     captured_at: str  # when the capture listing it was made, ISO 8601 UTC
+
+
+@dataclass(frozen=True, slots=True)
+class LimitHit:
+    """A subscription usage limit that turned a request away, as the agent
+    logged it: which limit, and when it resets (see ADR 0014).
+
+    Claude Code logs these as structured metadata next to the notice it
+    shows; tokencur reads that metadata and never the notice's text.
+    """
+
+    source: str  # the ingester, e.g. "claude-code"
+    record_id: str  # identity within the source, stable across scans
+    timestamp: str  # when the request was turned away, ISO 8601 UTC
+    session_id: str
+    kind: str  # the limit, as logged: "five_hour", "seven_day", ...
+    resets_at: str  # when that limit resets, ISO 8601 UTC
 
 
 def parse_timestamp(timestamp: str) -> datetime | None:

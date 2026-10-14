@@ -19,7 +19,8 @@ Location: ``$TOKENCUR_LEDGER`` if set, else
 Deleting the file resets history to whatever the logs still hold.
 
 Billed charges (``charges``) and CI runs (``ci_runs``) are imported
-from captures into tables of their own, never mixed with usage.
+from captures into tables of their own, never mixed with usage, and so
+are the plan limits that turned requests away (``limit_hits``).
 
 The schema is versioned (``PRAGMA user_version``) and migrated in place,
 one step at a time, after a backup copy (see ``_migrate``). Rows a later
@@ -39,9 +40,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
-from tokencur.records import BilledCharge, CIRun, UsageRecord
+from tokencur.records import BilledCharge, CIRun, LimitHit, UsageRecord
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 class LedgerError(RuntimeError):
@@ -153,6 +154,26 @@ _UPSERT_CI_RUN = (
     + " WHERE excluded.captured_at >= ci_runs.captured_at"
 )
 
+# Plan limit hits (schema 7): when a subscription limit turned a request
+# away, and when that limit reset (ADR 0014). A hit never changes, so a
+# rescan adds only hits not yet on record.
+_LIMIT_FIELDS = tuple(f.name for f in fields(LimitHit))
+_V7_LIMIT_HITS = """CREATE TABLE IF NOT EXISTS limit_hits (
+    source      TEXT NOT NULL,
+    record_id   TEXT NOT NULL,
+    timestamp   TEXT NOT NULL,
+    session_id  TEXT NOT NULL,
+    kind        TEXT NOT NULL,
+    resets_at   TEXT NOT NULL,
+    first_seen  TEXT NOT NULL,
+    PRIMARY KEY (source, record_id)
+)"""
+_INSERT_LIMIT_HIT = (
+    f"INSERT INTO limit_hits ({', '.join(_LIMIT_FIELDS)}, first_seen) "
+    f"VALUES ({', '.join('?' * (len(_LIMIT_FIELDS) + 1))}) "
+    "ON CONFLICT (source, record_id) DO NOTHING"
+)
+
 # A rescan refreshes a stored row from the latest parse, except that a
 # working directory, once known, is never forgotten by a parse that
 # cannot see it.
@@ -251,6 +272,32 @@ def read_ci_runs(path: Path | None = None) -> list[CIRun]:
             "ORDER BY created_at, repo, run_id, attempt"
         )
         return [CIRun(*row) for row in cursor]
+
+
+def record_limit_hits(hits: Iterable[LimitHit], path: Path | None = None) -> int:
+    """Keep plan limit hits in the ledger; return how many were new."""
+    first_seen = _utc_now()
+    rows = [(*(getattr(h, f) for f in _LIMIT_FIELDS), first_seen) for h in hits]
+    if not rows:
+        return 0  # nothing to keep: don't create an empty ledger
+    with closing(_connect(path or default_path())) as conn, conn:
+        before = conn.execute("SELECT COUNT(*) FROM limit_hits").fetchone()[0]
+        conn.executemany(_INSERT_LIMIT_HIT, rows)
+        after = conn.execute("SELECT COUNT(*) FROM limit_hits").fetchone()[0]
+    return after - before
+
+
+def read_limit_hits(path: Path | None = None) -> list[LimitHit]:
+    """Every plan limit hit in the ledger, oldest first."""
+    target = path or default_path()
+    if not target.exists():
+        return []
+    with closing(_connect(target)) as conn:
+        cursor = conn.execute(
+            f"SELECT {', '.join(_LIMIT_FIELDS)} FROM limit_hits "
+            "ORDER BY timestamp, source, record_id"
+        )
+        return [LimitHit(*row) for row in cursor]
 
 
 def _without_copies(conn: sqlite3.Connection, rows: list[tuple]) -> list[tuple]:
@@ -472,8 +519,24 @@ def _v5_to_v6(conn: sqlite3.Connection) -> str:
     return "added the ci_runs table for CI results (tokencur import github-ci)"
 
 
+def _v6_to_v7(conn: sqlite3.Connection) -> str:
+    """Schema 7: the ``limit_hits`` table, for the subscription limits that
+    turned requests away (``tokencur limits``, ADR 0014)."""
+    with conn:
+        conn.execute(_V7_LIMIT_HITS)
+        conn.execute("PRAGMA user_version = 7")
+    return "added the limit_hits table for plan limits (tokencur limits)"
+
+
 # Step from version N to N + 1, keyed by N.
-_MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6}
+_MIGRATIONS = {
+    1: _v1_to_v2,
+    2: _v2_to_v3,
+    3: _v3_to_v4,
+    4: _v4_to_v5,
+    5: _v5_to_v6,
+    6: _v6_to_v7,
+}
 
 
 def _utc_now() -> str:
