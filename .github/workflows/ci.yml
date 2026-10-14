@@ -75,7 +75,9 @@ jobs:
         if: matrix.coverage
       # The conformance gate needs Python 3.12+ (focus-validator's floor);
       # the package itself still supports and tests 3.11.
-      - run: pip install focus-validator==2.2.1 # pinned; bump deliberately
+      # pyarrow too: focus-validator 2.2.1 caps numpy below 2 but leaves
+      # pyarrow open, and pyarrow 26 (2026-10-09) needs numpy 2 at import.
+      - run: pip install focus-validator==2.2.1 pyarrow==24.0.0 # pinned; bump deliberately
         if: runner.os == 'Linux' && matrix.python-version != '3.11'
       - run: python scripts/validate_focus.py
         if: runner.os == 'Linux' && matrix.python-version != '3.11'
