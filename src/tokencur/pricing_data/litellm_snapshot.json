@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-10-07",
+  "fetched": "2026-10-14",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -116,6 +116,14 @@
    "input_cost_per_token": 1e-06,
    "litellm_provider": "anthropic",
    "output_cost_per_token": 5e-06
+  },
+  "claude-haiku-5-5": {
+   "cache_creation_input_token_cost": 1.25e-07,
+   "cache_creation_input_token_cost_above_1hr": 2e-07,
+   "cache_read_input_token_cost": 1e-08,
+   "input_cost_per_token": 1e-07,
+   "litellm_provider": "anthropic",
+   "output_cost_per_token": 5e-07
   },
   "claude-mythos-5": {
    "cache_creation_input_token_cost": 1.25e-05,
@@ -284,7 +292,17 @@
   "claude-sonnet-5-5": {
    "cache_creation_input_token_cost": 2.5e-06,
    "cache_creation_input_token_cost_above_1hr": 4e-06,
-   "cache_read_input_token_cost": 2e-07,
+   "cache_read_input_token_cost": 1e-07,
+   "history": [
+    {
+     "cache_creation_input_token_cost": 2.5e-06,
+     "cache_creation_input_token_cost_above_1hr": 4e-06,
+     "cache_read_input_token_cost": 2e-07,
+     "input_cost_per_token": 2e-06,
+     "output_cost_per_token": 1e-05,
+     "until": "2026-10-14"
+    }
+   ],
    "input_cost_per_token": 2e-06,
    "litellm_provider": "anthropic",
    "output_cost_per_token": 1e-05
@@ -312,6 +330,11 @@
    "retired_upstream": true
   },
   "computer-use-preview": {
+   "input_cost_per_token": 3e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 1.2e-05
+  },
+  "computer-use-preview-2025-03-11": {
    "input_cost_per_token": 3e-06,
    "litellm_provider": "openai",
    "output_cost_per_token": 1.2e-05
@@ -894,6 +917,12 @@
    "litellm_provider": "gemini",
    "output_cost_per_token": 4.5e-06
   },
+  "gemini-4-argon": {
+   "cache_read_input_token_cost": 1e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "gemini",
+   "output_cost_per_token": 1e-05
+  },
   "gemini-embedding-001": {
    "input_cost_per_token": 1.5e-07,
    "litellm_provider": "gemini",
@@ -1342,8 +1371,7 @@
    "cache_read_input_token_cost": 7.5e-08,
    "input_cost_per_token": 1.5e-07,
    "litellm_provider": "openai",
-   "output_cost_per_token": 6e-07,
-   "retired_upstream": true
+   "output_cost_per_token": 6e-07
   },
   "gpt-4o-mini-transcribe": {
    "input_cost_per_token": 1.25e-06,
@@ -1427,8 +1455,7 @@
    "cache_read_input_token_cost": 1.25e-06,
    "input_cost_per_token": 2.5e-06,
    "litellm_provider": "openai",
-   "output_cost_per_token": 1e-05,
-   "retired_upstream": true
+   "output_cost_per_token": 1e-05
   },
   "gpt-4o-transcribe": {
    "input_cost_per_token": 2.5e-06,
@@ -1826,8 +1853,7 @@
   "gpt-audio-mini-2025-10-06": {
    "input_cost_per_token": 6e-07,
    "litellm_provider": "openai",
-   "output_cost_per_token": 2.4e-06,
-   "retired_upstream": true
+   "output_cost_per_token": 2.4e-06
   },
   "gpt-audio-mini-2025-12-15": {
    "input_cost_per_token": 6e-07,
@@ -1953,6 +1979,12 @@
    "input_cost_per_token": 6e-07,
    "litellm_provider": "openai",
    "output_cost_per_token": 2.4e-06
+  },
+  "gpt-rosalind-discovery": {
+   "cache_read_input_token_cost": 5e-07,
+   "input_cost_per_token": 5e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 2.5e-05
   },
   "gpt-rosalind-research": {
    "cache_read_input_token_cost": 5e-07,
@@ -2271,8 +2303,7 @@
    "cache_read_input_token_cost": 2.5e-06,
    "input_cost_per_token": 1e-05,
    "litellm_provider": "openai",
-   "output_cost_per_token": 4e-05,
-   "retired_upstream": true
+   "output_cost_per_token": 4e-05
   },
   "o3-mini": {
    "cache_read_input_token_cost": 5.5e-07,
@@ -2318,8 +2349,7 @@
    "cache_read_input_token_cost": 5e-07,
    "input_cost_per_token": 2e-06,
    "litellm_provider": "openai",
-   "output_cost_per_token": 8e-06,
-   "retired_upstream": true
+   "output_cost_per_token": 8e-06
   },
   "omni-moderation-2024-09-26": {
    "input_cost_per_token": 0.0,
