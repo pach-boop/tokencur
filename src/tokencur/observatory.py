@@ -92,7 +92,7 @@ def load_subscriptions(path: Path = DEFAULT_SUBSCRIPTIONS) -> dict | None:
     return data if data.get("plans") or data.get("monthly_usd") else None
 
 
-def _plans(subscriptions: dict | None) -> dict[str, list[dict]]:
+def plans_of(subscriptions: dict | None) -> dict[str, list[dict]]:
     """Each service's plans. ``plans`` lists them with the days they were
     active: ``from`` included, ``until`` excluded, like a billing period.
     A flat ``monthly_usd`` fee reads as one plan across the whole window."""
@@ -144,7 +144,7 @@ def _money(
     window — a paid month with no usage is real money — except across a
     declared history gap, where the usage happened but its record was lost.
     """
-    plans = _plans(subscriptions)
+    plans = plans_of(subscriptions)
     if not plans or not daily or total <= 0:
         return None
     days = sorted(daily)
