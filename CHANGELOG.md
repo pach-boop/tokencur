@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-14
+
 ### Added
 
 - **`tokencur limits`: how close a subscription's limits are** (ADR 0014).
