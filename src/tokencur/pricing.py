@@ -32,7 +32,7 @@ from pathlib import Path
 from tokencur import __version__
 from tokencur.records import UsageRecord, parse_timestamp
 
-AS_OF = "2026-10-02"
+AS_OF = "2026-10-14"
 SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing"
 
 
@@ -59,9 +59,14 @@ def _anthropic_rates(input: float, output: float, read: float = 0.10) -> ModelRa
 
 
 RATE_CARD: dict[str, ModelRates] = {
-    # Anthropic's pricing page on 2026-10-02 (SOURCE), top to bottom.
+    # Anthropic's pricing page on 2026-10-14 (SOURCE), top to bottom.
     # Cache hits cost 0.025x input on Fable 5.1 / Mythos 5.1 ($0.25)
-    # and 0.05x on Opus 5.5 ($0.20); every other model uses 0.1x.
+    # and 0.05x on Opus 5.5 ($0.20) and Sonnet 5.5 ($0.10, since
+    # 2026-10-07); every other model uses 0.1x. Haiku 5.5 (2026-10-07)
+    # is left out: it is priced by prompt length (over 100k tokens pays
+    # more), a tier this card does not model yet. Until it does, the
+    # community snapshot values it at the short-prompt rate, which
+    # underestimates prompts over 100k tokens.
     "claude-fable-5-1": _anthropic_rates(10.00, 50.00, read=0.025),
     "claude-mythos-5-1": _anthropic_rates(10.00, 50.00, read=0.025),
     "claude-fable-5": _anthropic_rates(10.00, 50.00),
@@ -73,7 +78,7 @@ RATE_CARD: dict[str, ModelRates] = {
     "claude-opus-4-6": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-5": _anthropic_rates(5.00, 25.00),
     "claude-opus-4-1": _anthropic_rates(15.00, 75.00),
-    "claude-sonnet-5-5": _anthropic_rates(2.00, 10.00),
+    "claude-sonnet-5-5": _anthropic_rates(2.00, 10.00, read=0.05),
     # Launched at $2/$10 as an introductory price through 2026-08-31;
     # Anthropic made it the standard price and cancelled the scheduled
     # rise to $3/$15. (This card had valued Sonnet 5 at $3/$15: see
@@ -104,12 +109,14 @@ RATE_CARD: dict[str, ModelRates] = {
 
 #: Rates the curated card held before a price move, per model, oldest
 #: first: ``(until, rates)`` where ``until`` is the first day (UTC,
-#: ``YYYY-MM-DD``) the next rate applied. Empty because no curated price
-#: has moved since the card began on 2026-07-06; the one change so far
-#: was a correction (below). When Anthropic moves a curated price, the
-#: old rate comes here, never away: tests/test_rate_history.py fails on
-#: a curated rate that leaves the card any other way (ADR 0011).
-RATE_CARD_HISTORY: dict[str, tuple[tuple[str, ModelRates], ...]] = {}
+#: ``YYYY-MM-DD``) the next rate applied. When Anthropic moves a curated
+#: price, the old rate comes here, never away: tests/test_rate_history.py
+#: fails on a curated rate that leaves the card any other way (ADR 0011).
+RATE_CARD_HISTORY: dict[str, tuple[tuple[str, ModelRates], ...]] = {
+    # Release notes, 2026-10-07: cache reads on Sonnet 5.5 went from
+    # $0.20 to $0.10 per MTok (0.1x to 0.05x input); nothing else moved.
+    "claude-sonnet-5-5": (("2026-10-07", _anthropic_rates(2.00, 10.00)),),
+}
 
 #: Curated rates found wrong after they were published, per model: the
 #: day the card was corrected, the (input, output) rates it wrongly held,

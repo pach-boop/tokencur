@@ -48,3 +48,12 @@ because of an October price.
   move cannot go unnoticed, and now it cannot be recorded wrongly.
 - A correction restates history on purpose. It must also be disclosed in
   the changelog, and on the observatory when published figures change.
+
+## Update 2026-10-14
+
+The first curated price move went through this path: Anthropic cut Sonnet
+5.5 cache reads from $0.20 to $0.10 per MTok on 2026-10-07. The
+card-versus-snapshot test stopped the daily refresh the next morning, as
+the consequences above expect, and the old rate is in `RATE_CARD_HISTORY`
+until 2026-10-07. It also showed a gap: the refresh stayed stopped for a
+week before anyone looked.

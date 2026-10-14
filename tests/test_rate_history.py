@@ -18,7 +18,7 @@ After an intended change, rewrite the record and review its diff:
 import importlib.util
 import json
 import os
-from dataclasses import fields
+from dataclasses import fields, replace
 from datetime import date
 from itertools import pairwise
 from pathlib import Path
@@ -187,6 +187,20 @@ def test_a_curated_price_move_values_each_day_at_its_rate(monkeypatch, fresh_rat
 
     assert record_cost_usd(_call(model, "2026-08-31")) == pytest.approx(a.input)
     assert record_cost_usd(_call(model, "2026-09-01")) == pytest.approx(b.input)
+
+
+def test_sonnet_5_5_cache_reads_halved_on_2026_10_07(fresh_rates):
+    """The card's first real move: Anthropic cut Sonnet 5.5 cache reads
+    from $0.20 to $0.10 per MTok on 2026-10-07 and left the rest alone."""
+
+    def cache_read(day: str) -> UsageRecord:
+        call = _call("claude-sonnet-5-5", day)
+        return replace(call, input_tokens=0, cache_read_tokens=1_000_000)
+
+    assert record_cost_usd(cache_read("2026-10-06")) == pytest.approx(0.20)
+    assert record_cost_usd(cache_read("2026-10-07")) == pytest.approx(0.10)
+    for day in ("2026-10-06", "2026-10-07"):
+        assert record_cost_usd(_call("claude-sonnet-5-5", day)) == pytest.approx(2.00)
 
 
 def test_a_september_figure_never_moves_when_october_prices_do(

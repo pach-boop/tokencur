@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Sonnet 5.5 cache reads cost $0.10 per MTok from 2026-10-07**, down
+  from $0.20 (0.05× input instead of 0.1×; Anthropic's release notes of
+  that day). The old rate moves into `RATE_CARD_HISTORY`, the curated
+  card's first recorded price move (ADR 0011): calls before 2026-10-07
+  keep their value. The daily price refresh had stopped on 2026-10-08,
+  as designed, because the card and the community snapshot disagreed;
+  this release carries the week of upstream changes it held back.
+- Claude Haiku 5.5 (2026-10-07) is priced by prompt length, which the
+  curated card does not model yet. Until it does, the community snapshot
+  values it at the short-prompt rate, an underestimate for prompts over
+  100k tokens.
+
 ## [0.6.0] - 2026-10-06
 
 ### Added

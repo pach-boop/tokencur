@@ -181,13 +181,22 @@
  },
  "claude-sonnet-5-5": {
   "current": {
-   "cache_read": 0.2,
+   "cache_read": 0.1,
    "cache_write_1h": 4.0,
    "cache_write_5m": 2.5,
    "input": 2.0,
    "output": 10.0
   },
-  "history": []
+  "history": [
+   {
+    "cache_read": 0.2,
+    "cache_write_1h": 4.0,
+    "cache_write_5m": 2.5,
+    "input": 2.0,
+    "output": 10.0,
+    "until": "2026-10-07"
+   }
+  ]
  },
  "kimi-k2.7-code-highspeed": {
   "current": {
