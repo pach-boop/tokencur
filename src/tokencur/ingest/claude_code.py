@@ -5,7 +5,8 @@ Claude Code writes one JSONL transcript per session under
 message line carries a ``message.usage`` object with token counts.
 
 It also reads Claude Code's own per-session cost counters
-(``session_counters``), which ``tokencur.reconcile`` checks tokencur against.
+(``session_counters``), which ``tokencur.reconcile`` checks tokencur against,
+and the plan limits that turned requests away (``iter_limit_hits``).
 
 Privacy: this module keeps usage metadata only (tokens, model,
 timestamps, the working directory, cost counters); SECURITY.md lists
@@ -17,13 +18,14 @@ from __future__ import annotations
 import math
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
 # ``tokencur.records`` and stays importable from here.
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.ingest.stats import ScanStats
-from tokencur.records import UsageRecord
+from tokencur.records import LimitHit, UsageRecord
 
 #: Claude Code logs client-side placeholder messages (API-error stubs,
 #: interrupted turns) under this sentinel model, with all-zero usage.
@@ -163,6 +165,53 @@ def _cache_writes(usage: dict) -> tuple[int, int]:
             count(breakdown.get("ephemeral_1h_input_tokens")),
         )
     return count(usage.get("cache_creation_input_tokens")), 0
+
+
+def iter_limit_hits(root: Path) -> Iterator[LimitHit]:
+    """Yield each logged refusal by a plan usage limit under ``root``.
+
+    When a subscription limit turns a request away, Claude Code logs a
+    ``<synthetic>`` stub carrying ``quotaLimits``: the limit's type
+    (``rateLimitType``: ``five_hour``, ``seven_day``, ...), ``status``
+    and ``resetsAt`` (Unix seconds). Only refusals (``status ==
+    "rejected"``) are kept, once per request. The stub's text, which says
+    the same in words, is never read (ADR 0006, ADR 0014).
+    """
+    hits: dict[str, LimitHit] = {}
+    for path in sorted(root.rglob("*.jsonl")):
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"quotaLimits"' not in line:
+                    continue  # a cheap filter: these lines are rare
+                hit = _limit_hit(entry(line))
+                if hit is not None:
+                    hits.setdefault(hit.record_id, hit)
+    yield from hits.values()
+
+
+def _limit_hit(line_entry: dict) -> LimitHit | None:
+    quota = obj(line_entry.get("quotaLimits"))
+    kind = text(quota.get("rateLimitType"))
+    resets = quota.get("resetsAt")
+    if quota.get("status") != "rejected" or not kind or not _is_amount(resets):
+        return None
+    try:
+        resets_at = datetime.fromtimestamp(resets, UTC)
+    except (OverflowError, OSError, ValueError):
+        return None
+    timestamp = text(line_entry.get("timestamp"))
+    request = text(line_entry.get("requestId"))
+    message = text(obj(line_entry.get("message")).get("id"))
+    if not timestamp or not (request or message):
+        return None
+    return LimitHit(
+        source="claude-code",
+        record_id=f"{request}:{message}",
+        timestamp=timestamp,
+        session_id=text(line_entry.get("sessionId")),
+        kind=kind,
+        resets_at=resets_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
 
 
 @dataclass(frozen=True)
