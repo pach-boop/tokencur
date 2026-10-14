@@ -20,3 +20,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0011](0011-curated-rates-change-only-on-the-record.md) | Curated rates change only through dated history or a declared correction | Accepted |
 | [0012](0012-usage-value-per-successful-change.md) | Usage value per successful change, session by session | Accepted |
 | [0013](0013-ci-results-per-change-matched-by-tree.md) | CI results per change, from a capture, matched by tree | Accepted |
+| [0014](0014-plan-limits-from-the-agents-quota-metadata.md) | Plan limits from the agent's own quota metadata, in usage value | Accepted |
