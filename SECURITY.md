@@ -37,11 +37,17 @@
   message: the line's sidechain, meta and compaction flags, the origin
   Claude Code records or, on lines from before it recorded one, whether
   the content is plain text and the types of its blocks. Never the text.
+- **Plan limits**: for `tokencur limits`, the `quotaLimits` metadata
+  Claude Code logs when a subscription limit turns a request away: its
+  `status`, `rateLimitType` and `resetsAt`, with the line's timestamp,
+  session, request and message ids. Only lines holding a `quotaLimits` key
+  are decoded; the notice's text is never read.
 - **Writes** the ledger at `~/.local/share/tokencur/ledger.sqlite3`
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`). Before a schema upgrade it
   copies the ledger next to itself as `<name>.schema-<N>.bak`, also
-  `0600`. CI runs you import are kept there too. `export` writes the CSV
+  `0600`. CI runs you import, and the plan limit hits `tokencur limits`
+  finds, are kept there too. `export` writes the CSV
   you name, and `observatory` and
   `prices` write their pages where you point them (by default
   `docs/observatory` and `docs/prices` under the current directory).

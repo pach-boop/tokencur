@@ -98,6 +98,7 @@ tokencur doctor                # read-only health check: log formats, ledger, pr
 tokencur import runpod FILE    # billed cost: a RunPod billing export
 tokencur outcomes [REPO...]    # usage value per commit, repository by repository
 tokencur outcomes --sessions   # usage value per change that landed and stayed
+tokencur limits                # how close the 5-hour and weekly plan limits are
 ```
 
 `tokencur --help` lists every command, and `python -m tokencur` works the same.
@@ -196,7 +197,8 @@ history:
   usage move to a `superseded` table with when and why. Schema 2 retired the
   Codex re-sent reports earlier versions double counted (see the changelog);
   schema 3 records each call's price-changing request options, schema 4 billed
-  charges, schema 5 the directory each call ran in, and schema 6 CI runs.
+  charges, schema 5 the directory each call ran in, schema 6 CI runs, and
+  schema 7 the plan limits that turned requests away.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -304,6 +306,43 @@ ends, Claude Code writes the cost it counted for each model, including calls it
 never writes to the transcript. `doctor` compares that with tokencur's value of
 the same sessions, and flags a gap either way: below 85% means calls are going
 missing, above 105% means calls are being counted twice.
+
+## Plan limits: how much of a subscription is left
+
+A subscription such as Claude Max caps usage in a five-hour window and a
+weekly one, and states neither cap in tokens or dollars. Claude Code does log,
+as structured metadata, each time a limit turned a request away and when that
+limit resets. `tokencur limits` measures every window in API-equivalent usage
+value:
+
+```text
+week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets Wed 2026-10-21 05:00 CST (in 6d 14h)
+  limit hit on this plan at $1,063.07 (Tue 2026-10-13 21:46 CST)
+  at the last 7 days' pace ($146.71/day) the week reaches the lowest ceiling seen ($1,063.07) around Wed 2026-10-21 02:22 CST, 2h 37m before it resets
+  also hit at $1,351.63 (Tue 2026-10-06 18:43 CST), in a window that began on another plan: not a reference
+
+5 hours: $111.07 = 82% of the lowest ceiling since Wed 2026-10-14 11:00 CST (window inferred from call times); resets Wed 2026-10-14 16:00 CST (in 1h 21m)
+  limit hit on this plan at $135.05 (Wed 2026-10-07 13:17 CST), $148.30 (Sat 2026-10-03 18:15 CST)
+```
+
+- **A ceiling** is the usage value a window had used when its limit turned a
+  request away, filed under the plan in force that day (`--plans
+  subscriptions.json`, read in your time zone, in the formats the observatory
+  reads). It is a reference for the current plan only when its whole window
+  ran on that plan and these logs hold its usage.
+- **The week** is placed by the latest weekly reset on record, since weekly
+  limits reset on a fixed schedule. Five-hour windows open with the first call
+  after the last one closed, rounded down to ten minutes (every reset logged so
+  far matches that rule); past a logged reset they are rebuilt from call
+  times.
+- **A gauge, not a balance.** Limits are not priced like the API, and usage
+  these logs do not hold (claude.ai chat, Claude Code's background calls)
+  draws on the same limits. Several agents on one subscription share the same
+  windows, so one command shows all of them how close the next hit is.
+
+Only `tokencur limits` looks for limit hits (a fast filter over the logs, about
+a second on a 1 GB history), so other commands stay as fast as before
+([ADR 0014](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0014-plan-limits-from-the-agents-quota-metadata.md)).
 
 ## Money concepts (read before quoting numbers)
 

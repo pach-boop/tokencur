@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **`tokencur limits`: how close a subscription's limits are** (ADR 0014).
+  Claude Code logs, as structured metadata, each time a plan limit turned a
+  request away (five-hour or weekly) and when it resets. tokencur keeps those
+  hits in the ledger's new `limit_hits` table (schema 7, backed up before the
+  upgrade as always) and measures each window in usage value: the value at
+  each hit is a ceiling seen on the plan in force that day, and the current
+  windows show what they have used, as a share of the lowest ceiling, and when
+  the week would reach it at the last seven days' pace. A ceiling counts as a
+  reference only when its whole window ran on the current plan and the logs
+  hold its usage. Five-hour windows open on ten-minute marks, which every
+  logged reset matches. On the maintainer's Max plan the week hit its limit at
+  $1,063 of usage value (an earlier hit, at $1,352, came in a week that began
+  on Pro), and the five-hour window at $148 and $135. The notice's text is
+  never read.
+
 ### Fixed
 
 - **Sonnet 5.5 cache reads cost $0.10 per MTok from 2026-10-07**, down
