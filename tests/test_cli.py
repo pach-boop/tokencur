@@ -56,7 +56,7 @@ def test_help_lists_every_command(capsys):
         cli.main(["--help"])
 
     out = capsys.readouterr().out
-    for command in ("report", "export", "recommend", "observatory", "prices"):
+    for command in ("report", "export", "recommend", "limits", "observatory", "prices"):
         assert command in out
 
 

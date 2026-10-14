@@ -23,6 +23,7 @@ from tokencur import (
     __version__,
     doctor,
     ledger,
+    limits,
     observatory,
     outcomes,
     prices,
@@ -160,6 +161,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     keep.add_argument("files", nargs="+", type=Path, help="files to import")
     keep.set_defaults(handler=_import)
+
+    plan = commands.add_parser(
+        "limits",
+        help="how close the subscription's 5-hour and weekly limits are (estimate)",
+    )
+    plan.add_argument(
+        "--plans",
+        type=Path,
+        default=observatory.DEFAULT_SUBSCRIPTIONS,
+        metavar="FILE",
+        help="subscriptions.json with dated plans, to tell ceilings of "
+        f"different plans apart (default: ./{observatory.DEFAULT_SUBSCRIPTIONS})",
+    )
+    plan.set_defaults(handler=_limits)
 
     check = commands.add_parser(
         "doctor",
@@ -345,6 +360,21 @@ def _claude_code_counters() -> claude_code.SessionCounters:
         if ingest is claude_code.iter_usage_records and root.exists():
             return claude_code.session_counters(root)
     return claude_code.SessionCounters()
+
+
+def _limits(args: argparse.Namespace) -> int:
+    records = load_records()
+    if not records:
+        _fail(_NOTHING)
+        return 1
+    for root, ingest in sources.DEFAULT_SOURCES:
+        if ingest is claude_code.iter_usage_records and root.exists():
+            ledger.record_limit_hits(claude_code.iter_limit_hits(root))
+    result = limits.limits(
+        records, ledger.read_limit_hits(), observatory.load_subscriptions(args.plans)
+    )
+    print(limits.render(result))
+    return 0
 
 
 def _observatory(args: argparse.Namespace) -> int:
