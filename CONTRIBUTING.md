@@ -55,7 +55,7 @@ The FOCUS conformance gate runs the FinOps Foundation's own validator
 (Python 3.12+):
 
 ```bash
-pip install focus-validator==2.2.1
+pip install focus-validator==2.2.1 pyarrow==24.0.0  # pyarrow 26 needs numpy 2
 python scripts/validate_focus.py
 ```
 
