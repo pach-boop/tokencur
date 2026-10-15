@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-14
+
+### Added
+
+- **`tokencur limits` reads Claude Code's own usage meter** (ADR 0015).
+  Claude Code caches the percent its `/usage` meter last showed for the
+  five-hour and weekly limits. tokencur reads that one key of Claude Code's
+  state file, keeps each reading in the ledger (schema 8, backed up before the
+  upgrade as always), and shows the reading taken in the current window with
+  its time. From a reading of 10% or more it derives what the whole limit is
+  worth in usage value, and measures the current share and the week's
+  projection against it. A reading also fixes the five-hour window's bounds.
+  On the first reading the weekly limit came to $1,062.95, against a weekly
+  ceiling hit the day before at $1,063.07; the five-hour limit came to
+  $166.32, so the estimate from ceilings hit (about $135) had read 56% where
+  the meter said 46%.
+
 ## [0.8.0] - 2026-10-14
 
 ### Added
