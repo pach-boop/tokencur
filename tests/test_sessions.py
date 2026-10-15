@@ -259,6 +259,40 @@ def test_the_default_branch_is_origins_and_its_local_twin(tmp_path):
     assert gitlog.default_refs(upstream) == ["refs/heads/main"]
 
 
+def test_a_repository_can_name_the_branch_its_work_lands_on(tmp_path):
+    """Like a repository that works on motor-pixel while main stays behind."""
+    repo = make_repo(tmp_path / "app")
+    commit(repo, "2026-09-10 09:00:00", name="base.txt")
+    git(repo, "checkout", "-q", "-b", "work")
+    commit(repo, "2026-09-10 10:00:00", name="feature.txt")
+    records = [call(repo, "2026-09-10T09:30:00Z", session="s")]
+
+    before = session_outcomes(records, SessionCounters())
+    git(repo, "config", "tokencur.branch", "work")
+    after = session_outcomes(records, SessionCounters())
+
+    assert (before.sessions[0].landed, before.sessions[0].pending) == (0, 1)
+    assert (after.sessions[0].landed, after.sessions[0].pending) == (1, 0)
+    assert gitlog.default_refs(repo) == ["refs/heads/work"]
+    assert "app: success counted on work (git config tokencur.branch)" in render(after)
+
+
+def test_a_work_branch_can_be_a_remote_one_and_a_missing_one_is_named(tmp_path):
+    upstream = make_repo(tmp_path / "upstream")
+    commit(upstream, "2026-09-10 09:00:00")
+    git(tmp_path, "clone", "-q", "-o", "backup", str(upstream), "clone")
+    clone = tmp_path / "clone"
+
+    git(clone, "config", "tokencur.branch", "backup/main")
+    assert gitlog.default_refs(clone) == ["refs/remotes/backup/main"]
+
+    git(clone, "config", "tokencur.branch", "gone")
+    records = [call(clone, "2026-09-10T08:30:00Z", session="s")]
+    text = render(session_outcomes(records, SessionCounters()))
+    assert gitlog.default_refs(clone) == ["refs/heads/main"]
+    assert "tokencur.branch names gone, which does not exist" in text
+
+
 def test_a_repository_git_cannot_read_is_named_not_fatal(tmp_path, monkeypatch):
     repo = make_repo(tmp_path / "app")
 

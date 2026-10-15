@@ -77,3 +77,16 @@ from other Claude Code messages also reads each line's sidechain, meta
 and compaction flags and, on lines from before `origin` existed,
 whether the content is plain text and the types of its blocks; never
 the text. SECURITY.md lists both.
+
+## Update 2026-10-14
+
+Some repositories land their work on a branch that is not the default
+one: the maintainer's `justiciera` works on `motor-pixel`, 103 commits
+ahead of a `main` nobody touches, with no `origin`, so every change read
+as not landed. Such a repository names its work branch in its own git
+config, `git config tokencur.branch <name>` (a local branch, or a
+remote-tracking one such as `backup/main`), and success is counted there.
+It is a setting of that repository, not a guess: tokencur never infers a
+branch from activity. The view names each repository counted this way,
+and a name that matches no branch is reported and falls back to the
+default branch.
