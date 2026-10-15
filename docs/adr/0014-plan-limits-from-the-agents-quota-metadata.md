@@ -70,3 +70,12 @@ much of a limit is used before it is reached.
   whose logs were deleted before `tokencur limits` ran is lost.
 - If Claude Code renames `quotaLimits` or its fields, hits stop appearing
   and the view says no limit was hit; `doctor` does not check for that yet.
+
+## Update 2026-10-14
+
+The first agent to run the command outside a tokencur checkout found no
+`subscriptions.json`, so Pro's ceilings (about $40 per five hours)
+became the reference and its window read 48% full instead of 14%. The
+plans file is now also looked for in `$XDG_CONFIG_HOME/tokencur/`
+(`~/.config/tokencur/subscriptions.json`), after the current directory,
+and the view names the file it read.

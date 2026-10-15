@@ -22,9 +22,11 @@ calls) draws on the same limits. Only Claude Code usage is measured.
 
 from __future__ import annotations
 
+import os
 from bisect import bisect_left
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta, tzinfo
+from pathlib import Path
 
 from tokencur.observatory import plans_of
 from tokencur.pricing import provenance, record_cost_usd
@@ -82,8 +84,27 @@ class Limits:
     pace_per_day: float
     other_kinds: list[str] = field(default_factory=list)
     plans_known: bool = False  # the plans file names Claude Code plans
+    plans_from: str = ""  # where the plans were read, for the view
     implausible: int = 0  # hits left out: their reset does not fit the window
     unpriced: dict[str, int] = field(default_factory=dict)  # model -> calls
+
+
+def plans_path(explicit: Path | None = None) -> Path | None:
+    """The plans file to read: ``explicit`` when given; else
+    ``subscriptions.json`` in the current directory (a tokencur checkout);
+    else ``$XDG_CONFIG_HOME/tokencur/subscriptions.json``
+    (``~/.config/tokencur/...``), so the command finds it from anywhere.
+    None when there is none."""
+    if explicit is not None:
+        return explicit
+    config = os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
+    for candidate in (
+        Path("subscriptions.json"),
+        Path(config) / "tokencur" / "subscriptions.json",
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 class _Timeline:
@@ -121,6 +142,7 @@ def limits(
     subscriptions: dict | None,
     now: datetime | None = None,
     tz: tzinfo | None = None,
+    plans_from: str = "",
 ) -> Limits:
     """Ceilings seen at each hit, and where the current windows stand.
 
@@ -181,6 +203,7 @@ def limits(
         pace_per_day=timeline.value(now - timedelta(days=_PACE_DAYS), now) / _PACE_DAYS,
         other_kinds=sorted(other_kinds),
         plans_known=bool(plans),
+        plans_from=plans_from,
         implausible=implausible,
         unpriced=unpriced,
     )
@@ -291,13 +314,15 @@ def render(result: Limits, tz: tzinfo | None = None) -> str:
 
 
 def _plan_line(result: Limits) -> str:
+    source = f" (from {result.plans_from})" if result.plans_from else ""
     if result.plan:
-        return f"plan in force: {result.plan}"
+        return f"plan in force: {result.plan}{source}"
     if result.plans_known:
-        return "plan in force: none of the plans given covers today"
+        return f"plan in force: none of the plans{source} covers today"
     return (
-        "plan in force: unknown (pass --plans subscriptions.json to tell "
-        "ceilings of different plans apart)"
+        "plan in force: unknown; put your plans in "
+        "~/.config/tokencur/subscriptions.json (or pass --plans FILE) to tell "
+        "ceilings of different plans apart"
     )
 
 

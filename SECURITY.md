@@ -37,6 +37,9 @@
   message: the line's sidechain, meta and compaction flags, the origin
   Claude Code records or, on lines from before it recorded one, whether
   the content is plain text and the types of its blocks. Never the text.
+- **Plans file**: `tokencur limits` reads `subscriptions.json` from the
+  current directory, else `$XDG_CONFIG_HOME/tokencur/subscriptions.json`
+  (`~/.config/tokencur/...`), or the file `--plans` names.
 - **Plan limits**: for `tokencur limits`, the `quotaLimits` metadata
   Claude Code logs when a subscription limit turns a request away: its
   `status`, `rateLimitType` and `resetsAt`, with the line's timestamp,
