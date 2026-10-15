@@ -5,6 +5,7 @@ import sqlite3
 from contextlib import closing
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -326,7 +327,7 @@ def test_without_plans_every_ceiling_counts_and_the_view_says_why():
         limits.limits(records, hits, None, _t("2026-10-03T00:00")), tz=UTC
     )
 
-    assert "plan in force: unknown (pass --plans" in out
+    assert "plan in force: unknown; put your plans in ~/.config/tokencur" in out
     assert "limit hit at $40.00 (Fri 2026-10-02 01:15 UTC)" in out
 
 
@@ -430,7 +431,35 @@ def test_plans_read_like_the_observatory_reads_them():
     assert limits.limits([], [], flat, now).plan == "$100/month"
     assert limits.limits([], [], {"plans": None, **flat}, now).plan == "$100/month"
     out = limits.render(limits.limits([], [], ended, now, tz=UTC), tz=UTC)
-    assert "plan in force: none of the plans given covers today" in out
+    assert "plan in force: none of the plans covers today" in out
+
+
+# Where the plans are read
+
+
+def test_the_plans_file_is_found_here_then_in_the_config_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
+    saved = config / "tokencur" / "subscriptions.json"
+
+    assert limits.plans_path() is None
+    saved.parent.mkdir(parents=True)
+    saved.write_text("{}", encoding="utf-8")
+    assert limits.plans_path() == saved
+    (tmp_path / "subscriptions.json").write_text("{}", encoding="utf-8")
+    assert limits.plans_path() == Path("subscriptions.json")
+    assert limits.plans_path(tmp_path / "x.json") == tmp_path / "x.json"
+
+
+def test_the_view_says_where_the_plans_came_from():
+    result = limits.limits(
+        [], [], PLANS, _t("2026-10-14T00:00"), tz=UTC, plans_from="~/plans.json"
+    )
+
+    assert "plan in force: $100/month since 2026-10-02 (from ~/plans.json)" in (
+        limits.render(result, tz=UTC)
+    )
 
 
 # The command
@@ -465,6 +494,36 @@ def test_limits_runs_through_the_cli_and_keeps_the_hits(tmp_path, monkeypatch, c
     out = capsys.readouterr().out
     assert "limit hit on this plan at $5.00" in out
     assert len(ledger.read_limit_hits()) == 1
+
+
+def test_limits_finds_the_plans_in_the_config_dir(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "projects" / "workspace"
+    root.mkdir(parents=True)
+    (root / "s.jsonl").write_text(
+        _stub("2026-10-14T03:46:59", "seven_day", _t(WEEKLY_RESET)), encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        sources, "DEFAULT_SOURCES", ((root.parent, claude_code.iter_usage_records),)
+    )
+    monkeypatch.setattr(cli, "load_records", lambda: [_call("2026-10-13T20:00:00")])
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    saved = tmp_path / "config" / "tokencur" / "subscriptions.json"
+    saved.parent.mkdir(parents=True)
+    saved.write_text(json.dumps(PLANS), encoding="utf-8")
+
+    assert cli.main(["limits"]) == 0
+
+    assert "subscriptions.json)" in capsys.readouterr().out
+
+
+def test_limits_says_when_the_plans_file_given_is_missing(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(cli, "load_records", lambda: [_call("2026-10-13T20:00:00")])
+
+    assert cli.main(["limits", "--plans", str(tmp_path / "none.json")]) == 1
+    assert "none.json does not exist" in capsys.readouterr().err
 
 
 def test_limits_without_usage_says_so(capsys):

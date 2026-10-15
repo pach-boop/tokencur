@@ -326,9 +326,10 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
 ```
 
 - **A ceiling** is the usage value a window had used when its limit turned a
-  request away, filed under the plan in force that day (`--plans
-  subscriptions.json`, read in your time zone, in the formats the observatory
-  reads). It is a reference for the current plan only when its whole window
+  request away, filed under the plan in force that day. Plans come from
+  `subscriptions.json` in the current directory, else
+  `~/.config/tokencur/subscriptions.json`, or the file `--plans` names; their
+  days are read in your time zone, in the formats the observatory reads. It is a reference for the current plan only when its whole window
   ran on that plan and these logs hold its usage.
 - **The week** is placed by the latest weekly reset on record, since weekly
   limits reset on a fixed schedule. Five-hour windows open with the first call

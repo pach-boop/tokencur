@@ -38,6 +38,7 @@ from tokencur.recommend import recommendations, render
 from tokencur.records import UsageRecord, in_period
 from tokencur.report import summarize
 from tokencur.sources import load_records
+from tokencur.terminal import home_relative
 
 _NOTHING = "no usage in known log locations or the ledger"
 
@@ -169,10 +170,10 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument(
         "--plans",
         type=Path,
-        default=observatory.DEFAULT_SUBSCRIPTIONS,
         metavar="FILE",
         help="subscriptions.json with dated plans, to tell ceilings of "
-        f"different plans apart (default: ./{observatory.DEFAULT_SUBSCRIPTIONS})",
+        "different plans apart (default: ./subscriptions.json, else "
+        "~/.config/tokencur/subscriptions.json)",
     )
     plan.set_defaults(handler=_limits)
 
@@ -370,8 +371,15 @@ def _limits(args: argparse.Namespace) -> int:
     for root, ingest in sources.DEFAULT_SOURCES:
         if ingest is claude_code.iter_usage_records and root.exists():
             ledger.record_limit_hits(claude_code.iter_limit_hits(root))
+    plans = limits.plans_path(args.plans)
+    if plans is not None and not plans.is_file():
+        _fail(f"{plans} does not exist")
+        return 1
     result = limits.limits(
-        records, ledger.read_limit_hits(), observatory.load_subscriptions(args.plans)
+        records,
+        ledger.read_limit_hits(),
+        observatory.load_subscriptions(plans) if plans else None,
+        plans_from=home_relative(plans.absolute()) if plans else "",
     )
     print(limits.render(result))
     return 0
