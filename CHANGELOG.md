@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-14
+
+### Added
+
+- **`tokencur limits` finds your plans from anywhere.** Without `--plans`, it
+  reads `subscriptions.json` from the current directory, else
+  `~/.config/tokencur/subscriptions.json` (`$XDG_CONFIG_HOME`), and says which
+  file it read. Run outside a tokencur checkout, it used to find none and take
+  an older plan's lower ceilings as the reference. A `--plans` file that does
+  not exist is now an error.
+- **A repository can name the branch its work lands on** (ADR 0012 update).
+  With `git config tokencur.branch <name>` in a repository, `outcomes
+  --sessions` counts a change as landed when it reaches that branch, local or
+  remote-tracking, instead of the default one, and the view says so. A name
+  that matches no branch is reported. The count of changes not yet landed now
+  says how to name a work branch.
+
 ## [0.7.0] - 2026-10-14
 
 ### Added
