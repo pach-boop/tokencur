@@ -170,6 +170,10 @@ class History:
     #: tree hash, which names the code it holds, and its parents.
     trees: dict[str, str] = field(default_factory=dict)
     parents: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: The work branch ``git config tokencur.branch`` names, when there is
+    #: one: "" for none; ``missing`` when it names no branch in the repo.
+    branch: str = ""
+    missing: bool = False
 
 
 def history(
@@ -181,6 +185,9 @@ def history(
     A commit that reverts another is a correction, not a change."""
     if not has_commits(root):
         return History([])
+    named = work_branch(root)
+    main = default_refs(root)
+    marks = {"branch": named, "missing": bool(named) and not _named_ref(root, named)}
     # git filters on the commit date, which comes after the author date
     # (a rebase moves it later still); a day of margin keeps it safe.
     floor = (since - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
@@ -206,7 +213,7 @@ def history(
             continue
         commits[sha] = authored
     if not commits:
-        return History([])
+        return History([], **marks)
 
     patches = git(
         root, "log", "--no-merges", after, "-p", "--format=commit %H", *everywhere
@@ -215,7 +222,6 @@ def history(
     for line in git(root, "patch-id", "--stable", stdin=patches).splitlines():
         patch, sha = line.split()
         patch_of[sha] = patch
-    main = default_refs(root)
     # rev-list prints a "commit <sha>" line before each formatted one.
     trees, parents = {}, {}
     for line in git(root, "rev-list", after, "--format=%H %T %P", *main).splitlines():
@@ -242,13 +248,37 @@ def history(
                 copies=on_main,
             )
         )
-    return History(changes, trees, parents)
+    return History(changes, trees, parents, **marks)
+
+
+#: A repository whose work lands on a branch other than its default one
+#: names it in its own git config: ``git config tokencur.branch <name>``.
+BRANCH_KEY = "tokencur.branch"
+
+
+def work_branch(root: Path) -> str:
+    """The branch ``tokencur.branch`` names in ``root``'s git config, or ""."""
+    done = run_git(root, "config", "--get", BRANCH_KEY)
+    return done.stdout.strip() if done.returncode == 0 else ""
+
+
+def _named_ref(root: Path, name: str) -> str:
+    """The ref a ``tokencur.branch`` value names: a local branch, else a
+    remote-tracking one (``respaldo/motor-pixel``); "" when neither exists."""
+    for ref in (f"refs/heads/{name}", f"refs/remotes/{name}"):
+        if _exists(root, ref):
+            return ref
+    return ""
 
 
 def default_refs(root: Path) -> list[str]:
-    """The default branch: origin's, with the local branch of the same
-    name when there is one; without origin, the local main or master;
-    else HEAD."""
+    """The branch work lands on: the one ``tokencur.branch`` names, when it
+    exists; else origin's default, with the local branch of the same name
+    when there is one; without origin, the local main or master; else
+    HEAD."""
+    named = work_branch(root)
+    if named and (ref := _named_ref(root, named)):
+        return [ref]
     done = run_git(root, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
     remote = done.stdout.strip() if done.returncode == 0 else ""
     if remote and _exists(root, remote):

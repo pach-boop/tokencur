@@ -88,6 +88,9 @@ class SessionsResult:
     ci_repos: set[Path] = field(default_factory=set)
     ci_value_usd: float = 0.0
     ci_captures: list[str] = field(default_factory=list)
+    #: Repositories whose work branch ``git config tokencur.branch`` names,
+    #: with that name and whether it exists.
+    work_branches: dict[Path, tuple[str, bool]] = field(default_factory=dict)
 
     @property
     def value_usd(self) -> float:
@@ -204,6 +207,8 @@ def _attribute(
     except gitlog.GitError as exc:
         result.errors[root] = str(exc)
         return []
+    if history.branch:
+        result.work_branches[root] = (history.branch, not history.missing)
     judged = ci.verdicts(history, runs) if runs else [None] * len(history.changes)
     times = [moment for moment, _ in calls]
     for change, verdict in zip(history.changes, judged, strict=True):
@@ -328,9 +333,21 @@ def _totals(result: SessionsResult) -> list[str]:
             f"sessions with no landed change: {len(idle):,} of "
             f"{len(result.sessions):,}, ${value:,.2f} of usage value"
         )
+    for root, (branch, found) in sorted(result.work_branches.items()):
+        lines.append(
+            f"{home_relative(root)}: success counted on {branch} "
+            "(git config tokencur.branch)"
+            if found
+            else f"{home_relative(root)}: tokencur.branch names {branch}, which "
+            "does not exist; success counted on the default branch"
+        )
     pending = sum(s.pending for s in result.sessions)
     if pending:
-        lines.append(f"changes not on the default branch yet: {pending:,}")
+        lines.append(
+            f"changes not on the default branch yet: {pending:,} (a repository "
+            "whose work lands on another branch can name it: "
+            "git config tokencur.branch NAME)"
+        )
     if result.without_agent:
         lines.append(
             f"changes with no agent session in the day before: {result.without_agent:,}"

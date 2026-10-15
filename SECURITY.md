@@ -17,7 +17,9 @@
   in the ledger: never in the FOCUS export or the observatory.
 - **Runs git**, read-only, for `tokencur outcomes`: `git log`,
   `git rev-list`, `git patch-id`, `git rev-parse`, `git symbolic-ref` and
-  `git config user.email` in the repositories the agents worked in. From
+  `git config user.email` and `git config tokencur.branch` (the branch a
+  repository's work lands on, when it names one) in the repositories the
+  agents worked in. From
   each commit it reads the hash, the author's name, email and date, the
   `Co-authored-by` trailers and the lines changed, to count commits,
   agent signatures and lines; the tree hash, to match CI runs to the

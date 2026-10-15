@@ -250,7 +250,9 @@ session   started (UTC)     repository            calls  usage value  prompts  A
 ```
 
 - **Success means it stayed.** A change succeeds when it reaches the default
-  branch and is never reverted; a rebased copy is the same change.
+  branch and is never reverted; a rebased copy is the same change. A
+  repository whose work lands on another branch names it in its own git
+  config, `git config tokencur.branch motor-pixel`, and the view says so.
 - **A change goes to the session behind it:** the last one that worked in its
   repository in the day before the commit.
 - **What a person put in:** prompts count the messages a person typed, and API
