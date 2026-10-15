@@ -20,7 +20,8 @@ Deleting the file resets history to whatever the logs still hold.
 
 Billed charges (``charges``) and CI runs (``ci_runs``) are imported
 from captures into tables of their own, never mixed with usage, and so
-are the plan limits that turned requests away (``limit_hits``).
+are the plan limits that turned requests away (``limit_hits``) and the
+readings of an agent's own usage meter (``meter_readings``).
 
 The schema is versioned (``PRAGMA user_version``) and migrated in place,
 one step at a time, after a backup copy (see ``_migrate``). Rows a later
@@ -40,9 +41,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
-from tokencur.records import BilledCharge, CIRun, LimitHit, UsageRecord
+from tokencur.records import BilledCharge, CIRun, LimitHit, MeterReading, UsageRecord
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 class LedgerError(RuntimeError):
@@ -174,6 +175,25 @@ _INSERT_LIMIT_HIT = (
     "ON CONFLICT (source, record_id) DO NOTHING"
 )
 
+# Meter readings (schema 8): how much of a plan limit the provider said
+# was used, each time an agent fetched it (ADR 0015). A reading never
+# changes; one fetch is one row per limit.
+_READING_FIELDS = tuple(f.name for f in fields(MeterReading))
+_V8_METER_READINGS = """CREATE TABLE IF NOT EXISTS meter_readings (
+    source      TEXT NOT NULL,
+    kind        TEXT NOT NULL,
+    fetched_at  TEXT NOT NULL,
+    percent     REAL NOT NULL,
+    resets_at   TEXT NOT NULL,
+    first_seen  TEXT NOT NULL,
+    PRIMARY KEY (source, kind, fetched_at)
+)"""
+_INSERT_READING = (
+    f"INSERT INTO meter_readings ({', '.join(_READING_FIELDS)}, first_seen) "
+    f"VALUES ({', '.join('?' * (len(_READING_FIELDS) + 1))}) "
+    "ON CONFLICT (source, kind, fetched_at) DO NOTHING"
+)
+
 # A rescan refreshes a stored row from the latest parse, except that a
 # working directory, once known, is never forgotten by a parse that
 # cannot see it.
@@ -298,6 +318,34 @@ def read_limit_hits(path: Path | None = None) -> list[LimitHit]:
             "ORDER BY timestamp, source, record_id"
         )
         return [LimitHit(*row) for row in cursor]
+
+
+def record_meter_readings(
+    readings: Iterable[MeterReading], path: Path | None = None
+) -> int:
+    """Keep usage meter readings in the ledger; return how many were new."""
+    first_seen = _utc_now()
+    rows = [(*(getattr(r, f) for f in _READING_FIELDS), first_seen) for r in readings]
+    if not rows:
+        return 0  # nothing to keep: don't create an empty ledger
+    with closing(_connect(path or default_path())) as conn, conn:
+        before = conn.execute("SELECT COUNT(*) FROM meter_readings").fetchone()[0]
+        conn.executemany(_INSERT_READING, rows)
+        after = conn.execute("SELECT COUNT(*) FROM meter_readings").fetchone()[0]
+    return after - before
+
+
+def read_meter_readings(path: Path | None = None) -> list[MeterReading]:
+    """Every usage meter reading in the ledger, oldest first."""
+    target = path or default_path()
+    if not target.exists():
+        return []
+    with closing(_connect(target)) as conn:
+        cursor = conn.execute(
+            f"SELECT {', '.join(_READING_FIELDS)} FROM meter_readings "
+            "ORDER BY fetched_at, source, kind"
+        )
+        return [MeterReading(*row) for row in cursor]
 
 
 def _without_copies(conn: sqlite3.Connection, rows: list[tuple]) -> list[tuple]:
@@ -528,6 +576,15 @@ def _v6_to_v7(conn: sqlite3.Connection) -> str:
     return "added the limit_hits table for plan limits (tokencur limits)"
 
 
+def _v7_to_v8(conn: sqlite3.Connection) -> str:
+    """Schema 8: the ``meter_readings`` table, for the plan usage an agent's
+    own meter reported (``tokencur limits``, ADR 0015)."""
+    with conn:
+        conn.execute(_V8_METER_READINGS)
+        conn.execute("PRAGMA user_version = 8")
+    return "added the meter_readings table for Claude Code's usage meter"
+
+
 # Step from version N to N + 1, keyed by N.
 _MIGRATIONS = {
     1: _v1_to_v2,
@@ -536,6 +593,7 @@ _MIGRATIONS = {
     4: _v4_to_v5,
     5: _v5_to_v6,
     6: _v6_to_v7,
+    7: _v7_to_v8,
 }
 
 

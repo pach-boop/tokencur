@@ -14,6 +14,10 @@ API-equivalent usage value:
 - The value used in the current window, set against those ceilings, says
   how close the next hit is; the last seven days' pace says when it
   would come.
+- When Claude Code's own usage meter was read in the current window
+  (``MeterReading``), its percent is the provider's figure, shown as read;
+  set against the value used by then, it also says what the whole limit
+  is worth (ADR 0015).
 
 These are estimates by nature. Limits are not priced like the API, and
 usage the logs do not hold (claude.ai chat, Claude Code's own background
@@ -24,13 +28,14 @@ from __future__ import annotations
 
 import os
 from bisect import bisect_left
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from pathlib import Path
 
 from tokencur.observatory import plans_of
 from tokencur.pricing import provenance, record_cost_usd
-from tokencur.records import LimitHit, UsageRecord, parse_timestamp
+from tokencur.records import LimitHit, MeterReading, UsageRecord, parse_timestamp
 
 #: The windows tokencur knows, by the ``rateLimitType`` Claude Code logs.
 WINDOWS = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
@@ -47,6 +52,11 @@ _GRAIN_SECONDS = 600
 #: Below this, a ceiling's window holds almost no usage these logs see:
 #: the subscription was used elsewhere, so it is no reference.
 _MEASURED = 1.0
+#: The meter reports whole percents: below this, rounding alone moves the
+#: limit it implies by more than a tenth, so none is derived.
+_METER_FLOOR = 10.0
+#: The meter's reset and a window's end can differ by a rounding second.
+_SAME_RESET = timedelta(minutes=2)
 _SHOWN_HITS = 3
 _SOURCE = "claude-code"
 
@@ -73,6 +83,9 @@ class Window:
     value: float
     blocked: bool  # a limit hit in this window: requests wait for ``end``
     estimated: bool  # bounds inferred from call times, not from a logged reset
+    meter_percent: float | None = None  # Claude Code's meter, when read here
+    meter_at: datetime | None = None  # when it was read
+    meter_limit: float | None = None  # the limit's usage value it implies
 
 
 @dataclass(frozen=True)
@@ -143,6 +156,7 @@ def limits(
     now: datetime | None = None,
     tz: tzinfo | None = None,
     plans_from: str = "",
+    readings: Sequence[MeterReading] = (),
 ) -> Limits:
     """Ceilings seen at each hit, and where the current windows stand.
 
@@ -184,9 +198,21 @@ def limits(
             )
         )
     ceilings.sort(key=lambda c: c.hit_at)
+    meter = _meter_now(readings, now)
+    weekly_resets = [
+        moment
+        for r in readings
+        if r.kind == "seven_day" and (moment := parse_timestamp(r.resets_at))
+    ]
     current = {
-        "seven_day": _week(ceilings, timeline, now),
-        "five_hour": _five_hours(ceilings, timeline, now),
+        "seven_day": _week(
+            ceilings, timeline, now, meter.get("seven_day"), weekly_resets
+        ),
+        "five_hour": _five_hours(ceilings, timeline, now, meter.get("five_hour")),
+    }
+    current = {
+        kind: _with_meter(window, meter.get(kind), timeline)
+        for kind, window in current.items()
     }
     starts = [c.resets_at - WINDOWS[c.kind] for c in ceilings]
     starts += [w.start for w in current.values() if w is not None]
@@ -222,14 +248,70 @@ def _plan_at(plans: list[dict], day: date) -> str:
     return ""
 
 
-def _week(ceilings: list[Ceiling], timeline: _Timeline, now: datetime) -> Window | None:
-    """The seven-day window ``now`` is in. Weekly limits reset on a fixed
-    schedule, so the latest logged reset places every later week; with
-    none on record the week cannot be placed."""
-    resets = [c.resets_at for c in ceilings if c.kind == "seven_day"]
+@dataclass(frozen=True)
+class _Meter:
+    percent: float
+    at: datetime
+    resets: datetime
+
+
+def _meter_now(readings: Sequence[MeterReading], now: datetime) -> dict[str, _Meter]:
+    """Per limit, the latest meter reading taken in the window still open
+    at ``now`` (its limit resets after ``now``)."""
+    latest: dict[str, _Meter] = {}
+    for reading in readings:
+        at, resets = (
+            parse_timestamp(reading.fetched_at),
+            parse_timestamp(reading.resets_at),
+        )
+        if at is None or resets is None or not at <= now < resets:
+            continue
+        if reading.kind in WINDOWS and not resets - at > WINDOWS[reading.kind]:
+            seen = latest.get(reading.kind)
+            if seen is None or at > seen.at:
+                latest[reading.kind] = _Meter(reading.percent, at, resets)
+    return latest
+
+
+def _with_meter(
+    window: Window | None, meter: _Meter | None, timeline: _Timeline
+) -> Window | None:
+    """``window`` with the meter reading taken in it, and the usage value
+    of the whole limit that reading implies."""
+    if window is None or meter is None or abs(window.end - meter.resets) > _SAME_RESET:
+        return window
+    limit = None
+    used = timeline.value(window.start, meter.at)
+    if meter.percent >= _METER_FLOOR and used >= _MEASURED:
+        limit = used / (meter.percent / 100)
+    return replace(
+        window, meter_percent=meter.percent, meter_at=meter.at, meter_limit=limit
+    )
+
+
+def _week(
+    ceilings: list[Ceiling],
+    timeline: _Timeline,
+    now: datetime,
+    meter: _Meter | None = None,
+    readings: Sequence[datetime] = (),
+) -> Window | None:
+    """The seven-day window ``now`` is in. A limit hit still in force
+    blocks its week. Otherwise a meter reading taken in this week places it;
+    else weekly limits reset on a fixed schedule, so the latest reset on
+    record, from a hit or a reading, places every later week. With none the
+    week cannot be placed."""
+    hits = [c.resets_at for c in ceilings if c.kind == "seven_day"]
+    week = WINDOWS["seven_day"]
+    blocking = max(hits, default=None)
+    if meter is not None and (blocking is None or now >= blocking):
+        start = meter.resets - week
+        return Window(
+            "seven_day", start, meter.resets, timeline.value(start, now), False, False
+        )
+    resets = [*hits, *(r for r in readings if r <= now)]  # past weeks' ends
     if not resets:
         return None
-    week = WINDOWS["seven_day"]
     latest = max(resets)
     if now < latest:
         start, end, blocked = latest - week, latest, True
@@ -240,19 +322,27 @@ def _week(ceilings: list[Ceiling], timeline: _Timeline, now: datetime) -> Window
 
 
 def _five_hours(
-    ceilings: list[Ceiling], timeline: _Timeline, now: datetime
+    ceilings: list[Ceiling],
+    timeline: _Timeline,
+    now: datetime,
+    meter: _Meter | None = None,
 ) -> Window | None:
     """The five-hour window ``now`` is in, if one is open. A window opens
     with the first call after the previous one closed, rounded down to ten
     minutes, and lasts five hours. A logged reset fixes where a window
-    ends; past it, and when no reset is recent, windows are rebuilt from
-    call times."""
+    ends, and so does a meter reading taken in it; past them, windows are
+    rebuilt from call times."""
     span = WINDOWS["five_hour"]
     latest = max((c.resets_at for c in ceilings if c.kind == "five_hour"), default=None)
     if latest is not None and now < latest:
         start = latest - span
         return Window(
             "five_hour", start, latest, timeline.value(start, now), True, False
+        )
+    if meter is not None:
+        start = meter.resets - span
+        return Window(
+            "five_hour", start, meter.resets, timeline.value(start, now), False, False
         )
     since, end = now - _LOOKBACK, None
     if latest is not None and latest >= since:
@@ -307,7 +397,9 @@ def render(result: Limits, tz: tzinfo | None = None) -> str:
         "A ceiling is the usage value these logs show when a limit turned a "
         "request away. Usage they do not hold (claude.ai chat, Claude Code's "
         "background calls) counted too, and limits are not priced like the "
-        "API: read this as a gauge, not a balance (ADR 0014).",
+        "API: read this as a gauge, not a balance (ADR 0014). Claude Code's "
+        "meter is the provider's own figure, as Claude Code last fetched it "
+        "(ADR 0015).",
         f"reproducible with {provenance()}",
     ]
     return "\n".join(lines)
@@ -343,12 +435,43 @@ def _section(result: Limits, kind: str, at) -> list[str]:
     else:
         state = "limit reached, requests wait until" if window.blocked else "resets"
         how = " (window inferred from call times)" if window.estimated else ""
-        share = (
-            f" = {window.value / lowest:.0%} of the lowest ceiling" if lowest else ""
-        )
+        if window.meter_limit is not None:
+            share = (
+                f" = {window.value / window.meter_limit:.0%} of the limit by "
+                f"Claude Code's meter ({window.meter_percent:.0f}% at "
+                f"{at(window.meter_at)})"
+            )
+        elif window.meter_percent is not None:
+            share = ""
+        else:
+            share = (
+                f" = {window.value / lowest:.0%} of the lowest ceiling"
+                if lowest
+                else ""
+            )
         lines.append(
             f"{label}: ${window.value:,.2f}{share} since {at(window.start)}{how}; "
             f"{state} {at(window.end)} (in {_span(window.end - result.now)})"
+        )
+    if (
+        window is not None
+        and window.meter_percent is not None
+        and window.meter_limit is None
+    ):
+        lines.append(
+            f"  Claude Code's meter read {window.meter_percent:.0f}% at "
+            f"{at(window.meter_at)}: too little to tell what the whole limit is worth"
+        )
+    if window is not None and window.meter_limit is not None:
+        compare = (
+            f"; by the lowest ceiling hit (${lowest:,.2f}) it would read "
+            f"{window.value / lowest:.0%}"
+            if lowest
+            else ""
+        )
+        lines.append(
+            f"  the meter puts the whole limit at about ${window.meter_limit:,.2f} "
+            f"of usage value{compare}"
         )
     on_plan = " on this plan" if result.plan else ""
     if references:
@@ -359,8 +482,6 @@ def _section(result: Limits, kind: str, at) -> list[str]:
         more = len(recent) - _SHOWN_HITS
         tail = f", and {more} more" if more > 0 else ""
         lines.append(f"  limit hit{on_plan} at {listed}{tail}")
-        if window is not None and not window.blocked and kind == "seven_day":
-            lines.append("  " + _projection(result, window, lowest, at))
     for c in mine:
         if c.spans_plans:
             lines.append(
@@ -372,6 +493,18 @@ def _section(result: Limits, kind: str, at) -> list[str]:
                 f"  also hit at {at(c.hit_at)} with ${c.value:,.2f} in these logs: "
                 "the usage was elsewhere, not a reference"
             )
+    if window is not None and not window.blocked and kind == "seven_day":
+        if window.meter_limit is not None:
+            reference = (
+                window.meter_limit,
+                f"the limit (about ${window.meter_limit:,.2f} by the meter)",
+            )
+        elif lowest:
+            reference = (lowest, f"the lowest ceiling seen (${lowest:,.2f})")
+        else:
+            reference = None
+        if reference is not None:
+            lines.append("  " + _projection(result, window, *reference, at))
     if not mine:
         earlier = len(seen)
         lines.append(
@@ -383,9 +516,9 @@ def _section(result: Limits, kind: str, at) -> list[str]:
     return lines
 
 
-def _projection(result: Limits, window: Window, lowest: float, at) -> str:
+def _projection(result: Limits, window: Window, lowest: float, named: str, at) -> str:
     if window.value >= lowest:
-        return f"already past the lowest ceiling seen (${lowest:,.2f})"
+        return f"already past {named}"
     pace = result.pace_per_day
     if pace <= 0:
         return "no usage in the last 7 days to project from"
@@ -394,12 +527,11 @@ def _projection(result: Limits, window: Window, lowest: float, at) -> str:
         left = (window.end - result.now) / timedelta(days=1)
         return (
             f"at the last 7 days' pace (${pace:,.2f}/day) the week ends near "
-            f"${window.value + pace * left:,.2f}, under the lowest ceiling seen "
-            f"(${lowest:,.2f})"
+            f"${window.value + pace * left:,.2f}, under {named}"
         )
     return (
-        f"at the last 7 days' pace (${pace:,.2f}/day) the week reaches the lowest "
-        f"ceiling seen (${lowest:,.2f}) around {at(eta)}, "
+        f"at the last 7 days' pace (${pace:,.2f}/day) the week reaches "
+        f"{named} around {at(eta)}, "
         f"{_span(window.end - eta)} before it resets"
     )
 

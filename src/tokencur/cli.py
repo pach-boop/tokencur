@@ -371,6 +371,7 @@ def _limits(args: argparse.Namespace) -> int:
     for root, ingest in sources.DEFAULT_SOURCES:
         if ingest is claude_code.iter_usage_records and root.exists():
             ledger.record_limit_hits(claude_code.iter_limit_hits(root))
+            ledger.record_meter_readings(claude_code.meter_readings())
     plans = limits.plans_path(args.plans)
     if plans is not None and not plans.is_file():
         _fail(f"{plans} does not exist")
@@ -380,6 +381,7 @@ def _limits(args: argparse.Namespace) -> int:
         ledger.read_limit_hits(),
         observatory.load_subscriptions(plans) if plans else None,
         plans_from=home_relative(plans.absolute()) if plans else "",
+        readings=ledger.read_meter_readings(),
     )
     print(limits.render(result))
     return 0
