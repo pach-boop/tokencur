@@ -4,7 +4,8 @@ An ingester turns one source's log lines into ``UsageRecord`` values;
 the ledger stores them; pricing, the FOCUS normalizer, reports and
 recommendations read them. The type lives here, not inside any one
 ingester, so no layer depends on how a particular agent logs. Billed
-charges, CI runs and plan limit hits live here for the same reason.
+charges, CI runs, plan limit hits and usage meter readings live here for
+the same reason.
 """
 
 from __future__ import annotations
@@ -115,6 +116,18 @@ class LimitHit:
     timestamp: str  # when the request was turned away, ISO 8601 UTC
     session_id: str
     kind: str  # the limit, as logged: "five_hour", "seven_day", ...
+    resets_at: str  # when that limit resets, ISO 8601 UTC
+
+
+@dataclass(frozen=True, slots=True)
+class MeterReading:
+    """How much of one plan limit the provider says is used, as an agent
+    last fetched it: Claude Code's own usage meter (``/usage``; ADR 0015)."""
+
+    source: str  # the agent that fetched it, e.g. "claude-code"
+    kind: str  # the limit: "five_hour", "seven_day"
+    fetched_at: str  # when the agent fetched it, ISO 8601 UTC
+    percent: float  # share of the limit used, 0-100
     resets_at: str  # when that limit resets, ISO 8601 UTC
 
 

@@ -198,7 +198,8 @@ history:
   Codex re-sent reports earlier versions double counted (see the changelog);
   schema 3 records each call's price-changing request options, schema 4 billed
   charges, schema 5 the directory each call ran in, schema 6 CI runs, and
-  schema 7 the plan limits that turned requests away.
+  schema 7 the plan limits that turned requests away, and schema 8 the
+  readings of Claude Code's own usage meter.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -338,6 +339,15 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
   after the last one closed, rounded down to ten minutes (every reset logged so
   far matches that rule); past a logged reset they are rebuilt from call
   times.
+- **Claude Code's own meter, when it is fresh.** Claude Code caches the
+  percent its `/usage` meter last showed. When that reading was taken in the
+  current window, the view shows it with its time, and divides the value used
+  by then by it: what the whole limit is worth in usage value. The current
+  share and the week's projection then use that limit, and the estimate from
+  ceilings hit stays next to it. On the first reading the weekly limit came
+  to $1,062.95, against a weekly ceiling hit the day before at $1,063.07; the
+  five-hour limit came to $166.32, against ceilings hit near $135
+  ([ADR 0015](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0015-read-the-agents-own-usage-meter.md)).
 - **A gauge, not a balance.** Limits are not priced like the API, and usage
   these logs do not hold (claude.ai chat, Claude Code's background calls)
   draws on the same limits. Several agents on one subscription share the same

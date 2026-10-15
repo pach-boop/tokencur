@@ -39,6 +39,13 @@
   message: the line's sidechain, meta and compaction flags, the origin
   Claude Code records or, on lines from before it recorded one, whether
   the content is plain text and the types of its blocks. Never the text.
+- **Claude Code's usage meter**: `tokencur limits` reads Claude Code's
+  state file (`~/.claude.json`, or `$CLAUDE_CONFIG_DIR/.claude.json`) and
+  takes one key, `cachedUsageUtilization`: when it was fetched and, for
+  the five-hour and weekly limits, the percent used and the reset. The
+  file also holds account details and project settings; it is decoded as
+  JSON to reach that key, and nothing else in it is read into a record,
+  stored or shown (ADR 0015).
 - **Plans file**: `tokencur limits` reads `subscriptions.json` from the
   current directory, else `$XDG_CONFIG_HOME/tokencur/subscriptions.json`
   (`~/.config/tokencur/...`), or the file `--plans` names.
@@ -51,8 +58,8 @@
   (honours `$XDG_DATA_HOME`, or `$TOKENCUR_LEDGER`), created readable by
   its owner only (`0600`, directory `0700`). Before a schema upgrade it
   copies the ledger next to itself as `<name>.schema-<N>.bak`, also
-  `0600`. CI runs you import, and the plan limit hits `tokencur limits`
-  finds, are kept there too. `export` writes the CSV
+  `0600`. CI runs you import, and the plan limit hits and usage meter
+  readings `tokencur limits` finds, are kept there too. `export` writes the CSV
   you name, and `observatory` and
   `prices` write their pages where you point them (by default
   `docs/observatory` and `docs/prices` under the current directory).

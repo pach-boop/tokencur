@@ -21,3 +21,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0012](0012-usage-value-per-successful-change.md) | Usage value per successful change, session by session | Accepted |
 | [0013](0013-ci-results-per-change-matched-by-tree.md) | CI results per change, from a capture, matched by tree | Accepted |
 | [0014](0014-plan-limits-from-the-agents-quota-metadata.md) | Plan limits from the agent's own quota metadata, in usage value | Accepted |
+| [0015](0015-read-the-agents-own-usage-meter.md) | Read the agent's own usage meter, from one key of its state file | Accepted |

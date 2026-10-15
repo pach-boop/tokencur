@@ -6,7 +6,8 @@ message line carries a ``message.usage`` object with token counts.
 
 It also reads Claude Code's own per-session cost counters
 (``session_counters``), which ``tokencur.reconcile`` checks tokencur against,
-and the plan limits that turned requests away (``iter_limit_hits``).
+the plan limits that turned requests away (``iter_limit_hits``), and its
+own usage meter (``meter_readings``).
 
 Privacy: this module keeps usage metadata only (tokens, model,
 timestamps, the working directory, cost counters); SECURITY.md lists
@@ -15,17 +16,19 @@ every field it reads. It never extracts message content.
 
 from __future__ import annotations
 
+import json
 import math
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
 # ``tokencur.records`` and stays importable from here.
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.ingest.stats import ScanStats
-from tokencur.records import LimitHit, UsageRecord
+from tokencur.records import LimitHit, MeterReading, UsageRecord
 
 #: Claude Code logs client-side placeholder messages (API-error stubs,
 #: interrupted turns) under this sentinel model, with all-zero usage.
@@ -212,6 +215,68 @@ def _limit_hit(line_entry: dict) -> LimitHit | None:
         kind=kind,
         resets_at=resets_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
+
+
+#: The limits whose meter tokencur reads, as Claude Code names them.
+_METERED = ("five_hour", "seven_day")
+
+
+def config_path() -> Path:
+    """Claude Code's own state file: ``$CLAUDE_CONFIG_DIR/.claude.json``,
+    else ``~/.claude.json``."""
+    base = os.environ.get("CLAUDE_CONFIG_DIR")
+    return Path(base) / ".claude.json" if base else Path.home() / ".claude.json"
+
+
+def meter_readings(path: Path | None = None) -> list[MeterReading]:
+    """The plan usage Claude Code last fetched for its ``/usage`` meter.
+
+    Claude Code keeps it in its state file under ``cachedUsageUtilization``:
+    when it was fetched (``fetchedAtMs``) and, per limit, the percent used
+    and when the limit resets (rounded to the minute). That file also holds account details and
+    project settings; it is decoded as JSON to reach this key, and nothing
+    else in it is read (ADR 0015). An absent, unreadable or reshaped file
+    gives no readings.
+    """
+    target = path or config_path()
+    try:
+        state = json.loads(target.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        return []
+    cached = obj(obj(state).get("cachedUsageUtilization"))
+    fetched = cached.get("fetchedAtMs")
+    if not _is_amount(fetched):
+        return []
+    try:
+        fetched_at = datetime.fromtimestamp(fetched / 1000, UTC)
+    except (OverflowError, OSError, ValueError):
+        return []
+    readings = []
+    for kind in _METERED:
+        limit = obj(obj(cached.get("utilization")).get(kind))
+        percent, resets = limit.get("utilization"), text(limit.get("resets_at"))
+        if not _is_amount(percent) or percent > 100 or not resets:
+            continue
+        try:
+            resets_at = datetime.fromisoformat(resets)
+            if resets_at.tzinfo is None:
+                resets_at = resets_at.replace(tzinfo=UTC)  # as parse_timestamp reads it
+            # Logged as 02:59:59.835 for a limit that resets at 03:00.
+            resets_at = (resets_at.astimezone(UTC) + timedelta(seconds=30)).replace(
+                second=0, microsecond=0
+            )
+        except (ValueError, OverflowError):
+            continue
+        readings.append(
+            MeterReading(
+                source="claude-code",
+                kind=kind,
+                fetched_at=fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                percent=float(percent),
+                resets_at=resets_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+        )
+    return readings
 
 
 @dataclass(frozen=True)
