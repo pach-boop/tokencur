@@ -31,14 +31,22 @@ C-003-C requires none where there is no reservation: no dataset passes
 both. The Foundation's newer 1.3.0.4 rules, a prerelease, fix it, and
 the export passes them with no failure (ADR 0016).
 
+The weekly FOCUS watch (``scripts/focus_watch.py``) runs this gate on
+other rule files: ``--rules`` takes a local ``model-<version>.json`` in
+place of the pinned one, ``--strict`` tolerates nothing, and ``--report``
+writes the verdict as JSON.
+
 Usage:
-    python scripts/validate_focus.py
+    python scripts/validate_focus.py [--rules FILE] [--strict] [--report FILE]
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -127,7 +135,7 @@ def _fixture_records() -> list[UsageRecord]:
     ]
 
 
-def _fetch_rules(directory: Path) -> None:
+def _fetch_rules(directory: Path) -> Path:
     """Save the released rule file into ``directory``, checked by hash."""
     with urllib.request.urlopen(RULES_URL, timeout=60) as response:
         data = response.read()
@@ -136,17 +144,37 @@ def _fetch_rules(directory: Path) -> None:
         raise SystemExit(
             f"the released rule file changed: sha256 {digest}, pinned {RULES_SHA256}"
         )
-    (directory / RULES_URL.rsplit("/", 1)[1]).write_bytes(data)
+    path = directory / RULES_URL.rsplit("/", 1)[1]
+    path.write_bytes(data)
+    return path
 
 
-def main() -> int:
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser.add_argument(
+        "--rules",
+        type=Path,
+        help="run on this local model-<version>.json instead of the pinned file",
+    )
+    parser.add_argument(
+        "--strict", action="store_true", help="tolerate no rule failure"
+    )
+    parser.add_argument("--report", type=Path, help="write the verdict as JSON here")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     import focus_validator
 
     package_parent = Path(focus_validator.__file__).parent.parent
     with tempfile.TemporaryDirectory() as tmp:
         rules = Path(tmp) / "rules"
         rules.mkdir()
-        _fetch_rules(rules)
+        if args.rules:
+            rule_file = Path(shutil.copy(args.rules, rules / args.rules.name))
+        else:
+            rule_file = _fetch_rules(rules)
         data_file = Path(tmp) / "focus_sample.csv"
         records = _synthetic_records() + _fixture_records()
         charges = runpod.iter_charges(FIXTURES / "billing" / "runpod-billing-pods.json")
@@ -183,11 +211,23 @@ def main() -> int:
     output = result.stdout + result.stderr
 
     failures = set(re.findall(r"^- (\S+): violations=", output, re.MULTILINE))
-    unexpected = failures - TOLERATED
+    unexpected = failures - (set() if args.strict else TOLERATED)
     summary = re.search(r"Total: \d+ \| Pass: \d+ \| Fail: \d+ \| Skipped: \d+", output)
     print(summary.group(0) if summary else "no summary line found")
+    passed = result.returncode == 0 and summary is not None and not unexpected
+    if args.report:
+        lines = [line for line in output.splitlines() if line.strip()]
+        verdict = {
+            "rules": rule_file.name,
+            "summary": summary.group(0) if summary else None,
+            "failures": sorted(failures),
+            "unexpected": sorted(unexpected),
+            "passed": passed,
+            "last_line": lines[-1] if lines else "",
+        }
+        args.report.write_text(json.dumps(verdict, indent=2) + "\n", encoding="utf-8")
 
-    if result.returncode != 0 or summary is None or unexpected:
+    if not passed:
         print(
             f"FOCUS conformance FAILED — unexpected rule failures: {sorted(unexpected)}"
         )

@@ -478,7 +478,9 @@ last rate), then regenerates this page from that history.
   ([ADR 0016](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0016-focus-1-3-gated-on-the-released-rules.md)).
   One rule is tolerated by name: it is malformed in the released rule file and fixed
   in the Foundation's 1.3.0.4 prerelease, which the export passes with no failure.
-  FOCUS 1.4 waits for released rules the validator can run. The export is also
+  FOCUS 1.4 waits for released rules the validator can run; a weekly
+  [focus-watch action](https://github.com/pach-boop/tokencur/blob/main/.github/workflows/focus-watch.yml)
+  opens an issue the day they do. The export is also
   cross-checked against the Foundation's official
   sample data (which targets FOCUS 1.0; the tests assert convention compatibility, not
   column equality).

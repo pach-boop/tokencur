@@ -1,0 +1,48 @@
+name: focus-watch
+
+# Weekly look at the FinOps Foundation's FOCUS rules with the newest
+# focus-validator (scripts/focus_watch.py): can the 1.3 gate drop its
+# tolerated rule (ADR 0016), can the focus-1.4 branch be merged, does
+# that branch still pass its own gate. It opens or comments on one
+# issue, labelled focus-watch, when an answer is not the expected one;
+# a quiet week only writes the run summary.
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Write the report to the run summary only, never to an issue
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write # the focus-watch issue and its label
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      # The newest validator, unlike CI's pin: the question is what anyone
+      # who runs it today gets. pyarrow pinned as in ci.yml.
+      - run: pip install focus-validator pyarrow==24.0.0
+      - name: Run the three checks; open or comment on the issue if an answer moved
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python scripts/focus_watch.py --dry-run
+          else
+            python scripts/focus_watch.py
+          fi

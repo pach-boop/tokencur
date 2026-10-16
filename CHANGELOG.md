@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **A weekly FOCUS watch** (the `focus-watch` workflow, Mondays). It runs the
+  newest `focus-validator` three ways: main's export on the 1.3 rules the
+  validator downloads by default, tolerating nothing; the `focus-1.4`
+  branch's export on the released 1.4 rules; and that branch's own gate. When
+  an answer is not the expected one (the tolerated rule can go, the branch
+  can be merged, the branch fails), it opens or comments on one issue,
+  labelled `focus-watch`, and posts each answer once. It never changes code.
+- `scripts/validate_focus.py` takes `--rules` (a local rule file in place of
+  the pinned one), `--strict` (tolerate nothing) and `--report` (the verdict
+  as JSON).
+
 ## [0.10.0] - 2026-10-15
 
 ### Changed
