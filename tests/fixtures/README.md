@@ -10,7 +10,8 @@ truncation.
 
 Used by `tests/test_focus_cross.py` to cross-check tokencur's export conventions
 against an official FOCUS dataset (note: the sample targets FOCUS 1.0; tokencur
-exports 1.2, which adds columns such as `InvoiceId` and `ServiceSubcategory`).
+exports 1.3, which adds columns such as `InvoiceId`, `ServiceSubcategory` and
+`ServiceProviderName`).
 
 ## logs/ and golden/
 

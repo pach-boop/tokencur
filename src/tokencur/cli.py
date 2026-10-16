@@ -87,7 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     report.set_defaults(handler=_report)
 
     export = commands.add_parser(
-        "export", parents=[period, contract], help="write a FOCUS 1.2 CSV"
+        "export", parents=[period, contract], help="write a FOCUS 1.3 CSV"
     )
     export.add_argument("output", type=Path, help="CSV file to write")
     export.add_argument("root", nargs="?", type=Path, help=root_help)

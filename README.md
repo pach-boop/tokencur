@@ -71,7 +71,7 @@ flowchart LR
     L --> P["Pricing<br/>curated card + LiteLLM snapshot"]
     W["price-watch action<br/>(daily)"] -.->|refreshes| P
     P --> R["report · recommend"]
-    P --> F["FOCUS 1.2 normalizer"]
+    P --> F["FOCUS 1.3 normalizer"]
     F --> E["export: FOCUS CSV<br/>(validated in CI)"]
     F --> O["observatory · dashboard"]
 ```
@@ -91,7 +91,7 @@ Requires Python 3.11+. No runtime dependencies.
 ```bash
 pip install tokencur
 tokencur report                # cost summary in your terminal
-tokencur export focus.csv      # FOCUS 1.2 conformant dataset
+tokencur export focus.csv      # FOCUS 1.3 conformant dataset
 tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 tokencur doctor                # read-only health check: log formats, ledger, pricing
@@ -473,9 +473,13 @@ last rate), then regenerates this page from that history.
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
   land on the next UTC day.
-- Targets FOCUS 1.2: the newest spec version the Foundation's `focus-validator` can
-  check (2.2.1 ships 1.2 rules only), so newer spec versions will follow the validator.
-  The export passes it in CI and is cross-checked against the Foundation's official
+- Targets FOCUS 1.3, checked in CI by the Foundation's `focus-validator` on its released
+  1.3 rules, pinned by hash
+  ([ADR 0016](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0016-focus-1-3-gated-on-the-released-rules.md)).
+  One rule is tolerated by name: it is malformed in the released rule file and fixed
+  in the Foundation's 1.3.0.4 prerelease, which the export passes with no failure.
+  FOCUS 1.4 waits for released rules the validator can run. The export is also
+  cross-checked against the Foundation's official
   sample data (which targets FOCUS 1.0; the tests assert convention compatibility, not
   column equality).
 

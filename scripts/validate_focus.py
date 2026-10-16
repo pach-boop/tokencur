@@ -1,7 +1,7 @@
 """Conformance gate: run the FinOps Foundation validator on our export.
 
 Exports one FOCUS CSV holding these datasets and runs ``focus-validator``
-against spec 1.2:
+against spec 1.3:
 
 - hand-built records for edge dates (a December charge, whose billing
   period ends in the next year), and
@@ -13,12 +13,23 @@ against spec 1.2:
 - billed RunPod charges from the billing fixture (real money: Compute
   rows, including a storage-only charge with no unit price);
 - the hand-built records again under negotiated discounts, so rows where
-  ContractedCost, EffectiveCost and BilledCost sit below ListCost pass too. Passes when every
-composite column rule passes; the only tolerated raw failure is
-``InvoiceId-C-005-C`` — the not-null branch of the OR rule
-``InvoiceId-C-003-C``, which showback data legitimately does not take
-(no invoice exists, so InvoiceId is an explicit null and the OR is
-satisfied by ``InvoiceId-C-004-C``).
+  ContractedCost, EffectiveCost and BilledCost sit below ListCost pass too.
+
+The rules are the Foundation's released 1.3 rule file, the one the
+validator downloads for 1.3 by default. The gate fetches it, checks its
+SHA-256 and runs the validator on it offline (``--block-download``), so
+a re-published rule file cannot change the verdict unseen. The validator
+is told which features tokencur's data has (applicability criteria);
+rules for features it lacks are skipped, as the spec makes them
+conditional.
+
+Passes when every rule passes but one, tolerated by name with its
+parent: ``CAU-CapacityReservationStatus-C-004-C``. Its condition is
+malformed in the released file (``{"AND": [...]}`` instead of a check
+function), so the validator requires a status on every row, while
+C-003-C requires none where there is no reservation: no dataset passes
+both. The Foundation's newer 1.3.0.4 rules, a prerelease, fix it, and
+the export passes them with no failure (ADR 0016).
 
 Usage:
     python scripts/validate_focus.py
@@ -26,19 +37,43 @@ Usage:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from tokencur.export import export_csv
+from tokencur.focus import FOCUS_VERSION
 from tokencur.ingest import claude_code, codex, kimi_code, runpod
 from tokencur.records import UsageRecord
 
-TOLERATED_OR_BRANCHES = {"InvoiceId-C-005-C"}
+RULES_URL = (
+    "https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS_Spec"
+    "/releases/download/v1.3/model-1.3.0.1.json"
+)
+RULES_SHA256 = "2c0e38136d12fc5f965c09ef7e005f8ec00dbe2fe6907e8b98d79d8257a0d272"
+# What tokencur's data has, in the validator's terms.
+APPLICABILITY_CRITERIA = (
+    "ACCOUNT_NAMING_SUPPORTED",  # billing accounts have names
+    "BILLING_BASED_ON_PROVISIONED_RESOURCES_SUPPORTED",  # RunPod bills pods
+    "MULTIPLE_BILLING_ACCOUNT_TYPES_SUPPORTED",  # showback, prepaid credits
+    "NEGOTIATED_PRICING_SUPPORTED",  # contract discounts
+    "PUBLIC_PRICE_LIST_SUPPORTED",  # list rates are published
+    "RESOURCE_TYPE_ASSIGNMENT_SUPPORTED",  # agent sessions, GPU pods
+    "SUB_ACCOUNT_SUPPORTED",  # workspaces
+    "UNIT_PRICING_SUPPORTED",  # a price per token, hour or GB
+    "USAGE_MEASUREMENT_SUPPORTED",  # tokens, hours and GB are measured
+)
+# The malformed rule, and the composite that fails only through it.
+TOLERATED = {
+    "CAU-CapacityReservationStatus-C-004-C",
+    "CAU-CapacityReservationStatus-C-002-C",
+}
 # A negotiated contract (see tokencur.pricing.load_discounts).
 DISCOUNTS = {"Anthropic": 0.15, "OpenAI": 0.10, "Moonshot AI": 0.05}
 FIXTURES = Path(__file__).parent.parent / "tests" / "fixtures"
@@ -92,11 +127,26 @@ def _fixture_records() -> list[UsageRecord]:
     ]
 
 
+def _fetch_rules(directory: Path) -> None:
+    """Save the released rule file into ``directory``, checked by hash."""
+    with urllib.request.urlopen(RULES_URL, timeout=60) as response:
+        data = response.read()
+    digest = hashlib.sha256(data).hexdigest()
+    if digest != RULES_SHA256:
+        raise SystemExit(
+            f"the released rule file changed: sha256 {digest}, pinned {RULES_SHA256}"
+        )
+    (directory / RULES_URL.rsplit("/", 1)[1]).write_bytes(data)
+
+
 def main() -> int:
     import focus_validator
 
     package_parent = Path(focus_validator.__file__).parent.parent
     with tempfile.TemporaryDirectory() as tmp:
+        rules = Path(tmp) / "rules"
+        rules.mkdir()
+        _fetch_rules(rules)
         data_file = Path(tmp) / "focus_sample.csv"
         records = _synthetic_records() + _fixture_records()
         charges = runpod.iter_charges(FIXTURES / "billing" / "runpod-billing-pods.json")
@@ -110,14 +160,19 @@ def main() -> int:
             "real), RunPod billed charges, and hand-built under negotiated discounts"
         )
 
-        # The validator resolves its rule files relative to the CWD.
+        # The validator resolves its currency list relative to the CWD.
         result = subprocess.run(
             [
                 "focus-validator",
                 "--data-file",
                 str(data_file),
                 "--validate-version",
-                "1.2",
+                FOCUS_VERSION,
+                "--rule-set-path",
+                str(rules),
+                "--block-download",
+                "--applicability-criteria",
+                ",".join(APPLICABILITY_CRITERIA),
                 "--output-type",
                 "console",
             ],
@@ -128,18 +183,17 @@ def main() -> int:
     output = result.stdout + result.stderr
 
     failures = set(re.findall(r"^- (\S+): violations=", output, re.MULTILINE))
-    unexpected = failures - TOLERATED_OR_BRANCHES
-    or_satisfied = "InvoiceId-C-003-C: PASS" in output
+    unexpected = failures - TOLERATED
     summary = re.search(r"Total: \d+ \| Pass: \d+ \| Fail: \d+ \| Skipped: \d+", output)
     print(summary.group(0) if summary else "no summary line found")
 
-    if result.returncode != 0 or unexpected or not or_satisfied:
+    if result.returncode != 0 or summary is None or unexpected:
         print(
             f"FOCUS conformance FAILED — unexpected rule failures: {sorted(unexpected)}"
         )
         print(output[-3000:])
         return 1
-    print("FOCUS 1.2 conformance gate: PASS")
+    print(f"FOCUS {FOCUS_VERSION} conformance gate: PASS")
     return 0
 
 

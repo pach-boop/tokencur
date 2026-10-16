@@ -7,10 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
-- **The FOCUS export carries every FOCUS 1.3 column**: 65, up from 35. It is
-  still checked as 1.2 until the conformance gate moves to 1.3; it already
-  passes 1.3 but for one malformed rule in the Foundation's 1.3 rule file.
-  The new columns with values:
+- **tokencur targets FOCUS 1.3** (ADR 0016, superseding ADR 0003). CI fails
+  unless the export passes the Foundation's `focus-validator` on its released
+  1.3 rules. The gate fetches that rule file and checks it against a pinned
+  SHA-256, then runs offline. It declares the nine applicability criteria
+  tokencur's data meets, so 395 rules run and pass, against 136 for the 1.2
+  gate. One rule is tolerated by name: its condition is malformed in the
+  released file, so no dataset can pass it, and the Foundation's 1.3.0.4
+  prerelease fixes it. The export passes that prerelease with no failure.
+- **The FOCUS export carries every FOCUS 1.3 column**: 65, up from 35. The
+  new columns with values:
   - `ServiceProviderName` and `HostProviderName`, 1.3's split of
     `ProviderName`;
   - `BillingAccountType` ("Showback", or "Prepaid credits" for RunPod) and
