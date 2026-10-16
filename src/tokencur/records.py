@@ -72,8 +72,8 @@ class BilledCharge:
     service: str  # FOCUS ServiceName
     resource_id: str  # what was billed, e.g. a pod id
     resource_type: str  # FOCUS ResourceType, e.g. "GPU pod"
-    quantity: float  # usage billed, in `unit` (0 when only storage was billed)
-    unit: str  # FOCUS ConsumedUnit, e.g. "Hours"
+    quantity: float  # usage billed, in `unit`
+    unit: str  # FOCUS ConsumedUnit: "Hours", or "GB" when only disk was billed
     amount_usd: float  # what was billed
     detail: str = ""  # a note for people, e.g. "50 GB disk"
 
