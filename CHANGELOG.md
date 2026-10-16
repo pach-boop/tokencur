@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-15
+
 ### Changed
 
 - **tokencur targets FOCUS 1.3** (ADR 0016, superseding ADR 0003). CI fails
