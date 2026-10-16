@@ -18,52 +18,118 @@ Column semantics follow the FOCUS specification
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
+from functools import cache
 
 from tokencur.pricing import ModelRates, rates_for, rates_for_record
 from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 
 FOCUS_VERSION = "1.2"
 
-# Column order for CSV export.
+# Column order for CSV export: every column of the FOCUS 1.3 Cost and
+# Usage dataset. ProviderName and PublisherName are deprecated in 1.3 in
+# favour of ServiceProviderName and HostProviderName, but still required.
 FOCUS_COLUMNS = [
+    "AllocatedMethodDetails",
+    "AllocatedMethodId",
+    "AllocatedResourceId",
+    "AllocatedResourceName",
+    "AllocatedTags",
+    "AvailabilityZone",
     "BilledCost",
     "BillingAccountId",
     "BillingAccountName",
+    "BillingAccountType",
     "BillingCurrency",
     "BillingPeriodStart",
     "BillingPeriodEnd",
+    "CapacityReservationId",
+    "CapacityReservationStatus",
     "ChargeCategory",
     "ChargeClass",
     "ChargeDescription",
     "ChargeFrequency",
     "ChargePeriodStart",
     "ChargePeriodEnd",
+    "CommitmentDiscountCategory",
+    "CommitmentDiscountId",
+    "CommitmentDiscountName",
+    "CommitmentDiscountQuantity",
+    "CommitmentDiscountStatus",
+    "CommitmentDiscountType",
+    "CommitmentDiscountUnit",
     "ConsumedQuantity",
     "ConsumedUnit",
+    "ContractApplied",
     "ContractedCost",
+    "ContractedUnitPrice",
     "EffectiveCost",
+    "HostProviderName",
     "InvoiceId",
     "InvoiceIssuerName",
     "ListCost",
     "ListUnitPrice",
     "PricingCategory",
+    "PricingCurrency",
+    "PricingCurrencyContractedUnitPrice",
+    "PricingCurrencyEffectiveCost",
+    "PricingCurrencyListUnitPrice",
     "PricingQuantity",
     "PricingUnit",
     "ProviderName",
     "PublisherName",
+    "RegionId",
+    "RegionName",
     "ResourceId",
     "ResourceName",
     "ResourceType",
     "ServiceCategory",
     "ServiceName",
+    "ServiceProviderName",
     "ServiceSubcategory",
     "SkuId",
+    "SkuMeter",
+    "SkuPriceDetails",
     "SkuPriceId",
     "SubAccountId",
     "SubAccountName",
+    "SubAccountType",
+    "Tags",
 ]
+
+# Columns for features no tokencur source has: cost allocation, zones and
+# regions, capacity reservations, commitment discounts, contract
+# commitments and tags. They are exported as explicit nulls rather than
+# left out: the Foundation's validator checks a column's type even where
+# its feature does not apply, and a fixed set of columns loads more easily.
+_NOT_APPLICABLE = dict.fromkeys(
+    (
+        "AllocatedMethodDetails",
+        "AllocatedMethodId",
+        "AllocatedResourceId",
+        "AllocatedResourceName",
+        "AllocatedTags",
+        "AvailabilityZone",
+        "CapacityReservationId",
+        "CapacityReservationStatus",
+        "CommitmentDiscountCategory",
+        "CommitmentDiscountId",
+        "CommitmentDiscountName",
+        "CommitmentDiscountQuantity",
+        "CommitmentDiscountStatus",
+        "CommitmentDiscountType",
+        "CommitmentDiscountUnit",
+        "ContractApplied",
+        "RegionId",
+        "RegionName",
+        "Tags",
+    )
+)
+
+# What a billed charge's unit meters, for SkuMeter.
+_METER_BY_UNIT = {"Hours": "time", "GB": "disk"}
 
 _PROVIDER_BY_SOURCE = {
     "claude-code": "Anthropic",
@@ -95,6 +161,16 @@ _BUCKETS = (
     ),
 )
 
+# SKU price properties by SKU suffix, for SkuPriceDetails. FOCUS defines
+# none for tokens, so they are custom properties: "x_" keys.
+_PRICE_PROPERTIES = {
+    "input": {"x_TokenType": "input"},
+    "output": {"x_TokenType": "output"},
+    "cache-read": {"x_TokenType": "cache read"},
+    "cache-write-5m": {"x_TokenType": "cache write", "x_CacheTtl": "5m"},
+    "cache-write-1h": {"x_TokenType": "cache write", "x_CacheTtl": "1h"},
+}
+
 
 def provider_for(source: str) -> str:
     """The FOCUS ProviderName of a usage source."""
@@ -124,10 +200,12 @@ def to_focus_rows(
 def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
     """FOCUS rows for billed charges: real money, not showback.
 
-    BilledCost is what the provider took. No list price is published per
-    charge, so ListCost, ContractedCost and EffectiveCost equal it. A
-    charge with no billed time (storage only) has no unit price: there is
-    no quantity to divide by, and FOCUS wants an explicit null then.
+    BilledCost and EffectiveCost are what the provider took. No list
+    price is published per charge, so the unit price is the amount over
+    the quantity, and ListCost and ContractedCost are that price times the
+    quantity: FOCUS checks that product exactly, and dividing then
+    multiplying back can be off the amount by a rounding unit. A charge
+    with nothing billed to divide by has no unit price, an explicit null.
     """
     for c in charges:
         start = parse_timestamp(c.period_start)
@@ -136,13 +214,17 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
         period_start = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         unit = c.unit.lower()
         detail = f", {c.detail}" if c.detail else ""
+        unit_price = c.amount_usd / c.quantity if c.quantity else None
+        list_cost = c.amount_usd if unit_price is None else unit_price * c.quantity
         yield {
+            **_NOT_APPLICABLE,
             "BilledCost": c.amount_usd,
             "EffectiveCost": c.amount_usd,
-            "ContractedCost": c.amount_usd,
-            "ListCost": c.amount_usd,
+            "ContractedCost": list_cost,
+            "ListCost": list_cost,
             "BillingAccountId": f"tokencur-{c.source}",
             "BillingAccountName": f"{c.provider} account",
+            "BillingAccountType": "Prepaid credits",
             "BillingCurrency": "USD",
             "BillingPeriodStart": _fmt(period_start),
             "BillingPeriodEnd": _fmt(_next_month(period_start)),
@@ -154,11 +236,19 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
             "ChargePeriodEnd": c.period_end,
             "ConsumedQuantity": float(c.quantity),
             "ConsumedUnit": c.unit,
+            "ContractedUnitPrice": unit_price,
+            "HostProviderName": c.provider,
             # Prepaid credits: the provider issues no invoice per charge.
             "InvoiceId": None,
             "InvoiceIssuerName": c.provider,
-            "ListUnitPrice": c.amount_usd / c.quantity if c.quantity else None,
+            "ListUnitPrice": unit_price,
             "PricingCategory": "Standard",
+            # Priced in the billing currency: the PricingCurrency columns
+            # repeat the billing ones.
+            "PricingCurrency": "USD",
+            "PricingCurrencyContractedUnitPrice": unit_price,
+            "PricingCurrencyEffectiveCost": c.amount_usd,
+            "PricingCurrencyListUnitPrice": unit_price,
             "PricingQuantity": float(c.quantity),
             "PricingUnit": c.unit,
             "ProviderName": c.provider,
@@ -168,11 +258,15 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
             "ResourceType": c.resource_type,
             "ServiceCategory": "Compute",
             "ServiceName": c.service,
+            "ServiceProviderName": c.provider,
             "ServiceSubcategory": "Containers",
             "SkuId": f"{c.source}/{unit}",
+            "SkuMeter": f"{c.resource_type} {_METER_BY_UNIT.get(c.unit, unit)}",
+            "SkuPriceDetails": None,
             "SkuPriceId": f"{c.source}/{unit}",
             "SubAccountId": None,
             "SubAccountName": None,
+            "SubAccountType": None,
         }
 
 
@@ -201,8 +295,10 @@ def _record_rows(
     # Columns that are the same for every bucket of this record, built
     # once: an export writes up to five rows per record.
     shared = {
+        **_NOT_APPLICABLE,
         "BillingAccountId": "tokencur-local",
         "BillingAccountName": "Local AI usage (showback)",
+        "BillingAccountType": "Showback",
         "BillingCurrency": "USD",
         "BillingPeriodStart": _fmt(period_start),
         "BillingPeriodEnd": _fmt(_next_month(period_start)),
@@ -212,11 +308,15 @@ def _record_rows(
         "ChargePeriodStart": _fmt(_floor_hour(charge_start)),
         "ChargePeriodEnd": _fmt(_floor_hour(charge_start + timedelta(hours=1))),
         "ConsumedUnit": "tokens",
+        "HostProviderName": provider,
         # Showback charges have no invoice; the spec requires an
         # explicit null in that case.
         "InvoiceId": None,
         "InvoiceIssuerName": provider,
         "PricingCategory": "Standard",
+        # Priced in the billing currency: the PricingCurrency columns
+        # repeat the billing ones.
+        "PricingCurrency": "USD",
         "PricingUnit": "tokens",
         "ProviderName": provider,
         "PublisherName": provider,
@@ -225,9 +325,11 @@ def _record_rows(
         "ResourceType": "AI agent session",
         "ServiceCategory": "AI and Machine Learning",
         "ServiceName": service,
+        "ServiceProviderName": provider,
         "ServiceSubcategory": "Generative AI",
         "SubAccountId": record.workspace or None,
         "SubAccountName": record.workspace or None,
+        "SubAccountType": "Workspace" if record.workspace else None,
     }
 
     for attribute, sku_suffix, label, rate_attribute in _BUCKETS:
@@ -235,7 +337,11 @@ def _record_rows(
         if not quantity:
             continue
         unit_price = getattr(rates, rate_attribute) / 1_000_000  # USD per token
-        cost = quantity * unit_price
+        contracted_price = unit_price * contracted
+        # Each cost is its unit price times the quantity, the product
+        # FOCUS checks exactly.
+        list_cost = quantity * unit_price
+        cost = quantity * contracted_price
         sku = f"{record.model}/{sku_suffix}"
         # A request option (fast mode, US-only, batch) is a price point of
         # the same SKU: SkuPriceId names it, ListUnitPrice carries it.
@@ -245,19 +351,35 @@ def _record_rows(
             **shared,
             # Showback: the cost columns carry list cost (module doc); a
             # negotiated discount lowers all but ListCost.
-            "BilledCost": cost * contracted,
-            "EffectiveCost": cost * contracted,
-            "ContractedCost": cost * contracted,
-            "ListCost": cost,
+            "BilledCost": cost,
+            "EffectiveCost": cost,
+            "ContractedCost": cost,
+            "ListCost": list_cost,
             "ChargeDescription": f"{record.model} {label} via {service}{note}",
             # Quantities as decimals: FOCUS metric columns must not
             # schema-infer as integers.
             "ConsumedQuantity": float(quantity),
+            "ContractedUnitPrice": contracted_price,
             "ListUnitPrice": unit_price,
+            "PricingCurrencyContractedUnitPrice": contracted_price,
+            "PricingCurrencyEffectiveCost": cost,
+            "PricingCurrencyListUnitPrice": unit_price,
             "PricingQuantity": float(quantity),
             "SkuId": sku,
+            "SkuMeter": label,
+            "SkuPriceDetails": _price_details(sku_suffix, record.price_modifiers),
             "SkuPriceId": sku + option,
         }
+
+
+@cache
+def _price_details(sku_suffix: str, price_modifiers: str) -> str:
+    """SkuPriceDetails of a token SKU price, a JSON object: what kind of
+    tokens, and the request options that set the price, if any."""
+    properties = dict(_PRICE_PROPERTIES[sku_suffix])
+    if price_modifiers:
+        properties["x_RequestOptions"] = price_modifiers
+    return json.dumps(properties, separators=(",", ":"))
 
 
 def _floor_hour(moment: datetime) -> datetime:

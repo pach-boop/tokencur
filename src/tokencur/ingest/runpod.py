@@ -66,6 +66,13 @@ def _charge(row: object, bucket: str) -> BilledCharge | None:
     if ms is not None and (type(ms) is not int or ms < 0):
         return None
     begin = _fmt(start)
+    disk_gb = disk if _money(disk) and disk else 0
+    if ms or not disk_gb:
+        quantity, unit = (ms or 0) / 3_600_000, "Hours"
+        detail = f"{disk_gb:g} GB disk" if disk_gb else ""
+    else:
+        # No pod time billed (a stopped pod): the charge is for its disk.
+        quantity, unit, detail = float(disk_gb), "GB", "disk only"
     return BilledCharge(
         source="runpod",
         record_id=f"{pod}@{begin}",
@@ -75,10 +82,10 @@ def _charge(row: object, bucket: str) -> BilledCharge | None:
         service="RunPod Pods",
         resource_id=pod,
         resource_type="GPU pod",
-        quantity=(ms or 0) / 3_600_000,
-        unit="Hours",
+        quantity=quantity,
+        unit=unit,
         amount_usd=float(amount),
-        detail=f"{disk:g} GB disk" if _money(disk) and disk else "",
+        detail=detail,
     )
 
 

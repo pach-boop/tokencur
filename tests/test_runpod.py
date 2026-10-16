@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import sqlite3
 from contextlib import closing
@@ -80,9 +81,31 @@ def test_billed_charges_are_focus_compute_rows_with_real_billed_cost():
         "2026-09-27T00:00:00Z",
         "2026-09-28T00:00:00Z",
     )
+    # A stopped pod billed only for its disk: priced per GB, since FOCUS
+    # 1.3 wants a unit price on every usage row with a SKU price.
     disk_only = rows[2]
-    assert disk_only["ConsumedQuantity"] == 0.0
-    assert disk_only["ListUnitPrice"] is None
+    assert (disk_only["ConsumedQuantity"], disk_only["ConsumedUnit"]) == (20.0, "GB")
+    assert disk_only["ListUnitPrice"] == pytest.approx(0.0125 / 20)
+    assert (disk_only["SkuId"], disk_only["SkuMeter"]) == ("runpod/gb", "GPU pod disk")
+    assert disk_only["BilledCost"] == 0.0125
+
+
+def test_list_and_contracted_cost_are_the_unit_price_times_the_quantity():
+    """FOCUS checks cost = unit price x quantity exactly. 0.07 / 1.1 * 1.1
+    is not 0.07 in floating point, so ListCost and ContractedCost come
+    from the unit price; BilledCost stays what RunPod took."""
+    charge = next(runpod.iter_charges(EXPORT))
+    odd = dataclasses.replace(charge, quantity=1.1, amount_usd=0.07)
+
+    (row,) = charge_rows([odd])
+
+    assert row["BilledCost"] == row["EffectiveCost"] == 0.07
+    for cost, price in (
+        ("ListCost", "ListUnitPrice"),
+        ("ContractedCost", "ContractedUnitPrice"),
+    ):
+        assert row[cost] == row[price] * row["PricingQuantity"]
+        assert row[cost] == pytest.approx(0.07)
 
 
 def _agent_call(root: Path) -> None:

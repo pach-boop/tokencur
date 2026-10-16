@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, undated_count, unpriced_models
@@ -65,6 +67,40 @@ def test_focus_semantics_and_formats():
     assert row["SubAccountId"] == "my-workspace"
 
 
+def test_focus_1_3_columns():
+    rows = {r["SkuId"]: r for r in to_focus_rows([_record()])}
+    row = rows["claude-opus-4-8/cache-write-5m"]
+
+    # 1.3 splits ProviderName: who sells the service, who runs it.
+    assert row["ServiceProviderName"] == row["HostProviderName"] == "Anthropic"
+    assert (row["BillingAccountType"], row["SubAccountType"]) == (
+        "Showback",
+        "Workspace",
+    )
+    assert row["SkuMeter"] == "cache write (5m TTL) tokens"
+    assert json.loads(row["SkuPriceDetails"]) == {
+        "x_TokenType": "cache write",
+        "x_CacheTtl": "5m",
+    }
+    assert row["PricingCurrency"] == "USD"
+    assert row["PricingCurrencyListUnitPrice"] == row["ListUnitPrice"]
+    assert row["PricingCurrencyEffectiveCost"] == row["EffectiveCost"]
+    # Features no source has are explicit nulls, never left out.
+    assert row["CommitmentDiscountId"] is None
+    assert row["RegionId"] is None
+    assert row["Tags"] is None
+
+
+def test_costs_are_exactly_unit_price_times_quantity_under_a_discount():
+    """The Foundation's validator compares cost = unit price x quantity
+    without tolerance, so the costs are built as that product."""
+    for row in to_focus_rows([_record()], discounts={"Anthropic": 0.15}):
+        quantity = row["PricingQuantity"]
+        assert row["ListCost"] == row["ListUnitPrice"] * quantity
+        assert row["ContractedCost"] == row["ContractedUnitPrice"] * quantity
+        assert row["ContractedUnitPrice"] == pytest.approx(row["ListUnitPrice"] * 0.85)
+
+
 def test_unpriced_records_are_skipped_and_counted():
     records = [_record(), _record(model="mystery-model")]
 
@@ -110,6 +146,10 @@ def test_a_priced_option_is_its_own_sku_price():
     assert out["SkuPriceId"] == "claude-opus-5-5/output/fast"
     assert out["ListUnitPrice"] == pytest.approx(40 / 1_000_000)  # $40/MTok
     assert out["ChargeDescription"].endswith("(fast)")
+    assert json.loads(out["SkuPriceDetails"]) == {
+        "x_TokenType": "output",
+        "x_RequestOptions": "fast",
+    }
 
 
 def test_a_negotiated_discount_lowers_contracted_cost_not_list_cost():

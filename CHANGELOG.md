@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed
+
+- **The FOCUS export carries every FOCUS 1.3 column**: 65, up from 35. It is
+  still checked as 1.2 until the conformance gate moves to 1.3; it already
+  passes 1.3 but for one malformed rule in the Foundation's 1.3 rule file.
+  The new columns with values:
+  - `ServiceProviderName` and `HostProviderName`, 1.3's split of
+    `ProviderName`;
+  - `BillingAccountType` ("Showback", or "Prepaid credits" for RunPod) and
+    `SubAccountType` ("Workspace");
+  - `SkuMeter`, what each SKU meters, e.g. "cache read tokens";
+  - `SkuPriceDetails`, the token type, cache TTL and request options of each
+    token price as `x_` properties;
+  - `ContractedUnitPrice`, and the `PricingCurrency` columns (USD, repeating
+    the billing ones).
+
+  Columns for features no source has are explicit nulls: cost allocation,
+  zones and regions, capacity reservations, commitment discounts, contracts
+  and tags. Without a discount, every value exported before is unchanged.
+- **Costs are unit price times quantity, exactly**, the product FOCUS 1.3
+  checks without tolerance. Under a negotiated discount, ContractedCost can
+  move by a rounding unit. For a billed charge, ListCost and ContractedCost
+  now come from the unit price, while BilledCost and EffectiveCost stay what
+  the provider took.
+- **A RunPod charge for disk only** (a stopped pod) is measured in GB of disk
+  instead of 0 hours, so it has a unit price.
+
 ## [0.9.0] - 2026-10-14
 
 ### Added
