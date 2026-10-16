@@ -9,7 +9,7 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 |---|---|---|
 | [0001](0001-showback-and-three-money-concepts.md) | Value usage as list-price showback; keep outlay, value and counterfactuals apart | Accepted |
 | [0002](0002-two-pricing-layers-never-zero.md) | Two pricing layers, curated card first; unpriced is never $0 | Accepted |
-| [0003](0003-focus-1-2-gated-by-the-foundation-validator.md) | Target FOCUS 1.2, gated in CI by the Foundation's validator | Accepted |
+| [0003](0003-focus-1-2-gated-by-the-foundation-validator.md) | Target FOCUS 1.2, gated in CI by the Foundation's validator | Superseded by 0016 |
 | [0004](0004-local-ledger-with-audited-corrections.md) | A local SQLite ledger keyed on stable ids, with audited corrections | Accepted |
 | [0005](0005-reconcile-with-the-sources-own-counters.md) | Reconcile with a source's own counters wherever it keeps them | Accepted |
 | [0006](0006-metadata-only-and-no-runtime-dependencies.md) | Read metadata only, depend on nothing at runtime | Accepted |
@@ -22,3 +22,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0013](0013-ci-results-per-change-matched-by-tree.md) | CI results per change, from a capture, matched by tree | Accepted |
 | [0014](0014-plan-limits-from-the-agents-quota-metadata.md) | Plan limits from the agent's own quota metadata, in usage value | Accepted |
 | [0015](0015-read-the-agents-own-usage-meter.md) | Read the agent's own usage meter, from one key of its state file | Accepted |
+| [0016](0016-focus-1-3-gated-on-the-released-rules.md) | Target FOCUS 1.3, gated by the Foundation's validator on its released rules | Accepted |

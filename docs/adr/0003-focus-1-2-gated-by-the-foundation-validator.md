@@ -1,6 +1,6 @@
 # 0003. Target FOCUS 1.2, gated in CI by the Foundation's validator
 
-- Status: Accepted
+- Status: Superseded by [ADR 0016](0016-focus-1-3-gated-on-the-released-rules.md) on 2026-10-15
 - Date: 2026-07-07; validator 2.2.1 on 2026-10-01; fixture logs 2026-10-02
 
 ## Context

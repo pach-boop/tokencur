@@ -26,7 +26,7 @@ from functools import cache
 from tokencur.pricing import ModelRates, rates_for, rates_for_record
 from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 
-FOCUS_VERSION = "1.2"
+FOCUS_VERSION = "1.3"
 
 # Column order for CSV export: every column of the FOCUS 1.3 Cost and
 # Usage dataset. ProviderName and PublisherName are deprecated in 1.3 in
