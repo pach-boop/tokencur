@@ -60,6 +60,12 @@ pip install focus-validator==2.2.1 pyarrow==24.0.0  # pyarrow 26 needs numpy 2
 python scripts/validate_focus.py
 ```
 
+A weekly workflow, `focus-watch`, runs `scripts/focus_watch.py` with the
+newest validator. It opens an issue labelled `focus-watch` when the 1.3 gate
+can drop its tolerated rule or the `focus-1.4` branch can be merged, and
+when that branch stops passing. `python scripts/focus_watch.py --dry-run`
+prints the same report without touching issues.
+
 ## Adding a usage source
 
 One module per source under `src/tokencur/ingest/`, exposing
