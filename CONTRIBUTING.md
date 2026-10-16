@@ -52,8 +52,8 @@ fails under 90%, runs the suite on Linux, macOS and Windows, and builds
 and installs the wheel. Leaked file or database handles fail the suite.
 
 The FOCUS conformance gate runs the FinOps Foundation's own validator
-(Python 3.12+) on its released FOCUS 1.3 rules, which it downloads and
-checks against a pinned SHA-256 (ADR 0016):
+(Python 3.12+) on its FOCUS 1.4.0.1 rules, a prerelease, which it
+downloads and checks against a pinned SHA-256 (ADR 0017):
 
 ```bash
 pip install focus-validator==2.2.1 pyarrow==24.0.0  # pyarrow 26 needs numpy 2

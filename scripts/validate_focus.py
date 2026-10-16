@@ -1,7 +1,7 @@
 """Conformance gate: run the FinOps Foundation validator on our export.
 
 Exports one FOCUS CSV holding these datasets and runs ``focus-validator``
-against spec 1.3:
+against spec 1.4:
 
 - hand-built records for edge dates (a December charge, whose billing
   period ends in the next year), and
@@ -15,21 +15,16 @@ against spec 1.3:
 - the hand-built records again under negotiated discounts, so rows where
   ContractedCost, EffectiveCost and BilledCost sit below ListCost pass too.
 
-The rules are the Foundation's released 1.3 rule file, the one the
-validator downloads for 1.3 by default. The gate fetches it, checks its
-SHA-256 and runs the validator on it offline (``--block-download``), so
-a re-published rule file cannot change the verdict unseen. The validator
-is told which features tokencur's data has (applicability criteria);
-rules for features it lacks are skipped, as the spec makes them
-conditional.
+The rules are the Foundation's 1.4.0.1 rule file, a prerelease: the
+released 1.4 file crashes focus-validator 2.2.1 before it checks any
+data, so this branch waits for released 1.4 rules the validator can run
+(ADR 0017). The gate fetches the file, checks its SHA-256 and runs the
+validator on it offline (``--block-download``), so a re-published rule
+file cannot change the verdict unseen. The validator is told which
+features tokencur's data has (applicability criteria); rules for
+features it lacks are skipped, as the spec makes them conditional.
 
-Passes when every rule passes but one, tolerated by name with its
-parent: ``CAU-CapacityReservationStatus-C-004-C``. Its condition is
-malformed in the released file (``{"AND": [...]}`` instead of a check
-function), so the validator requires a status on every row, while
-C-003-C requires none where there is no reservation: no dataset passes
-both. The Foundation's newer 1.3.0.4 rules, a prerelease, fix it, and
-the export passes them with no failure (ADR 0016).
+Passes when every rule passes: nothing is tolerated.
 
 The weekly FOCUS watch (``scripts/focus_watch.py``) runs this gate on
 other rule files: ``--rules`` takes a local ``model-<version>.json`` in
@@ -62,9 +57,9 @@ from tokencur.records import UsageRecord
 
 RULES_URL = (
     "https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS_Spec"
-    "/releases/download/v1.3/model-1.3.0.1.json"
+    "/releases/download/latest-draft/model-1.4.0.1.json"
 )
-RULES_SHA256 = "2c0e38136d12fc5f965c09ef7e005f8ec00dbe2fe6907e8b98d79d8257a0d272"
+RULES_SHA256 = "6ebcae49979fa37923e5c43754cefe1053c11f8ca5b62a18c7401e805ed30a11"
 # What tokencur's data has, in the validator's terms.
 APPLICABILITY_CRITERIA = (
     "ACCOUNT_NAMING_SUPPORTED",  # billing accounts have names
@@ -77,11 +72,8 @@ APPLICABILITY_CRITERIA = (
     "UNIT_PRICING_SUPPORTED",  # a price per token, hour or GB
     "USAGE_MEASUREMENT_SUPPORTED",  # tokens, hours and GB are measured
 )
-# The malformed rule, and the composite that fails only through it.
-TOLERATED = {
-    "CAU-CapacityReservationStatus-C-004-C",
-    "CAU-CapacityReservationStatus-C-002-C",
-}
+# Rules a defect in the rule file makes impossible to pass: none in 1.4.
+TOLERATED: set[str] = set()
 # A negotiated contract (see tokencur.pricing.load_discounts).
 DISCOUNTS = {"Anthropic": 0.15, "OpenAI": 0.10, "Moonshot AI": 0.05}
 FIXTURES = Path(__file__).parent.parent / "tests" / "fixtures"
@@ -136,13 +128,13 @@ def _fixture_records() -> list[UsageRecord]:
 
 
 def _fetch_rules(directory: Path) -> Path:
-    """Save the released rule file into ``directory``, checked by hash."""
+    """Save the pinned rule file into ``directory``, checked by hash."""
     with urllib.request.urlopen(RULES_URL, timeout=60) as response:
         data = response.read()
     digest = hashlib.sha256(data).hexdigest()
     if digest != RULES_SHA256:
         raise SystemExit(
-            f"the released rule file changed: sha256 {digest}, pinned {RULES_SHA256}"
+            f"the pinned rule file changed: sha256 {digest}, pinned {RULES_SHA256}"
         )
     path = directory / RULES_URL.rsplit("/", 1)[1]
     path.write_bytes(data)

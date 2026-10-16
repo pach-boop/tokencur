@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed
+
+- **tokencur targets FOCUS 1.4** (ADR 0017, superseding ADR 0016). CI fails
+  unless the export passes the Foundation's `focus-validator` on its 1.4.0.1
+  rules, a prerelease pinned by SHA-256, with nothing tolerated: 351 rules
+  pass. The released 1.4 rule file crashes the validator 2.2.1.
+- **The FOCUS export carries the two columns new in 1.4**:
+  `CommitmentProgramEligibilityDetails` and `InvoiceDetailId`, explicit nulls
+  (no commitment programs, no payable invoices). `ProviderName` and
+  `PublisherName` stay: the text of 1.4 removes them, but its rule files
+  still require them. 67 columns, up from 65; every value exported before is
+  unchanged.
+
 ### Added
 
 - **A weekly FOCUS watch** (the `focus-watch` workflow, Mondays). It runs the

@@ -2,7 +2,7 @@
 
 The fixture is a slice of the FinOps Foundation's published sample data
 (see tests/fixtures/README.md). It targets FOCUS 1.0 while tokencur
-exports 1.3, so these tests assert *convention compatibility* — shared
+exports 1.4, so these tests assert *convention compatibility* — shared
 vocabulary, mutually parseable values, spec-conformant formats — not
 column-set equality.
 """

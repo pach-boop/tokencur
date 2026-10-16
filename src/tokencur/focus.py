@@ -26,11 +26,13 @@ from functools import cache
 from tokencur.pricing import ModelRates, rates_for, rates_for_record
 from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 
-FOCUS_VERSION = "1.3"
+FOCUS_VERSION = "1.4"
 
-# Column order for CSV export: every column of the FOCUS 1.3 Cost and
-# Usage dataset. ProviderName and PublisherName are deprecated in 1.3 in
-# favour of ServiceProviderName and HostProviderName, but still required.
+# Column order for CSV export: every column of the FOCUS 1.4 Cost and
+# Usage dataset, plus ProviderName and PublisherName. 1.4's text removes
+# them in favour of ServiceProviderName and HostProviderName, but its rule
+# files still require them (two "Deprecated" presence rules the validator
+# runs), so they stay until the rules drop them (ADR 0017).
 FOCUS_COLUMNS = [
     "AllocatedMethodDetails",
     "AllocatedMethodId",
@@ -60,6 +62,7 @@ FOCUS_COLUMNS = [
     "CommitmentDiscountStatus",
     "CommitmentDiscountType",
     "CommitmentDiscountUnit",
+    "CommitmentProgramEligibilityDetails",
     "ConsumedQuantity",
     "ConsumedUnit",
     "ContractApplied",
@@ -67,6 +70,7 @@ FOCUS_COLUMNS = [
     "ContractedUnitPrice",
     "EffectiveCost",
     "HostProviderName",
+    "InvoiceDetailId",
     "InvoiceId",
     "InvoiceIssuerName",
     "ListCost",
@@ -100,10 +104,11 @@ FOCUS_COLUMNS = [
 ]
 
 # Columns for features no tokencur source has: cost allocation, zones and
-# regions, capacity reservations, commitment discounts, contract
-# commitments and tags. They are exported as explicit nulls rather than
-# left out: the Foundation's validator checks a column's type even where
-# its feature does not apply, and a fixed set of columns loads more easily.
+# regions, capacity reservations, commitment discounts and programs,
+# contract commitments and tags. They are exported as explicit nulls
+# rather than left out: the Foundation's validator checks a column's type
+# even where its feature does not apply, and a fixed set of columns loads
+# more easily.
 _NOT_APPLICABLE = dict.fromkeys(
     (
         "AllocatedMethodDetails",
@@ -121,6 +126,7 @@ _NOT_APPLICABLE = dict.fromkeys(
         "CommitmentDiscountStatus",
         "CommitmentDiscountType",
         "CommitmentDiscountUnit",
+        "CommitmentProgramEligibilityDetails",
         "ContractApplied",
         "RegionId",
         "RegionName",
@@ -239,6 +245,7 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
             "ContractedUnitPrice": unit_price,
             "HostProviderName": c.provider,
             # Prepaid credits: the provider issues no invoice per charge.
+            "InvoiceDetailId": None,
             "InvoiceId": None,
             "InvoiceIssuerName": c.provider,
             "ListUnitPrice": unit_price,
@@ -311,6 +318,7 @@ def _record_rows(
         "HostProviderName": provider,
         # Showback charges have no invoice; the spec requires an
         # explicit null in that case.
+        "InvoiceDetailId": None,
         "InvoiceId": None,
         "InvoiceIssuerName": provider,
         "PricingCategory": "Standard",
