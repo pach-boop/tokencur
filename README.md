@@ -71,7 +71,7 @@ flowchart LR
     L --> P["Pricing<br/>curated card + LiteLLM snapshot"]
     W["price-watch action<br/>(daily)"] -.->|refreshes| P
     P --> R["report · recommend"]
-    P --> F["FOCUS 1.3 normalizer"]
+    P --> F["FOCUS 1.4 normalizer"]
     F --> E["export: FOCUS CSV<br/>(validated in CI)"]
     F --> O["observatory · dashboard"]
 ```
@@ -91,7 +91,7 @@ Requires Python 3.11+. No runtime dependencies.
 ```bash
 pip install tokencur
 tokencur report                # cost summary in your terminal
-tokencur export focus.csv      # FOCUS 1.3 conformant dataset
+tokencur export focus.csv      # FOCUS 1.4 conformant dataset
 tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 tokencur doctor                # read-only health check: log formats, ledger, pricing
@@ -473,14 +473,14 @@ last rate), then regenerates this page from that history.
   5-minute tier (slight underestimate), documented in the parser.
 - Daily buckets use the UTC dates recorded in the logs; a late-night local session can
   land on the next UTC day.
-- Targets FOCUS 1.3, checked in CI by the Foundation's `focus-validator` on its released
-  1.3 rules, pinned by hash
-  ([ADR 0016](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0016-focus-1-3-gated-on-the-released-rules.md)).
-  One rule is tolerated by name: it is malformed in the released rule file and fixed
-  in the Foundation's 1.3.0.4 prerelease, which the export passes with no failure.
-  FOCUS 1.4 waits for released rules the validator can run; a weekly
+- Targets FOCUS 1.4, checked in CI by the Foundation's `focus-validator` on its 1.4.0.1
+  rules, a prerelease pinned by hash, with nothing tolerated
+  ([ADR 0017](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0017-focus-1-4-once-its-released-rules-run.md)).
+  The released 1.4 rule file crashes the validator; a weekly
   [focus-watch action](https://github.com/pach-boop/tokencur/blob/main/.github/workflows/focus-watch.yml)
-  opens an issue the day they do. The export is also
+  opens an issue the day it runs. The text of 1.4 removes `ProviderName` and
+  `PublisherName`, but its rule files still require them, so the export keeps both.
+  The export is also
   cross-checked against the Foundation's official
   sample data (which targets FOCUS 1.0; the tests assert convention compatibility, not
   column equality).
