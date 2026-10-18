@@ -1,0 +1,9 @@
+[Unit]
+Description=tokencur: run the plan limits watch every 20 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=20min
+
+[Install]
+WantedBy=timers.target
