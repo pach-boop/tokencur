@@ -209,6 +209,32 @@ def test_the_meter_places_the_week_and_the_projection_uses_its_limit():
     assert "under the limit (about $1,000.00 by the meter)" in out
 
 
+def test_the_json_takes_the_percent_from_the_meter():
+    records = [_call("2026-10-14T12:00:00", 200.0)]
+    week = _reading("seven_day", 20.0, resets="2026-10-21T11:00:00Z")
+
+    figures = limits.as_dict(limits.limits(records, [], None, NOW, readings=[week]))
+
+    seven = figures["windows"]["seven_day"]
+    assert (seven["percent"], seven["percent_of"]) == (20.0, "meter")
+    assert seven["meter"] == {
+        "percent": 20.0,
+        "read_at": "2026-10-15T01:29:49Z",
+        "limit": 1000.0,
+    }
+    assert seven["projection"]["limit_from"] == "meter"
+
+
+def test_the_json_gives_a_low_reading_as_read():
+    result = limits.limits(
+        RECORDS, [], None, NOW, readings=[_reading("five_hour", 4.0)]
+    )
+
+    five = limits.as_dict(result)["windows"]["five_hour"]
+    assert (five["percent"], five["percent_of"]) == (4.0, "meter_reading")
+    assert five["meter"]["limit"] is None
+
+
 def test_limits_reads_and_keeps_the_meter(tmp_path, monkeypatch, capsys):
     root = tmp_path / "projects"
     root.mkdir()

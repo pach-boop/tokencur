@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- `tokencur limits --json`: the figures behind the view, for scripts. Per
+  window the usage value, the share of the limit and what it is measured
+  against (Claude Code's meter, its own low reading, or the lowest ceiling
+  seen), the reset, and the week's projection. The view and the JSON come
+  from the same code, so they cannot drift apart.
 - **A weekly FOCUS watch** (the `focus-watch` workflow, Mondays). It runs the
   newest `focus-validator` three ways: main's export on the 1.3 rules the
   validator downloads by default, tolerating nothing; the `focus-1.4`

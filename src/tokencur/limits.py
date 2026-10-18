@@ -29,7 +29,7 @@ from __future__ import annotations
 import os
 from bisect import bisect_left
 from collections.abc import Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from pathlib import Path
 
@@ -418,13 +418,136 @@ def _plan_line(result: Limits) -> str:
     )
 
 
+def _ceilings(result: Limits, kind: str) -> tuple[list[Ceiling], list[Ceiling]]:
+    """The ceilings of ``kind`` on the plan in force, and those that are a
+    reference for it: their whole window ran on it and these logs hold its
+    usage."""
+    seen = [c for c in result.ceilings if c.kind == kind]
+    mine = [c for c in seen if c.plan == result.plan] if result.plan else seen
+    return mine, [c for c in mine if not c.spans_plans and c.value >= _MEASURED]
+
+
+def _lowest(result: Limits, kind: str) -> float | None:
+    return min((c.value for c in _ceilings(result, kind)[1]), default=None)
+
+
+@dataclass(frozen=True)
+class Projection:
+    """Where the last seven days' pace takes the week, against one limit."""
+
+    limit: float
+    reference: str  # "meter" (Claude Code's meter) or "lowest_ceiling"
+    already_past: bool = False
+    reaches_at: datetime | None = None  # it gets there before the reset
+    ends_near: float | None = None  # it stays under: the value at the reset
+
+
+def project(result: Limits) -> Projection | None:
+    """The week's projection the view prints, or None when there is no
+    open week, its limit already turned requests away, or nothing to set
+    it against. Without usage in the last seven days only ``limit`` and
+    ``reference`` are known."""
+    window = result.current["seven_day"]
+    if window is None or window.blocked:
+        return None
+    if window.meter_limit is not None:
+        limit, reference = window.meter_limit, "meter"
+    else:
+        lowest = _lowest(result, "seven_day")
+        if not lowest:
+            return None
+        limit, reference = lowest, "lowest_ceiling"
+    if window.value >= limit:
+        return Projection(limit, reference, already_past=True)
+    pace = result.pace_per_day
+    if pace <= 0:
+        return Projection(limit, reference)
+    eta = result.now + timedelta(days=(limit - window.value) / pace)
+    if eta >= window.end:
+        left = (window.end - result.now) / timedelta(days=1)
+        return Projection(limit, reference, ends_near=window.value + pace * left)
+    return Projection(limit, reference, reaches_at=eta)
+
+
+def as_dict(result: Limits) -> dict:
+    """The figures behind the view, for scripts (``tokencur limits --json``).
+
+    Times are UTC ISO 8601. ``percent`` is the share of the limit used:
+    by Claude Code's meter when it says what the whole limit is worth
+    (``"meter"``), the meter's own reading when it was too low to say
+    (``"meter_reading"``), else against the lowest ceiling seen on this
+    plan (``"lowest_ceiling"``); null when there is nothing to set it
+    against."""
+
+    def iso(moment: datetime | None) -> str | None:
+        if moment is None:
+            return None
+        return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def window(kind: str) -> dict | None:
+        current = result.current[kind]
+        if current is None:
+            return None
+        lowest = _lowest(result, kind)
+        if current.meter_limit is not None:
+            percent, reference = 100 * current.value / current.meter_limit, "meter"
+        elif current.meter_percent is not None:
+            percent, reference = current.meter_percent, "meter_reading"
+        elif lowest:
+            percent, reference = 100 * current.value / lowest, "lowest_ceiling"
+        else:
+            percent, reference = None, None
+        meter = None
+        if current.meter_percent is not None:
+            meter = {
+                "percent": current.meter_percent,
+                "read_at": iso(current.meter_at),
+                "limit": (
+                    None
+                    if current.meter_limit is None
+                    else round(current.meter_limit, 2)
+                ),
+            }
+        return {
+            "start": iso(current.start),
+            "resets_at": iso(current.end),
+            "usage_value": round(current.value, 2),
+            "percent": None if percent is None else round(percent, 1),
+            "percent_of": reference,
+            "blocked": current.blocked,
+            "estimated": current.estimated,
+            "meter": meter,
+            "lowest_ceiling": None if lowest is None else round(lowest, 2),
+        }
+
+    week = window("seven_day")
+    projection = project(result)
+    if week is not None and projection is not None:
+        week["projection"] = {
+            "limit": round(projection.limit, 2),
+            "limit_from": projection.reference,
+            "already_past": projection.already_past,
+            "reaches_limit_at": iso(projection.reaches_at),
+            "ends_near": (
+                None if projection.ends_near is None else round(projection.ends_near, 2)
+            ),
+        }
+    return {
+        "unit": "API-equivalent USD: usage value, not money paid",
+        "now": iso(result.now),
+        "plan": result.plan or None,
+        "pace_per_day": round(result.pace_per_day, 2),
+        "windows": {"seven_day": week, "five_hour": window("five_hour")},
+        "provenance": asdict(provenance()),
+    }
+
+
 def _section(result: Limits, kind: str, at) -> list[str]:
     label = _LABELS[kind]
     window = result.current[kind]
     seen = [c for c in result.ceilings if c.kind == kind]
-    mine = [c for c in seen if c.plan == result.plan] if result.plan else seen
-    references = [c for c in mine if not c.spans_plans and c.value >= _MEASURED]
-    lowest = min((c.value for c in references), default=None)
+    mine, references = _ceilings(result, kind)
+    lowest = _lowest(result, kind)
     lines = []
     if window is None and kind == "seven_day":
         lines.append(
@@ -493,18 +616,9 @@ def _section(result: Limits, kind: str, at) -> list[str]:
                 f"  also hit at {at(c.hit_at)} with ${c.value:,.2f} in these logs: "
                 "the usage was elsewhere, not a reference"
             )
-    if window is not None and not window.blocked and kind == "seven_day":
-        if window.meter_limit is not None:
-            reference = (
-                window.meter_limit,
-                f"the limit (about ${window.meter_limit:,.2f} by the meter)",
-            )
-        elif lowest:
-            reference = (lowest, f"the lowest ceiling seen (${lowest:,.2f})")
-        else:
-            reference = None
-        if reference is not None:
-            lines.append("  " + _projection(result, window, *reference, at))
+    projection = project(result) if kind == "seven_day" else None
+    if projection is not None:
+        lines.append("  " + _projection(result, projection, at))
     if not mine:
         earlier = len(seen)
         lines.append(
@@ -516,24 +630,28 @@ def _section(result: Limits, kind: str, at) -> list[str]:
     return lines
 
 
-def _projection(result: Limits, window: Window, lowest: float, named: str, at) -> str:
-    if window.value >= lowest:
-        return f"already past {named}"
+def _projection(result: Limits, projection: Projection, at) -> str:
+    limit = projection.limit
+    if projection.reference == "meter":
+        named = f"the limit (about ${limit:,.2f} by the meter)"
+    else:
+        named = f"the lowest ceiling seen (${limit:,.2f})"
     pace = result.pace_per_day
-    if pace <= 0:
-        return "no usage in the last 7 days to project from"
-    eta = result.now + timedelta(days=(lowest - window.value) / pace)
-    if eta >= window.end:
-        left = (window.end - result.now) / timedelta(days=1)
+    if projection.already_past:
+        return f"already past {named}"
+    if projection.reaches_at is not None:
+        eta = projection.reaches_at
+        resets = result.current["seven_day"].end
+        return (
+            f"at the last 7 days' pace (${pace:,.2f}/day) the week reaches "
+            f"{named} around {at(eta)}, {_span(resets - eta)} before it resets"
+        )
+    if projection.ends_near is not None:
         return (
             f"at the last 7 days' pace (${pace:,.2f}/day) the week ends near "
-            f"${window.value + pace * left:,.2f}, under {named}"
+            f"${projection.ends_near:,.2f}, under {named}"
         )
-    return (
-        f"at the last 7 days' pace (${pace:,.2f}/day) the week reaches "
-        f"{named} around {at(eta)}, "
-        f"{_span(window.end - eta)} before it resets"
-    )
+    return "no usage in the last 7 days to project from"
 
 
 def _span(delta: timedelta) -> str:
