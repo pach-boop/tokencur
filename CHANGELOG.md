@@ -12,6 +12,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   against (Claude Code's meter, its own low reading, or the lowest ceiling
   seen), the reset, and the week's projection. The view and the JSON come
   from the same code, so they cannot drift apart.
+- **A Claude Code status line and hooks** in `contrib/claude-code/`
+  (standard library only, no tokens): the session's context against a cut and
+  the plan limits in the status line; a session-start notice with the limits,
+  the week's projection and the command that measures the session's real
+  context; a session log; and a systemd timer that sends a desktop notice
+  once per step a limit crosses. They read `tokencur limits --json` through a
+  cache, so several sessions share one measurement.
 - **A weekly FOCUS watch** (the `focus-watch` workflow, Mondays). It runs the
   newest `focus-validator` three ways: main's export on the 1.3 rules the
   validator downloads by default, tolerating nothing; the `focus-1.4`

@@ -1,0 +1,12 @@
+[Unit]
+Description=tokencur: desktop notice when a plan limit crosses a step (no tokens)
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+# User services do not read your shell's PATH: name tokencur in full if
+# `command -v tokencur` is not in /usr/bin or /usr/local/bin.
+#Environment=TOKENCUR_BIN=%h/.local/bin/tokencur
+#Environment=TOKENCUR_PLANS=%h/.config/tokencur/subscriptions.json
+ExecStart=/usr/bin/env python3 %h/src/tokencur/contrib/claude-code/tokencur_hooks.py watch
