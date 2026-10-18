@@ -353,6 +353,13 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
   draws on the same limits. Several agents on one subscription share the same
   windows, so one command shows all of them how close the next hit is.
 
+`tokencur limits --json` prints the same figures for scripts: per window the
+usage value, the share of the limit and what it was measured against
+(`meter`, `meter_reading` or `lowest_ceiling`), the reset, and for the week
+when its pace reaches the limit. The status line and hooks in
+[`contrib/claude-code/`](https://github.com/pach-boop/tokencur/tree/main/contrib/claude-code)
+read it.
+
 Only `tokencur limits` looks for limit hits (a fast filter over the logs, about
 a second on a 1 GB history), so other commands stay as fast as before
 ([ADR 0014](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0014-plan-limits-from-the-agents-quota-metadata.md)).

@@ -462,6 +462,46 @@ def test_the_view_says_where_the_plans_came_from():
     )
 
 
+# The figures for scripts
+
+
+def test_the_json_carries_the_figures_the_view_prints():
+    figures = limits.as_dict(_week_of(110.0))
+
+    week = figures["windows"]["seven_day"]
+    assert week["usage_value"] == 660.0
+    assert (week["percent"], week["percent_of"]) == (94.3, "lowest_ceiling")
+    assert week["resets_at"] == "2026-10-21T11:00:00Z"
+    assert week["projection"] == {
+        "limit": 700.0,
+        "limit_from": "lowest_ceiling",
+        "already_past": False,
+        "reaches_limit_at": "2026-10-20T21:10:54Z",
+        "ends_near": None,
+    }
+    assert figures["plan"] == "$100/month since 2026-10-02"
+
+
+def test_the_json_says_when_the_week_stays_under_or_is_past():
+    under = limits.as_dict(_week_of(50.0))["windows"]["seven_day"]["projection"]
+    past = limits.as_dict(_week_of(200.0))["windows"]["seven_day"]["projection"]
+
+    assert (under["ends_near"], under["reaches_limit_at"]) == (342.86, None)
+    assert past["already_past"] is True
+
+
+def test_the_json_has_no_percent_without_a_ceiling_or_a_meter():
+    records = [_call("2026-10-18T20:00:00")]
+
+    figures = limits.as_dict(limits.limits(records, [], None, _t("2026-10-18T21:00")))
+
+    assert figures["windows"]["seven_day"] is None
+    five = figures["windows"]["five_hour"]
+    assert (five["percent"], five["percent_of"], five["meter"]) == (None, None, None)
+    assert figures["plan"] is None
+    assert json.loads(json.dumps(figures)) == figures
+
+
 # The command
 
 
@@ -529,3 +569,16 @@ def test_limits_says_when_the_plans_file_given_is_missing(
 def test_limits_without_usage_says_so(capsys):
     assert cli.main(["limits"]) == 1
     assert "no usage" in capsys.readouterr().err
+
+
+def test_limits_prints_json_for_scripts(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "load_records", lambda: [_call("2026-10-13T20:00:00")])
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    assert cli.main(["limits", "--json"]) == 0
+
+    figures = json.loads(capsys.readouterr().out)
+    assert figures["unit"] == "API-equivalent USD: usage value, not money paid"
+    assert set(figures["windows"]) == {"seven_day", "five_hour"}
+    assert figures["provenance"]["tokencur"]

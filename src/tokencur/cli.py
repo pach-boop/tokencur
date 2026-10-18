@@ -13,6 +13,7 @@ included, ``--until`` the first day excluded, so ``--since 2026-09-01
 from __future__ import annotations
 
 import argparse
+import json
 import sqlite3
 import sys
 from collections.abc import Sequence
@@ -174,6 +175,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="subscriptions.json with dated plans, to tell ceilings of "
         "different plans apart (default: ./subscriptions.json, else "
         "~/.config/tokencur/subscriptions.json)",
+    )
+    plan.add_argument(
+        "--json",
+        action="store_true",
+        help="print the figures as JSON, for scripts such as a status line",
     )
     plan.set_defaults(handler=_limits)
 
@@ -383,7 +389,10 @@ def _limits(args: argparse.Namespace) -> int:
         plans_from=home_relative(plans.absolute()) if plans else "",
         readings=ledger.read_meter_readings(),
     )
-    print(limits.render(result))
+    if args.json:
+        print(json.dumps(limits.as_dict(result), indent=2))
+    else:
+        print(limits.render(result))
     return 0
 
 
