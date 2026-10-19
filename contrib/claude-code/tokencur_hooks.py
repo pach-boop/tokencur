@@ -126,9 +126,14 @@ def transcript_context(path: str | Path) -> int | None:
 
 
 def find_transcript(prefix: str, projects: Path | None = None) -> Path:
-    """The one transcript whose session id starts with ``prefix``."""
+    """The one transcript whose session id starts with ``prefix``.
+
+    A session id is a UUID, so a prefix may hold hyphens; anything else that is
+    not a letter or digit (``*``, ``/``) is refused rather than globbed.
+    """
     projects = projects or Path.home() / ".claude" / "projects"
-    found = sorted(projects.glob(f"*/{prefix}*.jsonl")) if prefix.isalnum() else []
+    plain = prefix.replace("-", "").isalnum()
+    found = sorted(projects.glob(f"*/{prefix}*.jsonl")) if plain else []
     if len(found) != 1:
         raise LookupError(
             f"{len(found)} transcripts start with {prefix!r}: give a longer prefix"
