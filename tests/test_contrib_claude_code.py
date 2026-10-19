@@ -88,7 +88,8 @@ def test_a_session_is_found_by_its_id_prefix(tmp_path):
         "next break"
     )
     assert "289k left" in hooks.context_report("abd", projects)
-    for prefix in ("ab", "*", ""):
+    assert hooks.find_transcript("abc123-1", projects).name == "abc123-1.jsonl"
+    for prefix in ("ab", "*", "", "-", "abc*-1", "../home/abc"):
         with pytest.raises(LookupError):
             hooks.find_transcript(prefix, projects)
 
