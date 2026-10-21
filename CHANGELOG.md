@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-20
+
 ### Fixed
 
 - **Claude Code subagents' output is no longer valued at a few tokens a
