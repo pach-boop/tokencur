@@ -7,10 +7,12 @@
   only their usage metadata: token counts, model ids, timestamps,
   workspace and session ids, the request and message ids that keep a call
   from counting twice, the agent's version, the request options that
-  change a call's price, the directory each call ran in (for Kimi Code,
-  the `cwd` field of each session's `state.json`), and the cost and
-  API-time counters Claude Code writes when a session ends, with the
-  session each one continued in. Log lines and Kimi Code's `state.json`
+  change a call's price, whether a Claude Code call's line records a stop
+  reason (a subagent's never does, see ADR 0017), the directory each call
+  ran in (for Kimi Code, the `cwd` field of each session's `state.json`),
+  and the cost, output-token and API-time counters Claude Code writes when
+  a session ends, with when they began and the session each one continued
+  in. Log lines and Kimi Code's `state.json`
   files are decoded as JSON to reach those fields; message content is
   never read into a record, stored or logged. A test asserts that none of
   it reaches the public observatory output, and working directories stay

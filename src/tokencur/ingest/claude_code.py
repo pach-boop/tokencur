@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import math
 import os
+from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -49,7 +50,9 @@ def iter_usage_records(
     follows the agent as it changes directory); the token counts are
     each field's largest value across the message's lines, because
     streamed counts only grow and an early line can hold a partial
-    output count.
+    output count. A subagent's transcript never logs that final count;
+    where Claude Code's counters hold it, it is filled in (see
+    ``_top_up``).
     Lines that are not valid JSON or carry no usage data are skipped,
     as are synthetic placeholder messages (see ``SYNTHETIC_MODEL``) and
     malformed usage (see ``tokencur.ingest.fields``). ``stats``, when
@@ -57,23 +60,37 @@ def iter_usage_records(
     """
     stats = stats if stats is not None else ScanStats()
     messages: dict[str, UsageRecord] = {}
+    finished: set[str] = set()  # records a line logged with the call's stop reason
+    counters = SessionCounters()
+    first_line: dict[str, str] = {}  # each session's earliest logged timestamp
     for path in sorted(root.rglob("*.jsonl")):
         stats.files += 1
         workspace = _workspace(root, path)
         # errors="replace": a corrupted byte spoils one line, not the scan.
         with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
+                line_entry = entry(line)
+                _read_counters(line_entry, counters)
+                session, logged = (
+                    text(line_entry.get("sessionId")),
+                    text(line_entry.get("timestamp")),
+                )
+                if session and logged:
+                    first_line[session] = min(first_line.get(session, logged), logged)
                 try:
-                    record = _parse_line(line, workspace, stats)
+                    record = _parse_entry(line_entry, workspace, stats)
                 except Malformed:
                     stats.malformed += 1
                     continue
                 if record is None:
                     continue
+                if obj(line_entry.get("message")).get("stop_reason") is not None:
+                    finished.add(record.record_id)
                 first = messages.get(record.record_id)
                 messages[record.record_id] = (
                     record if first is None else _final_counts(first, record)
                 )
+    _top_up(messages, finished, counters, first_line, stats)
     yield from messages.values()
 
 
@@ -104,8 +121,97 @@ def _final_counts(first: UsageRecord, later: UsageRecord) -> UsageRecord:
     )
 
 
-def _parse_line(line: str, workspace: str, stats: ScanStats) -> UsageRecord | None:
-    line_entry = entry(line)
+#: How long after its counters begin a session may write its first line.
+#: Claude Code writes it within seconds (207 of 210 sessions measured on
+#: 2026-10-20, all within a minute). A later first line means the counters
+#: began in a session whose transcript is no longer on disk, so the gap
+#: between them and the transcripts is not this session's to fill.
+_COUNTERS_LEAD = timedelta(minutes=10)
+
+
+def _top_up(
+    messages: dict[str, UsageRecord],
+    finished: set[str],
+    counters: SessionCounters,
+    first_line: dict[str, str],
+    stats: ScanStats,
+) -> None:
+    """Fill in the output counts subagent transcripts log short.
+
+    A subagent (a Task agent or a workflow agent) logs each message of a
+    call while it streams, with the output count of the call's first
+    event (a few tokens), and never logs the final count; the main
+    transcript does (measured 2026-10-20, Claude Code 2.1.282: 73-97% of
+    subagent calls, under 1% of main-transcript calls). A call no line
+    logged with a stop reason is one of these. In each chain of sessions
+    that closed with counters, the output Claude Code counted for a model
+    beyond what the transcripts logged is spread evenly over that model's
+    short calls, so the chain's output matches Claude Code's own and each
+    call keeps its time. Without counters (a session still open) or when
+    the counters began before the transcripts on disk (``_COUNTERS_LEAD``),
+    the short counts stay as logged.
+    """
+    short: dict[tuple[str, str], list[str]] = defaultdict(list)
+    logged: dict[tuple[str, str], int] = defaultdict(int)
+    sessions: dict[str, set[str]] = defaultdict(set)
+    for record_id, record in messages.items():
+        end = _counted_end(record.session_id, counters)
+        sessions[end].add(record.session_id)
+        logged[end, record.model] += record.output_tokens
+        if record_id not in finished:
+            short[end, record.model].append(record_id)
+    stats.short_output_calls += sum(len(ids) for ids in short.values())
+    for (end, model), ids in short.items():
+        counted = counters.output.get(end, {}).get(model)
+        if counted is None or not _counters_cover(
+            end, sessions[end], counters, first_line
+        ):
+            continue
+        missing = counted - logged[end, model]
+        if missing <= 0:
+            continue
+        ids.sort(key=lambda r: (messages[r].timestamp, r))
+        share, rest = divmod(missing, len(ids))
+        for i, record_id in enumerate(ids):
+            record = messages[record_id]
+            added = share + (1 if i < rest else 0)
+            messages[record_id] = replace(
+                record, output_tokens=record.output_tokens + added
+            )
+        stats.topped_up_calls += len(ids)
+        stats.topped_up_tokens += missing
+
+
+def _counted_end(session: str, counters: SessionCounters) -> str:
+    """The last session with counters that ``session``'s chain reaches."""
+    end, seen = session, {session}
+    while True:
+        after = counters.continued.get(end)
+        if after not in counters.output or after in seen:
+            return end
+        end = after
+        seen.add(end)
+
+
+def _counters_cover(
+    end: str, sessions: set[str], counters: SessionCounters, first_line: dict[str, str]
+) -> bool:
+    """Whether ``end``'s counters began with the transcripts on disk."""
+    started = counters.started.get(end)
+    firsts = [first_line[s] for s in sessions if s in first_line]
+    if started is None or not firsts:
+        return False
+    try:
+        first = datetime.fromisoformat(min(firsts).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    begun = datetime.fromtimestamp(started / 1000, UTC)
+    return first.tzinfo is not None and first - begun <= _COUNTERS_LEAD
+
+
+def _parse_entry(
+    line_entry: dict, workspace: str, stats: ScanStats
+) -> UsageRecord | None:
     if line_entry.get("type") != "assistant":
         return None
     message = obj(line_entry.get("message"))
@@ -339,17 +445,22 @@ class SessionCounters:
     the cost it counted for each model, including calls it never writes
     to the transcript, and the time its API calls took. ``costs`` maps
     each session to the last such line's per-model cost in USD, and
-    ``api_ms`` to its API time in milliseconds, with and without retries.
+    ``api_ms`` to its API time in milliseconds, with and without retries,
+    ``output`` to its per-model output tokens and ``started`` to when its
+    counters began (``startTime``, milliseconds since the epoch).
     A session continued in another one (``continued-in`` lines) hands
     those counters on to it: ``continued`` maps each session to the one
-    it continued in. ``prompts`` counts, per session, the messages a
-    person typed (see ``_is_prompt``). Ids and numbers only.
+    it continued in, and the later session keeps the earlier one's start.
+    ``prompts`` counts, per session, the messages a person typed (see
+    ``_is_prompt``). Ids and numbers only.
     """
 
     costs: dict[str, dict[str, float]] = field(default_factory=dict)
     api_ms: dict[str, tuple[float, float]] = field(default_factory=dict)
     continued: dict[str, str] = field(default_factory=dict)
     prompts: dict[str, int] = field(default_factory=dict)
+    output: dict[str, dict[str, int]] = field(default_factory=dict)
+    started: dict[str, float] = field(default_factory=dict)
 
     def chain_end(self, session: str) -> str:
         """The last session of the chain ``session`` continued into."""
@@ -366,15 +477,8 @@ def session_counters(root: Path) -> SessionCounters:
     for path in sorted(root.rglob("*.jsonl")):
         with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
-                if '"cost-state"' in line:
-                    _read_cost_state(entry(line), counters)
-                elif '"continued-in"' in line:
-                    line_entry = entry(line)
-                    if line_entry.get("type") == "continued-in":
-                        before = text(line_entry.get("sessionId"))
-                        after = text(line_entry.get("continuedInSessionId"))
-                        if before and after and before != after:
-                            counters.continued[before] = after
+                if '"cost-state"' in line or '"continued-in"' in line:
+                    _read_counters(entry(line), counters)
                 elif '"user"' in line and '"tool_result"' not in line:
                     line_entry = entry(line)
                     session = text(line_entry.get("sessionId"))
@@ -404,16 +508,36 @@ def _is_prompt(line_entry: dict) -> bool:
     )
 
 
+def _read_counters(line_entry: dict, counters: SessionCounters) -> None:
+    """Add a ``cost-state`` or ``continued-in`` line to ``counters``."""
+    kind = line_entry.get("type")
+    if kind == "cost-state":
+        _read_cost_state(line_entry, counters)
+    elif kind == "continued-in":
+        before = text(line_entry.get("sessionId"))
+        after = text(line_entry.get("continuedInSessionId"))
+        if before and after and before != after:
+            counters.continued[before] = after
+
+
 def _read_cost_state(line_entry: dict, counters: SessionCounters) -> None:
     session = text(line_entry.get("sessionId"))
-    if line_entry.get("type") != "cost-state" or not session:
+    if not session:
         return
-    costs = {}
+    costs, output = {}, {}
     for model, usage in obj(line_entry.get("modelUsage")).items():
-        cost = obj(usage).get("costUSD")
+        cost, tokens = obj(usage).get("costUSD"), obj(usage).get("outputTokens")
         if _is_amount(cost):
             costs[model] = float(cost)
+        if _is_amount(tokens):
+            output[model] = int(tokens)
     counters.costs[session] = costs  # the last line of a session wins
+    counters.output[session] = output
+    start = line_entry.get("startTime")
+    if _is_amount(start):
+        counters.started[session] = float(start)
+    else:
+        counters.started.pop(session, None)
     total = line_entry.get("totalAPIDuration")
     net = line_entry.get("totalAPIDurationWithoutRetries")
     if _is_amount(total) and _is_amount(net) and net <= total:

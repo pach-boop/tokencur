@@ -18,6 +18,11 @@ class ScanStats:
     files: int = 0
     usage_lines: int = 0  # lines carrying the source's usage payload
     malformed: int = 0  # usage lines whose fields could not be read
+    # Calls logged with a short output count (Claude Code subagents), and
+    # those filled in from the agent's own counters, with the tokens added.
+    short_output_calls: int = 0
+    topped_up_calls: int = 0
+    topped_up_tokens: int = 0
     versions: Counter[str] = field(default_factory=Counter)
 
     def saw_version(self, version: str) -> None:
