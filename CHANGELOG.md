@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Claude Code subagents' output is no longer valued at a few tokens a
+  call.** A Task or workflow agent's transcript logs each call while it
+  streams and never logs the final output count. Once a session closes,
+  tokencur fills that count in from Claude Code's own counters, spread
+  evenly over the calls that lack it (ADR 0017). On the maintainer's logs
+  this added 23.9M output tokens over 15,688 calls and raised `doctor`'s
+  reconciliation from 85% to 95%. `doctor` says how many calls were filled
+  in and how many wait for their session to close. Earlier figures for
+  sessions that ran subagents or workflows were low by their output.
+
 ## [0.11.0] - 2026-10-20
 
 ### Added

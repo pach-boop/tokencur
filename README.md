@@ -472,8 +472,12 @@ last rate), then regenerates this page from that history.
   smaller models for web search, web fetch and session titles, and some
   main-model calls such as compaction. Its own end-of-session counters show
   tokencur's Claude Code value is a slight underestimate: on the maintainer's
-  sessions, tokencur sees 93.6% of the cost Claude Code counted.
+  sessions, tokencur sees 95% of the cost Claude Code counted.
   `tokencur doctor` measures this on your own logs.
+- Claude Code's subagents (Task and workflow agents) never log their calls'
+  final output count. Once a session closes, tokencur fills it in from Claude
+  Code's counters, in even shares over those calls (ADR 0017); until then a
+  session's subagent output reads low.
 - Usage value per commit counts commits on the checked-out branch, and a commit
   says nothing about size or quality. Usage logged before tokencur 0.3 kept no
   working directory; it is attributed only if its log is still on disk.

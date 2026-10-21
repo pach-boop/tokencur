@@ -309,6 +309,15 @@ def render(d: Diagnosis) -> str:
             f"{head}  {s.files:,} files · {s.usage_lines:,} usage lines · "
             f"{c.records:,} records · {s.malformed:,} malformed{versions}"
         )
+        if s.short_output_calls:
+            low = s.short_output_calls - s.topped_up_calls
+            lines.append(
+                f"  {'':<{width}}  {s.short_output_calls:,} calls logged no final "
+                "output count (subagents never do); "
+                f"{s.topped_up_calls:,} filled in from Claude "
+                f"Code's counters (+{s.topped_up_tokens:,} output tokens), {low:,} "
+                "still read low (session open, or its counters began earlier)"
+            )
     lines += _render_reconciliation(d.reconciliation)
     lines += _render_plan_limits(d.meter, d.limit_stubs)
     k = d.ledger
