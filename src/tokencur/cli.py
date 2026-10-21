@@ -374,10 +374,13 @@ def _limits(args: argparse.Namespace) -> int:
     if not records:
         _fail(_NOTHING)
         return 1
+    broken: list[str] = []
     for root, ingest in sources.DEFAULT_SOURCES:
         if ingest is claude_code.iter_usage_records and root.exists():
-            ledger.record_limit_hits(claude_code.iter_limit_hits(root))
-            ledger.record_meter_readings(claude_code.meter_readings())
+            stubs, meter = claude_code.limit_stubs(root), claude_code.meter_status()
+            ledger.record_limit_hits(stubs.hits)
+            ledger.record_meter_readings(meter.readings)
+            broken = doctor.plan_limit_problems(meter, stubs)
     plans = limits.plans_path(args.plans)
     if plans is not None and not plans.is_file():
         _fail(f"{plans} does not exist")
@@ -393,6 +396,8 @@ def _limits(args: argparse.Namespace) -> int:
         print(json.dumps(limits.as_dict(result), indent=2))
     else:
         print(limits.render(result))
+    if broken:
+        print(f"warning: {'; '.join(broken)} (see `tokencur doctor`)", file=sys.stderr)
     return 0
 
 

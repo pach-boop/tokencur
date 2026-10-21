@@ -180,16 +180,46 @@ def iter_limit_hits(root: Path) -> Iterator[LimitHit]:
     "rejected"``) are kept, once per request. The stub's text, which says
     the same in words, is never read (ADR 0006, ADR 0014).
     """
+    yield from limit_stubs(root).hits
+
+
+@dataclass(frozen=True)
+class LimitStubs:
+    """The refusals by a plan limit under a root, and how many of the
+    stubs Claude Code logs for them could be read."""
+
+    hits: list[LimitHit]
+    stubs: int = 0  # requests whose stub has ``error: "rate_limit"``
+    unreadable: int = 0  # of those, the ones that give no hit
+
+
+def limit_stubs(root: Path) -> LimitStubs:
+    """The limit hits under ``root`` (see ``iter_limit_hits``), checked
+    against every ``rate_limit`` stub: each one up to 2026-10-16 carried
+    ``quotaLimits``, so a stub that gives no hit means Claude Code changed
+    how it logs a limit, and the hits it stands for go unseen. Requests
+    are counted once, however many files repeat them."""
     hits: dict[str, LimitHit] = {}
+    stubs: dict[str, bool] = {}  # request -> gave a hit
     for path in sorted(root.rglob("*.jsonl")):
         with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
-                if '"quotaLimits"' not in line:
+                if '"quotaLimits"' not in line and '"rate_limit"' not in line:
                     continue  # a cheap filter: these lines are rare
-                hit = _limit_hit(entry(line))
+                line_entry = entry(line)
+                hit = _limit_hit(line_entry)
                 if hit is not None:
                     hits.setdefault(hit.record_id, hit)
-    yield from hits.values()
+                if line_entry.get("error") == "rate_limit":
+                    request = text(line_entry.get("requestId"))
+                    message = text(obj(line_entry.get("message")).get("id"))
+                    key = f"{request}:{message}" if request or message else line
+                    stubs[key] = stubs.get(key, False) or hit is not None
+    return LimitStubs(
+        hits=list(hits.values()),
+        stubs=len(stubs),
+        unreadable=sum(not read for read in stubs.values()),
+    )
 
 
 def _limit_hit(line_entry: dict) -> LimitHit | None:
@@ -228,7 +258,27 @@ def config_path() -> Path:
     return Path(base) / ".claude.json" if base else Path.home() / ".claude.json"
 
 
+@dataclass(frozen=True)
+class MeterStatus:
+    """What Claude Code's state file holds of its ``/usage`` meter."""
+
+    file: bool  # the state file could be read
+    found: bool  # it holds the meter's key
+    readings: list[MeterReading] = field(default_factory=list)
+
+    @property
+    def reshaped(self) -> bool:
+        """The key is there but gives no reading: its shape changed."""
+        return self.found and not self.readings
+
+
 def meter_readings(path: Path | None = None) -> list[MeterReading]:
+    """The plan usage Claude Code last fetched for its ``/usage`` meter
+    (see ``meter_status``)."""
+    return meter_status(path).readings
+
+
+def meter_status(path: Path | None = None) -> MeterStatus:
     """The plan usage Claude Code last fetched for its ``/usage`` meter.
 
     Claude Code keeps it in its state file under ``cachedUsageUtilization``:
@@ -242,15 +292,17 @@ def meter_readings(path: Path | None = None) -> list[MeterReading]:
     try:
         state = json.loads(target.read_text(encoding="utf-8", errors="replace"))
     except (OSError, ValueError):
-        return []
+        return MeterStatus(file=False, found=False)
+    if "cachedUsageUtilization" not in obj(state):
+        return MeterStatus(file=True, found=False)  # API-key use has no meter
     cached = obj(obj(state).get("cachedUsageUtilization"))
     fetched = cached.get("fetchedAtMs")
     if not _is_amount(fetched):
-        return []
+        return MeterStatus(file=True, found=True)
     try:
         fetched_at = datetime.fromtimestamp(fetched / 1000, UTC)
     except (OverflowError, OSError, ValueError):
-        return []
+        return MeterStatus(file=True, found=True)
     readings = []
     for kind in _METERED:
         limit = obj(obj(cached.get("utilization")).get(kind))
@@ -276,7 +328,7 @@ def meter_readings(path: Path | None = None) -> list[MeterReading]:
                 resets_at=resets_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
             )
         )
-    return readings
+    return MeterStatus(file=True, found=True, readings=readings)
 
 
 @dataclass(frozen=True)

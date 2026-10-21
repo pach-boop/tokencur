@@ -59,8 +59,12 @@ and 20% (week). tokencur's ADR 0014 estimate read 56% and 20%.
   machines), which the implied limit then absorbs: on a machine that is
   not the only one using the subscription, the implied limit reads low.
 - This is a read of a file another program owns. If Claude Code renames
-  the key or its fields, readings stop and the view falls back to ADR 0014
-  without saying why; `doctor` does not check it yet.
+  the key or its fields, readings stop and the view falls back to ADR 0014.
+  Since 2026-10-20 `doctor` checks it (a key that gives no reading is a
+  problem; an old reading, or no key at all as with an API key, is not),
+  and `limits` prints one warning line, so the fallback is no longer
+  silent. `doctor` also checks that every `rate_limit` stub still gives a
+  limit hit (ADR 0014).
 
 ## Update 2026-10-20: the meter follows a line, not a share
 

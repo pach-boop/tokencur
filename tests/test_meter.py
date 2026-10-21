@@ -340,7 +340,34 @@ def test_limits_reads_and_keeps_the_meter(tmp_path, monkeypatch, capsys):
     assert cli.main(["limits"]) == 0
 
     assert len(ledger.read_meter_readings()) == 2
-    assert "by Claude Code's meter" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "by Claude Code's meter" in captured.out
+    assert "warning" not in captured.err
+
+
+def test_limits_warns_in_one_line_when_the_meter_is_reshaped(
+    tmp_path, monkeypatch, capsys
+):
+    root = tmp_path / "projects"
+    root.mkdir()
+    monkeypatch.setattr(
+        sources, "DEFAULT_SOURCES", ((root, claude_code.iter_usage_records),)
+    )
+    monkeypatch.setattr(cli, "load_records", lambda: RECORDS)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    (tmp_path / ".claude.json").write_text(
+        json.dumps({"cachedUsageUtilization": {"fetchedAtMs": FETCHED_MS}}),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["limits", "--json"]) == 0
+
+    captured = capsys.readouterr()
+    json.loads(captured.out)  # the JSON stays clean for scripts
+    warnings = captured.err.splitlines()
+    assert len(warnings) == 1
+    assert warnings[0].startswith("warning: claude-code: the usage meter")
+    assert warnings[0].endswith("(see `tokencur doctor`)")
 
 
 # Found in review

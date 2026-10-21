@@ -310,6 +310,13 @@ never writes to the transcript. `doctor` compares that with tokencur's value of
 the same sessions, and flags a gap either way: below 85% means calls are going
 missing, above 105% means calls are being counted twice.
 
+And it checks the two things `tokencur limits` reads from Claude Code, neither
+of them documented: its `/usage` meter in `~/.claude.json`, and the stub it
+logs when a limit turns a request away. A meter fetched long ago is normal; a
+meter key that is there but gives no reading, or a `rate_limit` stub that gives
+no limit hit, is a problem, because `limits` would quietly fall back to less.
+`limits` itself prints one warning line when either breaks.
+
 ## Plan limits: how much of a subscription is left
 
 A subscription such as Claude Max caps usage in a five-hour window and a

@@ -11,7 +11,11 @@ ledger):
 - pricing: the curated card's date, the snapshot's fetch date and its
   SHA-256 (compare it with the attested release asset), unpriced models;
 - reconciliation: tokencur's value of Claude Code sessions against the
-  cost Claude Code itself counted for them (see ``tokencur.reconcile``).
+  cost Claude Code itself counted for them (see ``tokencur.reconcile``);
+- plan limits: whether Claude Code's ``/usage`` meter and the stubs it
+  logs when a limit turns a request away still read (ADR 0014, ADR 0015).
+  A meter that was not fetched lately is normal; one whose key is there
+  but gives no reading is a problem.
 
 The result is a list of problems; the CLI exits 1 when there is any.
 """
@@ -75,22 +79,27 @@ class Diagnosis:
     snapshot_sha256: str
     problems: list[str]
     reconciliation: Reconciliation | None = None
+    meter: claude_code.MeterStatus | None = None
+    limit_stubs: claude_code.LimitStubs | None = None
 
 
 def diagnose(
     sources: tuple[Source, ...] | None = None, ledger_path: Path | None = None
 ) -> Diagnosis:
-    checks, reconciliation = [], None
+    checks, reconciliation, stubs = [], None, None
     for root, ingest in sources or DEFAULT_SOURCES:
         check, records = _check_source(root, ingest)
         checks.append(check)
         if ingest is claude_code.iter_usage_records and check.present:
             reconciliation = reconcile(records, claude_code.session_counters(root))
+            stubs = claude_code.limit_stubs(root)
+    meter = claude_code.meter_status()
     kept = _check_ledger(ledger_path or ledger.default_path())
     pricing = provenance()
     problems = [p for check in checks for p in _source_problems(check)]
     problems += _ledger_problems(kept)
     problems += _reconciliation_problems(reconciliation)
+    problems += plan_limit_problems(meter, stubs)
     return Diagnosis(
         sources=checks,
         ledger=kept,
@@ -100,7 +109,30 @@ def diagnose(
         snapshot_sha256=pricing.snapshot_sha256,
         problems=problems,
         reconciliation=reconciliation,
+        meter=meter,
+        limit_stubs=stubs,
     )
+
+
+def plan_limit_problems(
+    meter: claude_code.MeterStatus | None, stubs: claude_code.LimitStubs | None
+) -> list[str]:
+    """What stopped reading of the plan limits, which ``tokencur limits``
+    also warns about: it would otherwise fall back without saying why."""
+    problems = []
+    if meter is not None and meter.reshaped:
+        problems.append(
+            "claude-code: the usage meter (cachedUsageUtilization in "
+            f"{home_relative(claude_code.config_path())}) is there but gives no "
+            "reading; its shape changed, so limits fall back to the ceilings hit"
+        )
+    if stubs is not None and stubs.unreadable:
+        problems.append(
+            f"claude-code: {stubs.unreadable:,} of {stubs.stubs:,} rate_limit stubs "
+            "give no limit hit; quotaLimits may have changed, so those ceilings "
+            "go unseen"
+        )
+    return problems
 
 
 def _check_source(root: Path, ingest) -> tuple[SourceCheck, list[UsageRecord]]:
@@ -225,6 +257,40 @@ def _render_reconciliation(r: Reconciliation | None) -> list[str]:
     return lines
 
 
+def _render_plan_limits(
+    meter: claude_code.MeterStatus | None, stubs: claude_code.LimitStubs | None
+) -> list[str]:
+    if meter is None or (stubs is None and not meter.file):
+        return []  # no Claude Code here
+    lines = ["", "plan limits (claude-code)"]
+    state = home_relative(claude_code.config_path())
+    if meter.readings:
+        shares = " · ".join(
+            f"{r.kind} {r.percent:.0f}%"
+            for r in sorted(meter.readings, key=lambda r: r.kind)
+        )
+        lines.append(f"  meter: fetched {meter.readings[0].fetched_at} · {shares}")
+    elif meter.found:
+        lines.append(f"  meter: in {state}, but no reading could be read")
+    elif meter.file:
+        lines.append(f"  meter: none in {state} (API-key use has none)")
+    else:
+        lines.append(f"  meter: no state file at {state}")
+    if stubs is not None:
+        kinds: dict[str, int] = {}
+        for hit in stubs.hits:
+            kinds[hit.kind] = kinds.get(hit.kind, 0) + 1
+        per_kind = ", ".join(f"{kind} {n:,}" for kind, n in sorted(kinds.items()))
+        last = max((hit.timestamp for hit in stubs.hits), default="")
+        lines.append(
+            f"  limit hits: {len(stubs.hits):,} ({per_kind or 'none'})"
+            + (f", last at {last}" if last else "")
+            + f" · {stubs.stubs - stubs.unreadable:,} of {stubs.stubs:,} "
+            "rate_limit stubs read"
+        )
+    return lines
+
+
 def render(d: Diagnosis) -> str:
     lines = ["tokencur doctor", "", "log sources"]
     width = max(len(c.name) for c in d.sources) if d.sources else 0
@@ -244,6 +310,7 @@ def render(d: Diagnosis) -> str:
             f"{c.records:,} records · {s.malformed:,} malformed{versions}"
         )
     lines += _render_reconciliation(d.reconciliation)
+    lines += _render_plan_limits(d.meter, d.limit_stubs)
     k = d.ledger
     lines += ["", "ledger", f"  {home_relative(k.path)}"]
     if not k.present:
