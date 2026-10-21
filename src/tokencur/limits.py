@@ -17,7 +17,8 @@ API-equivalent usage value:
 - When Claude Code's own usage meter was read in the current window
   (``MeterReading``), its percent is the provider's figure, shown as read;
   set against the value used by then, it also says what the whole limit
-  is worth (ADR 0015).
+  is worth (ADR 0015). Several readings in one window place the meter on
+  a line, which it follows more closely than a share of a single reading.
 
 These are estimates by nature. Limits are not priced like the API, and
 usage the logs do not hold (claude.ai chat, Claude Code's own background
@@ -57,6 +58,15 @@ _MEASURED = 1.0
 _METER_FLOOR = 10.0
 #: The meter's reset and a window's end can differ by a rounding second.
 _SAME_RESET = timedelta(minutes=2)
+#: Readings in one window fall on a line, percent = base + usage value /
+#: value per point, and the base is not zero: the week to 2026-10-21 read
+#: 5.7 points ahead of the usage these logs hold, and its nine readings
+#: (20% to 93%) sat within 0.4 points of one line, while a single
+#: reading's share put the whole limit anywhere from $1,063 to $1,412.
+#: A line takes this many readings, spread over this many points, or
+#: whole-percent rounding tilts it.
+_LINE_READINGS = 3
+_LINE_SPREAD = 20.0
 _SHOWN_HITS = 3
 _SOURCE = "claude-code"
 
@@ -86,6 +96,8 @@ class Window:
     meter_percent: float | None = None  # Claude Code's meter, when read here
     meter_at: datetime | None = None  # when it was read
     meter_limit: float | None = None  # the limit's usage value it implies
+    meter_base: float = 0.0  # the meter's percent before any usage logged here
+    meter_readings: int = 0  # readings behind meter_limit: 1, or a line's points
 
 
 @dataclass(frozen=True)
@@ -198,7 +210,7 @@ def limits(
             )
         )
     ceilings.sort(key=lambda c: c.hit_at)
-    meter = _meter_now(readings, now)
+    meter = _meter_now(readings, now, _plan_start(plans, now.astimezone(tz).date()), tz)
     weekly_resets = [
         moment
         for r in readings
@@ -236,16 +248,33 @@ def limits(
 
 
 def _plan_at(plans: list[dict], day: date) -> str:
+    """The Claude Code plan in force on ``day``, as a label; "" when none is."""
+    plan = _plan_in_force(plans, day)
+    if plan is None:
+        return ""
+    start = plan.get("from")
+    label = f"${plan.get('monthly_usd', 0):,.0f}/month"
+    return f"{label} since {start}" if start else label
+
+
+def _plan_start(plans: list[dict], day: date) -> date | None:
+    """The first day of the Claude Code plan in force on ``day``; None
+    when no plan is, or it names no first day."""
+    plan = _plan_in_force(plans, day)
+    start = None if plan is None else plan.get("from")
+    return None if start is None else date.fromisoformat(start)
+
+
+def _plan_in_force(plans: list[dict], day: date) -> dict | None:
     """The Claude Code plan in force on ``day``, as subscriptions.json dates
-    it (``from`` included, ``until`` excluded); "" when none is."""
+    it (``from`` included, ``until`` excluded)."""
     for plan in plans:
         start, end = plan.get("from"), plan.get("until")
         if (start is None or date.fromisoformat(start) <= day) and (
             end is None or day < date.fromisoformat(end)
         ):
-            label = f"${plan.get('monthly_usd', 0):,.0f}/month"
-            return f"{label} since {start}" if start else label
-    return ""
+            return plan
+    return None
 
 
 @dataclass(frozen=True)
@@ -253,12 +282,21 @@ class _Meter:
     percent: float
     at: datetime
     resets: datetime
+    #: every reading of this window on the plan in force, as (when, percent)
+    points: tuple[tuple[datetime, float], ...] = ()
 
 
-def _meter_now(readings: Sequence[MeterReading], now: datetime) -> dict[str, _Meter]:
+def _meter_now(
+    readings: Sequence[MeterReading],
+    now: datetime,
+    plan_start: date | None = None,
+    tz: tzinfo | None = None,
+) -> dict[str, _Meter]:
     """Per limit, the latest meter reading taken in the window still open
-    at ``now`` (its limit resets after ``now``)."""
-    latest: dict[str, _Meter] = {}
+    at ``now`` (its limit resets after ``now``), with the window's other
+    readings taken on the plan in force (from ``plan_start``, a day in
+    ``tz``): another plan's readings follow another line."""
+    open_now: dict[str, list[_Meter]] = {}
     for reading in readings:
         at, resets = (
             parse_timestamp(reading.fetched_at),
@@ -267,9 +305,21 @@ def _meter_now(readings: Sequence[MeterReading], now: datetime) -> dict[str, _Me
         if at is None or resets is None or not at <= now < resets:
             continue
         if reading.kind in WINDOWS and not resets - at > WINDOWS[reading.kind]:
-            seen = latest.get(reading.kind)
-            if seen is None or at > seen.at:
-                latest[reading.kind] = _Meter(reading.percent, at, resets)
+            open_now.setdefault(reading.kind, []).append(
+                _Meter(reading.percent, at, resets)
+            )
+    latest = {}
+    for kind, seen in open_now.items():
+        last = max(seen, key=lambda m: m.at)
+        points = tuple(
+            sorted(
+                (m.at, m.percent)
+                for m in seen
+                if abs(m.resets - last.resets) <= _SAME_RESET
+                and (plan_start is None or m.at.astimezone(tz).date() >= plan_start)
+            )
+        )
+        latest[kind] = replace(last, points=points)
     return latest
 
 
@@ -280,13 +330,60 @@ def _with_meter(
     of the whole limit that reading implies."""
     if window is None or meter is None or abs(window.end - meter.resets) > _SAME_RESET:
         return window
-    limit = None
+    measured = [
+        (used, percent)
+        for at, percent in meter.points
+        if percent >= _METER_FLOOR
+        and (used := timeline.value(window.start, at)) >= _MEASURED
+    ]
+    line = _line(measured)
     used = timeline.value(window.start, meter.at)
-    if meter.percent >= _METER_FLOOR and used >= _MEASURED:
-        limit = used / (meter.percent / 100)
+    if line is not None:
+        base, per_point = line
+        limit, count = per_point * (100 - base), len(measured)
+    elif meter.percent >= _METER_FLOOR and used >= _MEASURED:
+        base, limit, count = 0.0, used / (meter.percent / 100), 1
+    else:
+        base, limit, count = 0.0, None, 0
     return replace(
-        window, meter_percent=meter.percent, meter_at=meter.at, meter_limit=limit
+        window,
+        meter_percent=meter.percent,
+        meter_at=meter.at,
+        meter_limit=limit,
+        meter_base=base,
+        meter_readings=count,
     )
+
+
+def _line(points: list[tuple[float, float]]) -> tuple[float, float] | None:
+    """The least-squares line percent = base + usage value / value per
+    point through ``points`` (usage value, percent), as (base, value per
+    point); None when the points are too few or too close to place it."""
+    percents = [percent for _, percent in points]
+    if len(points) < _LINE_READINGS or max(percents) - min(percents) < _LINE_SPREAD:
+        return None
+    mean_value = sum(value for value, _ in points) / len(points)
+    mean_percent = sum(percents) / len(points)
+    spread = sum((value - mean_value) ** 2 for value, _ in points)
+    if spread == 0:
+        return None  # the meter moved while no usage logged here did
+    slope = (
+        sum((value - mean_value) * (p - mean_percent) for value, p in points) / spread
+    )
+    base = mean_percent - slope * mean_value
+    if slope <= 0 or base >= 100:
+        return None
+    return base, 1 / slope
+
+
+def meter_share(window: Window) -> float | None:
+    """The share of the limit ``window`` has used by Claude Code's meter:
+    the meter's base, then straight on to the whole limit; None when the
+    meter says nothing of the whole limit."""
+    if window.meter_limit is None:
+        return None
+    base = window.meter_base
+    return (base + (100 - base) * window.value / window.meter_limit) / 100
 
 
 def _week(
@@ -489,8 +586,8 @@ def as_dict(result: Limits) -> dict:
         if current is None:
             return None
         lowest = _lowest(result, kind)
-        if current.meter_limit is not None:
-            percent, reference = 100 * current.value / current.meter_limit, "meter"
+        if (share := meter_share(current)) is not None:
+            percent, reference = 100 * share, "meter"
         elif current.meter_percent is not None:
             percent, reference = current.meter_percent, "meter_reading"
         elif lowest:
@@ -507,6 +604,8 @@ def as_dict(result: Limits) -> dict:
                     if current.meter_limit is None
                     else round(current.meter_limit, 2)
                 ),
+                "base_percent": round(current.meter_base, 2),
+                "readings": current.meter_readings,
             }
         return {
             "start": iso(current.start),
@@ -558,12 +657,13 @@ def _section(result: Limits, kind: str, at) -> list[str]:
     else:
         state = "limit reached, requests wait until" if window.blocked else "resets"
         how = " (window inferred from call times)" if window.estimated else ""
-        if window.meter_limit is not None:
-            share = (
-                f" = {window.value / window.meter_limit:.0%} of the limit by "
-                f"Claude Code's meter ({window.meter_percent:.0f}% at "
-                f"{at(window.meter_at)})"
-            )
+        if (by_meter := meter_share(window)) is not None:
+            read = f"{window.meter_percent:.0f}% at {at(window.meter_at)}"
+            if window.meter_readings > 1:
+                read = (
+                    f"a line through {window.meter_readings} readings, the last {read}"
+                )
+            share = f" = {by_meter:.0%} of the limit by Claude Code's meter ({read})"
         elif window.meter_percent is not None:
             share = ""
         else:
@@ -592,9 +692,15 @@ def _section(result: Limits, kind: str, at) -> list[str]:
             if lowest
             else ""
         )
+        line = (
+            f" (it starts at {window.meter_base:.1f}% and adds a point per "
+            f"${window.meter_limit / (100 - window.meter_base):,.2f})"
+            if window.meter_readings > 1
+            else ""
+        )
         lines.append(
             f"  the meter puts the whole limit at about ${window.meter_limit:,.2f} "
-            f"of usage value{compare}"
+            f"of usage value{line}{compare}"
         )
     on_plan = " on this plan" if result.plan else ""
     if references:

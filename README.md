@@ -342,11 +342,13 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
 - **Claude Code's own meter, when it is fresh.** Claude Code caches the
   percent its `/usage` meter last showed. When that reading was taken in the
   current window, the view shows it with its time, and divides the value used
-  by then by it: what the whole limit is worth in usage value. The current
-  share and the week's projection then use that limit, and the estimate from
-  ceilings hit stays next to it. On the first reading the weekly limit came
-  to $1,062.95, against a weekly ceiling hit the day before at $1,063.07; the
-  five-hour limit came to $166.32, against ceilings hit near $135
+  by then by it: what the whole limit is worth in usage value. With three
+  readings or more in the window, spread over 20 points or more, it fits a
+  line through them instead, because the meter does not start at zero: one
+  week's nine readings sat within 0.4 points of percent = 5.7 + usage value /
+  $15.03, while one reading at a time put the limit anywhere from $1,063 to
+  $1,412. The current share and the week's projection then use that limit,
+  and the estimate from ceilings hit stays next to it
   ([ADR 0015](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0015-read-the-agents-own-usage-meter.md)).
 - **A gauge, not a balance.** Limits are not priced like the API, and usage
   these logs do not hold (claude.ai chat, Claude Code's background calls)

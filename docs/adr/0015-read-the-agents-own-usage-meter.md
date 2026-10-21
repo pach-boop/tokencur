@@ -61,3 +61,30 @@ and 20% (week). tokencur's ADR 0014 estimate read 56% and 20%.
 - This is a read of a file another program owns. If Claude Code renames
   the key or its fields, readings stop and the view falls back to ADR 0014
   without saying why; `doctor` does not check it yet.
+
+## Update 2026-10-20: the meter follows a line, not a share
+
+A week of readings showed that the share of one reading is the wrong
+model. The week that reset on 2026-10-21 was read nine times, from 20% to
+93%. Divided one at a time, those readings put the whole limit anywhere
+from $1,063 (at 20%) to $1,412 (at 93%), climbing with every reading, so a
+projection made early in the week reached the limit days too soon. Set
+against the usage value logged by each reading, the nine fall on one
+line, percent = 5.71 + usage value / $15.03, none more than 0.38 points
+off. The meter starts the week about six points ahead of the usage these
+logs hold. Why it does is not known (usage elsewhere, or how the provider
+counts); tokencur measures it and does not explain it.
+
+- With at least three readings in the window, spread over at least 20
+  points, the meter is placed on the least-squares line through them:
+  its base (the percent before any usage logged here) and the usage value
+  per point. The whole limit is the value at 100% on that line; the
+  current share is the base plus the value used now along the line. Fewer
+  or closer readings, a line that does not rise, or a base of 100% or more
+  fall back to the share of the latest reading, as decided above.
+- Only readings taken on the plan in force, from its first day in
+  subscriptions.json, go into the line: another plan's limit is another
+  line.
+- The view says which it used ("a line through 9 readings") and gives the
+  base and the value per point; the JSON adds `base_percent` and
+  `readings` to the meter.
