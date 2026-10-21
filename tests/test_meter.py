@@ -221,6 +221,8 @@ def test_the_json_takes_the_percent_from_the_meter():
         "percent": 20.0,
         "read_at": "2026-10-15T01:29:49Z",
         "limit": 1000.0,
+        "base_percent": 0.0,
+        "readings": 1,
     }
     assert seven["projection"]["limit_from"] == "meter"
 
@@ -233,6 +235,96 @@ def test_the_json_gives_a_low_reading_as_read():
     five = limits.as_dict(result)["windows"]["five_hour"]
     assert (five["percent"], five["percent_of"]) == (4.0, "meter_reading")
     assert five["meter"]["limit"] is None
+
+
+WEEK_RESETS = "2026-10-21T11:00:00Z"
+#: a week whose meter reads 5% before any usage, then a point per $10
+WEEK_CALLS = [
+    _call("2026-10-14T12:00:00", 150.0),
+    _call("2026-10-14T18:00:00", 300.0),
+    _call("2026-10-15T00:00:00", 300.0),
+]
+
+
+def _week_readings(
+    *percents, at=("2026-10-14T13:00", "2026-10-14T19:00", "2026-10-15T01:00")
+):
+    return [
+        _reading("seven_day", percent, at=f"{moment}:00Z", resets=WEEK_RESETS)
+        for percent, moment in zip(percents, at, strict=False)
+    ]
+
+
+def test_several_readings_place_the_meter_on_a_line():
+    result = limits.limits(
+        WEEK_CALLS, [], None, NOW, readings=_week_readings(20, 50, 80)
+    )
+
+    window = result.current["seven_day"]
+    assert window.meter_base == pytest.approx(5.0)
+    assert window.meter_limit == pytest.approx(950.0)  # (100 - 5) points at $10
+    assert window.meter_readings == 3
+    assert limits.meter_share(window) == pytest.approx(0.80)  # 5 + 750 / 10
+    out = limits.render(result, tz=UTC)
+    assert "= 80% of the limit by Claude Code's meter (a line through 3 readings" in out
+    assert (
+        "about $950.00 of usage value (it starts at 5.0% and adds a point per $10.00)"
+        in out
+    )
+    meter = limits.as_dict(result)["windows"]["seven_day"]["meter"]
+    assert (meter["base_percent"], meter["readings"]) == (5.0, 3)
+
+
+def test_a_single_reading_would_put_that_week_lower():
+    """The same week read once at 20%: its share puts the limit at $750."""
+    result = limits.limits(WEEK_CALLS, [], None, NOW, readings=_week_readings(20))
+
+    window = result.current["seven_day"]
+    assert (window.meter_base, window.meter_readings) == (0.0, 1)
+    assert window.meter_limit == pytest.approx(750.0)  # $150 was 20%
+
+
+@pytest.mark.parametrize(
+    "percents",
+    [(20, 50), (70, 75, 80)],
+    ids=["too few readings", "too close together"],
+)
+def test_without_a_line_the_latest_reading_sets_the_limit(percents):
+    at = ("2026-10-14T13:00", "2026-10-14T19:00", "2026-10-15T01:00")[-len(percents) :]
+    result = limits.limits(
+        WEEK_CALLS, [], None, NOW, readings=_week_readings(*percents, at=at)
+    )
+
+    window = result.current["seven_day"]
+    assert window.meter_readings == 1
+    assert window.meter_limit == pytest.approx(750.0 / (percents[-1] / 100))
+
+
+def test_the_line_leaves_out_readings_from_before_the_plan():
+    plans = {
+        "plans": {
+            "Claude Code": [
+                {"monthly_usd": 100.0, "from": "2026-10-01", "until": "2026-10-15"},
+                {"monthly_usd": 200.0, "from": "2026-10-15"},
+            ]
+        }
+    }
+
+    result = limits.limits(
+        WEEK_CALLS, [], plans, NOW, tz=UTC, readings=_week_readings(20, 50, 80)
+    )
+
+    window = result.current["seven_day"]
+    assert window.meter_readings == 1  # only the 01:00 reading is on the new plan
+    assert window.meter_limit == pytest.approx(750.0 / 0.80)
+
+
+def test_a_line_that_falls_is_no_line():
+    result = limits.limits(
+        WEEK_CALLS, [], None, NOW, readings=_week_readings(80, 50, 20)
+    )
+
+    assert result.current["seven_day"].meter_readings == 1
 
 
 def test_limits_reads_and_keeps_the_meter(tmp_path, monkeypatch, capsys):

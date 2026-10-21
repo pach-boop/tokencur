@@ -30,6 +30,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   the pinned one), `--strict` (tolerate nothing) and `--report` (the verdict
   as JSON).
 
+### Changed
+
+- **`tokencur limits` reads the meter as a line.** With three readings or
+  more in the window, spread over 20 points or more, it fits percent = base +
+  usage value / value per point, and takes the whole limit and the current
+  share from that line (ADR 0015, update 2026-10-20). A single reading's share
+  put one week's limit anywhere from $1,063 to $1,412; the line held its nine
+  readings within 0.4 points. Only readings on the plan in force count. The
+  JSON's meter gains `base_percent` and `readings`.
+
 ## [0.10.0] - 2026-10-15
 
 ### Changed
