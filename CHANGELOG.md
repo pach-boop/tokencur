@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-20
+
 ### Added
 
 - **`tokencur doctor` checks the plan limits' inputs**: Claude Code's `/usage`
