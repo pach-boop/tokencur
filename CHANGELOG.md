@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Added
 
+- **`tokencur doctor` checks the plan limits' inputs**: Claude Code's `/usage`
+  meter (a key that is there but gives no reading is a problem; an old reading,
+  or none with an API key, is not) and its `rate_limit` stubs (each must still
+  give a limit hit). `tokencur limits` prints one warning line on stderr when
+  either breaks, so it no longer falls back without saying why.
 - `tokencur limits --json`: the figures behind the view, for scripts. Per
   window the usage value, the share of the limit and what it is measured
   against (Claude Code's meter, its own low reading, or the lowest ceiling

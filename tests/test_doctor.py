@@ -160,3 +160,112 @@ def test_the_ledger_check_counts_records_that_name_their_directory(tmp_path):
 
     assert (d.ledger.with_cwd, sum(d.ledger.records.values())) == (5, 7)
     assert "5 of 7 records name their working directory" in doctor.render(d)
+
+
+# Plan limits: the meter and the limit stubs (ADR 0014, ADR 0015)
+
+
+def _state_file(content):
+    path = claude_code.config_path()
+    path.write_text(json.dumps(content), encoding="utf-8")
+    return path
+
+
+METER = {
+    "fetchedAtMs": 1792027789931,  # 2026-10-15T01:29:49Z
+    "utilization": {
+        "five_hour": {"utilization": 46, "resets_at": "2026-10-15T03:00:00+00:00"},
+        "seven_day": {"utilization": 20, "resets_at": "2026-10-21T11:00:00+00:00"},
+    },
+}
+
+
+def _stub_line(request, quota_key="quotaLimits"):
+    stub = {
+        "type": "assistant",
+        "timestamp": "2026-10-14T03:46:59.434Z",
+        "requestId": request,
+        "sessionId": "sess",
+        "error": "rate_limit",
+        "isApiErrorMessage": True,
+        "message": {"id": f"msg_{request}", "model": "<synthetic>"},
+    }
+    if quota_key:
+        stub[quota_key] = {
+            "status": "rejected",
+            "rateLimitType": "seven_day",
+            "resetsAt": 1792580400,
+        }
+    return json.dumps(stub)
+
+
+def _claude_logs(tmp_path, *lines):
+    root = tmp_path / "claude-logs"
+    (root / "project").mkdir(parents=True)
+    (root / "project" / "s.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return ((root, claude_code.iter_usage_records),)
+
+
+def _limit_problems(d):
+    return [p for p in d.problems if "meter" in p or "rate_limit" in p]
+
+
+def test_a_readable_meter_is_shown_and_no_problem(tmp_path):
+    _state_file({"cachedUsageUtilization": METER})
+
+    d = doctor.diagnose(FIXTURE_SOURCES, tmp_path / "l")
+
+    assert _limit_problems(d) == []
+    out = doctor.render(d)
+    assert "meter: fetched 2026-10-15T01:29:49Z · five_hour 46% · seven_day 20%" in out
+
+
+@pytest.mark.parametrize(
+    "content, shown",
+    [
+        (None, "meter: no state file at"),
+        ({"oauthAccount": {}}, "API-key use has none"),
+    ],
+    ids=["no state file", "no meter key"],
+)
+def test_no_meter_is_information_not_a_problem(tmp_path, content, shown):
+    if content is not None:
+        _state_file(content)
+
+    d = doctor.diagnose(FIXTURE_SOURCES, tmp_path / "l")
+
+    assert _limit_problems(d) == []
+    assert shown in doctor.render(d)
+
+
+def test_a_reshaped_meter_is_a_problem(tmp_path):
+    reshaped = {**METER, "utilization": {"session": {"percent": 46}}}
+    _state_file({"cachedUsageUtilization": reshaped})
+
+    d = doctor.diagnose(FIXTURE_SOURCES, tmp_path / "l")
+
+    assert len(_limit_problems(d)) == 1
+    assert "gives no reading; its shape changed" in _limit_problems(d)[0]
+
+
+def test_every_rate_limit_stub_read_is_no_problem(tmp_path):
+    logs = _claude_logs(tmp_path, _stub_line("req_1"), _stub_line("req_1"))
+
+    d = doctor.diagnose(logs, tmp_path / "l")
+
+    assert (d.limit_stubs.stubs, d.limit_stubs.unreadable) == (1, 0)  # copied once
+    assert _limit_problems(d) == []
+    assert "limit hits: 1 (seven_day 1)" in doctor.render(d)
+
+
+@pytest.mark.parametrize("quota_key", ["quotaLimit", None], ids=["renamed", "absent"])
+def test_a_rate_limit_stub_that_gives_no_hit_is_a_problem(tmp_path, quota_key):
+    logs = _claude_logs(tmp_path, _stub_line("req_1"), _stub_line("req_2", quota_key))
+
+    d = doctor.diagnose(logs, tmp_path / "l")
+
+    assert (d.limit_stubs.stubs, d.limit_stubs.unreadable) == (2, 1)
+    assert _limit_problems(d) == [
+        "claude-code: 1 of 2 rate_limit stubs give no limit hit; quotaLimits "
+        "may have changed, so those ceilings go unseen"
+    ]
