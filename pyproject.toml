@@ -39,7 +39,7 @@ dev = [
     "pytest-cov>=7",
     "hypothesis>=6.168",
     # Pinned: formatter output must be identical on every machine and in CI.
-    "ruff==0.17.0",
+    "ruff==0.17.2",
 ]
 dashboard = ["streamlit>=1.35", "duckdb>=1.0"]
 
