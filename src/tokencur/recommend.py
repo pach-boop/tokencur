@@ -133,6 +133,8 @@ def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
     for model, (current, downsized) in sums.items():
         sibling = DOWNSIZE[model.split("/")[-1]]
         now, now_sibling = rates_for(model), rates_for(sibling)
+        if now is None or now_sibling is None:
+            continue  # one of the pair has no rate today — nothing to compare
         if now_sibling.input >= now.input or now_sibling.output >= now.output:
             continue  # curated pair is not actually cheaper — skip
         if current - downsized < 1.0:

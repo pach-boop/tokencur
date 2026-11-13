@@ -40,6 +40,8 @@ dev = [
     "hypothesis>=6.168",
     # Pinned: formatter output must be identical on every machine and in CI.
     "ruff==0.17.0",
+    # Pinned for the same reason: a new release may report new errors.
+    "mypy==2.4.1",
 ]
 dashboard = ["streamlit>=1.35", "duckdb>=1.0"]
 
@@ -79,6 +81,17 @@ allow-dict-calls-with-keyword-arguments = true
 
 [tool.ruff.lint.isort]
 known-first-party = ["tokencur"]
+
+[tool.mypy]
+python_version = "3.11"  # the oldest Python the package supports
+files = ["src/tokencur"]
+
+# The dashboard's libraries are an optional extra: skipped, so the check
+# answers the same whether or not they are installed.
+[[tool.mypy.overrides]]
+module = ["duckdb.*", "pandas.*", "streamlit.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["tokencur"]

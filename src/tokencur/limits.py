@@ -444,17 +444,17 @@ def _five_hours(
     since, end = now - _LOOKBACK, None
     if latest is not None and latest >= since:
         since = end = latest
-    start = None
+    opened = None
     for moment in timeline.times[bisect_left(timeline.times, since) :]:
         if moment >= now:
             break
         if end is None or moment >= end:
-            start = _floor(moment)
-            start = max(start, end) if end is not None else start
-            end = start + span
-    if start is None or end is None or now >= end:
+            opened = _floor(moment)
+            opened = max(opened, end) if end is not None else opened
+            end = opened + span
+    if opened is None or end is None or now >= end:
         return None
-    return Window("five_hour", start, end, timeline.value(start, now), False, True)
+    return Window("five_hour", opened, end, timeline.value(opened, now), False, True)
 
 
 def _floor(moment: datetime) -> datetime:
@@ -745,12 +745,12 @@ def _projection(result: Limits, projection: Projection, at) -> str:
     pace = result.pace_per_day
     if projection.already_past:
         return f"already past {named}"
-    if projection.reaches_at is not None:
+    week = result.current["seven_day"]
+    if projection.reaches_at is not None and week is not None:
         eta = projection.reaches_at
-        resets = result.current["seven_day"].end
         return (
             f"at the last 7 days' pace (${pace:,.2f}/day) the week reaches "
-            f"{named} around {at(eta)}, {_span(resets - eta)} before it resets"
+            f"{named} around {at(eta)}, {_span(week.end - eta)} before it resets"
         )
     if projection.ends_near is not None:
         return (

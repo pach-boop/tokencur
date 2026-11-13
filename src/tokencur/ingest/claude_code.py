@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TypeGuard
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
 # ``tokencur.records`` and stays importable from here.
@@ -551,7 +552,7 @@ def _read_cost_state(line_entry: dict, counters: SessionCounters) -> None:
         counters.api_ms[session] = (float(total), float(net))
 
 
-def _is_amount(value: object) -> bool:
+def _is_amount(value: object) -> TypeGuard[float]:
     """A finite, non-negative number (booleans are not amounts)."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         return False

@@ -24,6 +24,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 - Examples in the README, an ADR and a docstring name a generic branch
   instead of one from a private repository.
+- **The package's type annotations are checked.** CI runs mypy, pinned
+  like ruff, on `src/tokencur`. The 38 errors of its first run are fixed
+  with annotations and type guards. `tokencur recommend` now skips a
+  model pair when one of the two has no rate today, where it would have
+  stopped with an error. Nothing else behaves differently.
 
 ## [0.11.2] - 2026-11-13
 
