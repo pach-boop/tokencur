@@ -5,6 +5,7 @@ import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime
 from functools import partial
+from pathlib import Path
 
 import pytest
 
@@ -85,6 +86,18 @@ def test_the_state_file_follows_claude_config_dir(tmp_path, monkeypatch):
 
     assert claude_code.config_path() == tmp_path / ".claude.json"
     assert len(claude_code.meter_readings()) == 2
+
+
+def test_the_session_logs_follow_claude_config_dir(tmp_path, monkeypatch):
+    """The logs and the state file move together, so the meter is never
+    read from one Claude Code and the usage from another."""
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    assert claude_code.projects_path() == tmp_path / "projects"
+
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    assert claude_code.projects_path() == tmp_path / ".claude" / "projects"
+    assert claude_code.config_path() == tmp_path / ".claude.json"
 
 
 @pytest.mark.parametrize(

@@ -94,6 +94,16 @@ def test_a_session_is_found_by_its_id_prefix(tmp_path):
             hooks.find_transcript(prefix, projects)
 
 
+def test_transcripts_are_looked_up_where_claude_config_dir_says(tmp_path, monkeypatch):
+    (tmp_path / "projects" / "home").mkdir(parents=True)
+    (tmp_path / "projects" / "home" / "abc123-1.jsonl").write_text(
+        _call(10_000), "utf-8"
+    )
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+
+    assert hooks.find_transcript("abc").name == "abc123-1.jsonl"
+
+
 # Status line
 
 
