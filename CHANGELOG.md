@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **Right-sizing covers Claude Fable 5.2**: `tokencur recommend` compares
+  its usage against Claude Opus 5.5, the tier below, as it already did for
+  Fable 5.1.
+
 ### Fixed
 
 - **Session logs follow `CLAUDE_CONFIG_DIR`.** With that variable set,
