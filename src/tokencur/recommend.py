@@ -31,6 +31,7 @@ from tokencur.records import UsageRecord
 # Curated "one tier down" pairs. Only emitted when the sibling is
 # actually cheaper on both input and output at list rates.
 DOWNSIZE = {
+    "claude-fable-5-2": "claude-opus-5-5",
     "claude-fable-5-1": "claude-opus-5-5",
     "claude-opus-5-5": "claude-sonnet-5-5",
     "claude-sonnet-5-5": "claude-haiku-4-5",
