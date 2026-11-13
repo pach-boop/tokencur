@@ -364,6 +364,13 @@ def config_path() -> Path:
     return Path(base) / ".claude.json" if base else Path.home() / ".claude.json"
 
 
+def projects_path() -> Path:
+    """Where Claude Code keeps its session logs:
+    ``$CLAUDE_CONFIG_DIR/projects``, else ``~/.claude/projects``."""
+    base = os.environ.get("CLAUDE_CONFIG_DIR")
+    return (Path(base) if base else Path.home() / ".claude") / "projects"
+
+
 @dataclass(frozen=True)
 class MeterStatus:
     """What Claude Code's state file holds of its ``/usage`` meter."""

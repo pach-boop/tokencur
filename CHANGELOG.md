@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Session logs follow `CLAUDE_CONFIG_DIR`.** With that variable set,
+  Claude Code keeps its logs in `$CLAUDE_CONFIG_DIR/projects`, and tokencur
+  kept looking in `~/.claude/projects`: it read the usage meter from one
+  place and the usage from another, or found no logs at all. The scan and
+  the Claude Code hooks' `context` command now look where Claude Code
+  writes.
+
 ## [0.11.2] - 2026-11-13
 
 ### Added

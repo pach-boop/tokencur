@@ -131,7 +131,9 @@ def find_transcript(prefix: str, projects: Path | None = None) -> Path:
     A session id is a UUID, so a prefix may hold hyphens; anything else that is
     not a letter or digit (``*``, ``/``) is refused rather than globbed.
     """
-    projects = projects or Path.home() / ".claude" / "projects"
+    if projects is None:
+        base = os.environ.get("CLAUDE_CONFIG_DIR")
+        projects = (Path(base) if base else Path.home() / ".claude") / "projects"
     plain = prefix.replace("-", "").isalnum()
     found = sorted(projects.glob(f"*/{prefix}*.jsonl")) if plain else []
     if len(found) != 1:

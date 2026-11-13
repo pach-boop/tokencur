@@ -19,7 +19,7 @@ from tokencur.records import UsageRecord
 Source = tuple[Path, Callable[[Path], Iterator[UsageRecord]]]
 
 DEFAULT_SOURCES: tuple[Source, ...] = (
-    (Path.home() / ".claude" / "projects", claude_code.iter_usage_records),
+    (claude_code.projects_path(), claude_code.iter_usage_records),
     (Path.home() / ".codex" / "sessions", codex.iter_usage_records),
     (Path.home() / ".kimi-code" / "sessions", kimi_code.iter_usage_records),
 )
