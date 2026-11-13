@@ -20,6 +20,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   the Claude Code hooks' `context` command now look where Claude Code
   writes.
 
+### Changed
+
+- Examples in the README, an ADR and a docstring name a generic branch
+  instead of one from a private repository.
+
 ## [0.11.2] - 2026-11-13
 
 ### Added
