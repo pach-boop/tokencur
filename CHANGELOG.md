@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **Claude Fable 5.2 and Claude Mythos 5.2 are priced**: $8 input and $40
+  output per MTok, with cache reads at $0.20 (0.025x input), on the
+  curated card, now as of Anthropic's pricing page on 2026-11-13. Until
+  now their calls surfaced as unpriced usage, so figures for periods that
+  include them were low by that usage.
+
 ### Fixed
 
 - **The test suite passes again, whatever the date.** A test of

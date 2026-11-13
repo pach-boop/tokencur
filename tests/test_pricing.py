@@ -78,6 +78,8 @@ def test_cache_reads_follow_each_models_published_multiplier():
         m: rates_for(m).cache_read
         for m in (
             "claude-opus-5-5",
+            "claude-fable-5-2",
+            "claude-mythos-5-2",
             "claude-fable-5-1",
             "claude-mythos-5-1",
             "claude-fable-5",
@@ -88,6 +90,8 @@ def test_cache_reads_follow_each_models_published_multiplier():
     assert read == pytest.approx(
         {
             "claude-opus-5-5": 0.20,  # 0.05x of $4
+            "claude-fable-5-2": 0.20,  # 0.025x of $8
+            "claude-mythos-5-2": 0.20,
             "claude-fable-5-1": 0.25,  # 0.025x of $10
             "claude-mythos-5-1": 0.25,
             "claude-fable-5": 1.00,  # the standard 0.1x
