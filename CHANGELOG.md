@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- **The test suite passes again, whatever the date.** A test of
+  `tokencur limits` read the real clock against a usage meter whose week
+  closed on 2026-10-21 at 11:00 UTC, and failed from that minute on. That
+  stopped the daily price-watch refresh, which runs the suite before it
+  commits and has not completed since 2026-10-20, and failed CI on every
+  pull request opened after. The test now sets the clock it needs. The
+  package itself did not change.
+
 ## [0.11.1] - 2026-10-20
 
 ### Fixed
