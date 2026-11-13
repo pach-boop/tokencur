@@ -187,7 +187,7 @@ def history(
         return History([])
     named = work_branch(root)
     main = default_refs(root)
-    marks = {"branch": named, "missing": bool(named) and not _named_ref(root, named)}
+    missing = bool(named) and not _named_ref(root, named)
     # git filters on the commit date, which comes after the author date
     # (a rebase moves it later still); a day of margin keeps it safe.
     floor = (since - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
@@ -213,7 +213,7 @@ def history(
             continue
         commits[sha] = authored
     if not commits:
-        return History([], **marks)
+        return History([], branch=named, missing=missing)
 
     patches = git(
         root, "log", "--no-merges", after, "-p", "--format=commit %H", *everywhere
@@ -248,7 +248,7 @@ def history(
                 copies=on_main,
             )
         )
-    return History(changes, trees, parents, **marks)
+    return History(changes, trees, parents, branch=named, missing=missing)
 
 
 #: A repository whose work lands on a branch other than its default one

@@ -36,7 +36,7 @@ from tokencur.focus import undated_count, unpriced_models
 from tokencur.ingest import claude_code, github_ci, runpod
 from tokencur.pricing import ConfigError, load_discounts, provenance
 from tokencur.recommend import recommendations, render
-from tokencur.records import UsageRecord, in_period
+from tokencur.records import BilledCharge, UsageRecord, in_period
 from tokencur.report import summarize
 from tokencur.sources import load_records
 from tokencur.terminal import home_relative
@@ -254,12 +254,14 @@ def _records(args: argparse.Namespace) -> list[UsageRecord] | None:
     root = getattr(args, "root", None)
     if root is not None:
         if not root.exists():
-            return _fail(f"{root} does not exist")
+            _fail(f"{root} does not exist")
+            return None
         records = list(claude_code.iter_usage_records(root))
     else:
         records = load_records()
     if not records:
-        return _fail(_NOTHING)
+        _fail(_NOTHING)
+        return None
     return in_period(records, args.since, args.until)
 
 
@@ -337,7 +339,7 @@ def _outcomes(args: argparse.Namespace) -> int:
     if records is None:
         return 1
     if args.sessions:
-        result = sessions.session_outcomes(
+        by_session = sessions.session_outcomes(
             records,
             _claude_code_counters(),
             repos=args.repos,
@@ -347,7 +349,7 @@ def _outcomes(args: argparse.Namespace) -> int:
             period=_period(args),
             ci_runs=ledger.read_ci_runs(),
         )
-        print(sessions.render(result, top=args.top))
+        print(sessions.render(by_session, top=args.top))
         return 0
     result = outcomes.outcomes(
         records,
@@ -439,7 +441,7 @@ def _import(args: argparse.Namespace) -> int:
             return 1
     if args.provider == "github-ci":
         return _import_ci(args.files)
-    charges = []
+    charges: list[BilledCharge] = []
     for path in args.files:
         charges.extend(runpod.iter_charges(path))
     if not charges:

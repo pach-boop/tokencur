@@ -43,7 +43,8 @@ def iter_usage_records(
         session_id = next(
             (part for part in path.parts if part.startswith("session_")), ""
         )
-        cwd = cwds.get(_session_dir(path), "")
+        session_dir = _session_dir(path)
+        cwd = cwds.get(session_dir, "") if session_dir else ""
         agent = path.parent.name  # .../agents/<agent>/wire.jsonl
         # errors="replace": a corrupted byte spoils one line, not the scan.
         with path.open(encoding="utf-8", errors="replace") as fh:

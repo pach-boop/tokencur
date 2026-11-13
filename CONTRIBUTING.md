@@ -39,11 +39,12 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Lint and format with the pinned ruff (CI runs the same two commands), and
-optionally let pre-commit run them before every commit:
+Lint and format with the pinned ruff and check the types with the pinned
+mypy (CI runs the same three commands), and optionally let pre-commit run
+ruff before every commit:
 
 ```bash
-ruff check . && ruff format --check .
+ruff check . && ruff format --check . && mypy
 pip install pre-commit && pre-commit install   # optional
 ```
 

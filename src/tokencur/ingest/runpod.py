@@ -20,6 +20,7 @@ import math
 from collections.abc import Iterator
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TypeGuard
 from urllib.parse import parse_qs, urlparse
 
 from tokencur.ingest.fields import text
@@ -89,8 +90,10 @@ def _charge(row: object, bucket: str) -> BilledCharge | None:
     )
 
 
-def _money(value: object) -> bool:
-    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+def _money(value: object) -> TypeGuard[float]:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return False
+    return math.isfinite(value) and value >= 0
 
 
 def _end(start: datetime, bucket: str) -> datetime:
