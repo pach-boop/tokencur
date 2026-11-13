@@ -4,6 +4,7 @@ import json
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime
+from functools import partial
 
 import pytest
 
@@ -335,6 +336,9 @@ def test_limits_reads_and_keeps_the_meter(tmp_path, monkeypatch, capsys):
     )
     monkeypatch.setattr(cli, "load_records", lambda: RECORDS)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    # The command reads the real clock, and a reading counts only while its
+    # window is open: the week in this state file closed on 2026-10-21.
+    monkeypatch.setattr(limits, "limits", partial(limits.limits, now=NOW))
     _state(tmp_path / ".claude.json")
 
     assert cli.main(["limits"]) == 0
