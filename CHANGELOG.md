@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-13
+
 ### Added
 
 - **Claude Fable 5.2 and Claude Mythos 5.2 are priced**: $8 input and $40
