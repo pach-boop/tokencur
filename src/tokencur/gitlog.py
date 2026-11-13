@@ -264,7 +264,7 @@ def work_branch(root: Path) -> str:
 
 def _named_ref(root: Path, name: str) -> str:
     """The ref a ``tokencur.branch`` value names: a local branch, else a
-    remote-tracking one (``respaldo/motor-pixel``); "" when neither exists."""
+    remote-tracking one (``backup/main``); "" when neither exists."""
     for ref in (f"refs/heads/{name}", f"refs/remotes/{name}"):
         if _exists(root, ref):
             return ref
