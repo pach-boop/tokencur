@@ -39,7 +39,7 @@ dev = [
     "pytest-cov>=7",
     "hypothesis>=6.168",
     # Pinned: formatter output must be identical on every machine and in CI.
-    "ruff==0.17.0",
+    "ruff==0.17.4",
     # Pinned for the same reason: a new release may report new errors.
     "mypy==2.4.1",
 ]
