@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-11-04T12:00:00Z",
+  "request_url": "https://api.anthropic.com/v1/organizations/cost_report?starting_at=2026-11-01T00:00:00Z&ending_at=2026-11-04T00:00:00Z&bucket_width=1d&group_by[]=description&group_by[]=workspace_id",
+  "response": [
+    {
+      "data": [
+        {
+          "starting_at": "2026-11-01T00:00:00Z",
+          "ending_at": "2026-11-02T00:00:00Z",
+          "results": [
+            {
+              "currency": "USD",
+              "amount": "123.45",
+              "workspace_id": "wrkspc_fixture01",
+              "description": "Claude Sonnet 4.5 Usage - Input Tokens",
+              "cost_type": "tokens",
+              "context_window": "0-200k",
+              "model": "claude-sonnet-4-5",
+              "service_tier": "standard",
+              "token_type": "uncached_input_tokens",
+              "speed": null,
+              "inference_geo": null
+            },
+            {
+              "currency": "USD",
+              "amount": "250",
+              "workspace_id": null,
+              "description": "Claude Sonnet 4.5 Usage - Output Tokens",
+              "cost_type": "tokens",
+              "context_window": "0-200k",
+              "model": "claude-sonnet-4-5",
+              "service_tier": "batch",
+              "token_type": "output_tokens",
+              "speed": null,
+              "inference_geo": null
+            }
+          ]
+        },
+        {
+          "starting_at": "2026-11-02T00:00:00Z",
+          "ending_at": "2026-11-03T00:00:00Z",
+          "results": []
+        }
+      ],
+      "has_more": true,
+      "next_page": "page_fixture02"
+    },
+    {
+      "data": [
+        {
+          "starting_at": "2026-11-03T00:00:00Z",
+          "ending_at": "2026-11-04T00:00:00Z",
+          "results": [
+            {
+              "currency": "USD",
+              "amount": "10.5",
+              "workspace_id": "wrkspc_fixture01",
+              "description": "Web Search",
+              "cost_type": "web_search",
+              "context_window": null,
+              "model": null,
+              "service_tier": null,
+              "token_type": null,
+              "speed": null,
+              "inference_geo": null
+            },
+            {
+              "currency": "USD",
+              "amount": "not money",
+              "workspace_id": "wrkspc_fixture01",
+              "description": "Malformed: skipped",
+              "cost_type": "tokens",
+              "context_window": null,
+              "model": "claude-sonnet-4-5",
+              "service_tier": null,
+              "token_type": null,
+              "speed": null,
+              "inference_geo": null
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    }
+  ]
+}

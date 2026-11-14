@@ -11,7 +11,9 @@ against spec 1.3:
   so the validator checks what tokencur produces from the formats agents
   actually write, not only what a test author typed;
 - billed RunPod charges from the billing fixture (real money: Compute
-  rows, including a storage-only charge with no unit price);
+  rows, including a storage-only charge with no unit price), and billed
+  Anthropic and OpenAI charges from fixtures in their documented shapes
+  (AI rows, some with a list price above the billed amount);
 - the hand-built records again under negotiated discounts, so rows where
   ContractedCost, EffectiveCost and BilledCost sit below ListCost pass too.
 
@@ -57,7 +59,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from tokencur.export import export_csv
 from tokencur.focus import FOCUS_VERSION
-from tokencur.ingest import claude_code, codex, kimi_code, runpod
+from tokencur.ingest import ai_cost, claude_code, codex, kimi_code, runpod
 from tokencur.records import UsageRecord
 
 RULES_URL = (
@@ -177,7 +179,13 @@ def main(argv: list[str] | None = None) -> int:
             rule_file = _fetch_rules(rules)
         data_file = Path(tmp) / "focus_sample.csv"
         records = _synthetic_records() + _fixture_records()
-        charges = runpod.iter_charges(FIXTURES / "billing" / "runpod-billing-pods.json")
+        billing = FIXTURES / "billing"
+        charges = [
+            *runpod.iter_charges(billing / "runpod-billing-pods.json"),
+            *ai_cost.iter_anthropic(billing / "anthropic-cost-report.json"),
+            *ai_cost.iter_anthropic(billing / "anthropic-analytics-cost.json"),
+            *ai_cost.iter_openai(billing / "openai-organization-costs.json"),
+        ]
         rows = export_csv(records, data_file, charges=charges)
         discounted = Path(tmp) / "discounted.csv"
         rows += export_csv(_synthetic_records(), discounted, DISCOUNTS)
@@ -185,7 +193,8 @@ def main(argv: list[str] | None = None) -> int:
             out.writelines(discounted.read_text(encoding="utf-8").splitlines(True)[1:])
         print(
             f"exported {rows} FOCUS rows: hand-built, fixture logs (synthetic and "
-            "real), RunPod billed charges, and hand-built under negotiated discounts"
+            "real), billed charges (RunPod, Anthropic, OpenAI), and hand-built "
+            "under negotiated discounts"
         )
 
         # The validator resolves its currency list relative to the CWD.

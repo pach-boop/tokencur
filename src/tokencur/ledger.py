@@ -43,7 +43,7 @@ from pathlib import Path
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
 from tokencur.records import BilledCharge, CIRun, LimitHit, MeterReading, UsageRecord
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 
 class LedgerError(RuntimeError):
@@ -585,6 +585,16 @@ def _v7_to_v8(conn: sqlite3.Connection) -> str:
     return "added the meter_readings table for Claude Code's usage meter"
 
 
+def _v8_to_v9(conn: sqlite3.Connection) -> str:
+    """Schema 9: ``list_usd`` on charges, the list price a bill states next
+    to what it billed (Anthropic's cost report, ADR 0018). Stored charges
+    keep none: their bills did not state one."""
+    with conn:
+        _add_column(conn, "charges", "list_usd REAL")
+        conn.execute("PRAGMA user_version = 9")
+    return "added list_usd to billed charges (list price, when a bill states it)"
+
+
 # Step from version N to N + 1, keyed by N.
 _MIGRATIONS = {
     1: _v1_to_v2,
@@ -594,6 +604,7 @@ _MIGRATIONS = {
     5: _v5_to_v6,
     6: _v6_to_v7,
     7: _v7_to_v8,
+    8: _v8_to_v9,
 }
 
 
