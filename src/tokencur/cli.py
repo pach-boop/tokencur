@@ -16,7 +16,7 @@ import argparse
 import json
 import sqlite3
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
 from datetime import date
 from pathlib import Path
 
@@ -33,7 +33,7 @@ from tokencur import (
 )
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
-from tokencur.ingest import claude_code, github_ci, runpod
+from tokencur.ingest import ai_cost, claude_code, github_ci, runpod
 from tokencur.pricing import ConfigError, load_discounts, provenance
 from tokencur.recommend import recommendations, render
 from tokencur.records import BilledCharge, UsageRecord, in_period
@@ -158,8 +158,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     keep.add_argument(
         "provider",
-        choices=["runpod", "github-ci"],
-        help="runpod: a billing export; github-ci: a CI capture (ADR 0013)",
+        choices=["runpod", "anthropic-cost", "openai-costs", "github-ci"],
+        help=(
+            "runpod: a billing export; anthropic-cost, openai-costs: a saved "
+            "admin cost report (ADR 0018); github-ci: a CI capture (ADR 0013)"
+        ),
     )
     keep.add_argument("files", nargs="+", type=Path, help="files to import")
     keep.set_defaults(handler=_import)
@@ -441,11 +444,20 @@ def _import(args: argparse.Namespace) -> int:
             return 1
     if args.provider == "github-ci":
         return _import_ci(args.files)
-    charges: list[BilledCharge] = []
-    for path in args.files:
-        charges.extend(runpod.iter_charges(path))
+    read = _CHARGE_READERS[args.provider]
+    charges = [charge for path in args.files for charge in read(path)]
     if not charges:
         _fail("no billed charges in those files")
+        return 1
+    clashes = ai_cost.conflicts(charges, ledger.read_charges())
+    for clash in clashes:
+        _fail(
+            f"{clash.source} cost from {clash.day} is already grouped as "
+            f"{clash.kept}; these files group it as {clash.incoming}. "
+            "Keeping both would count the same money twice: import one "
+            "grouping per day"
+        )
+    if clashes:
         return 1
     added = ledger.record_charges(charges)
     total = sum(c.amount_usd for c in charges)
@@ -455,6 +467,13 @@ def _import(args: argparse.Namespace) -> int:
         f"{providers} — {ledger.default_path()}"
     )
     return 0
+
+
+_CHARGE_READERS: dict[str, Callable[[Path], Iterator[BilledCharge]]] = {
+    "runpod": runpod.iter_charges,
+    "anthropic-cost": ai_cost.iter_anthropic,
+    "openai-costs": ai_cost.iter_openai,
+}
 
 
 def _import_ci(files: list[Path]) -> int:

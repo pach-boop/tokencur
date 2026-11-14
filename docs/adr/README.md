@@ -24,3 +24,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0015](0015-read-the-agents-own-usage-meter.md) | Read the agent's own usage meter, from one key of its state file | Accepted |
 | [0016](0016-focus-1-3-gated-on-the-released-rules.md) | Target FOCUS 1.3, gated by the Foundation's validator on its released rules | Accepted |
 | [0017](0017-fill-in-subagent-output-from-the-agents-counters.md) | Fill in subagents' short output counts from Claude Code's counters | Accepted |
+| [0018](0018-billed-ai-cost-from-saved-admin-reports.md) | Billed AI cost from saved admin cost reports, one grouping per day | Accepted |

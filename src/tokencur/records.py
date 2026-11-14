@@ -76,6 +76,7 @@ class BilledCharge:
     unit: str  # FOCUS ConsumedUnit: "Hours", or "GB" when only disk was billed
     amount_usd: float  # what was billed
     detail: str = ""  # a note for people, e.g. "50 GB disk"
+    list_usd: float | None = None  # at list price, when the bill states it
 
 
 @dataclass(frozen=True, slots=True)

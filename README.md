@@ -96,6 +96,8 @@ tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 tokencur doctor                # read-only health check: log formats, ledger, pricing
 tokencur import runpod FILE    # billed cost: a RunPod billing export
+tokencur import anthropic-cost FILE   # billed cost: a saved Anthropic cost report
+tokencur import openai-costs FILE     # billed cost: a saved OpenAI costs report
 tokencur outcomes [REPO...]    # usage value per commit, repository by repository
 tokencur outcomes --sessions   # usage value per change that landed and stayed
 tokencur limits                # how close the 5-hour and weekly plan limits are
@@ -198,8 +200,9 @@ history:
   Codex re-sent reports earlier versions double counted (see the changelog);
   schema 3 records each call's price-changing request options, schema 4 billed
   charges, schema 5 the directory each call ran in, schema 6 CI runs, and
-  schema 7 the plan limits that turned requests away, and schema 8 the
-  readings of Claude Code's own usage meter.
+  schema 7 the plan limits that turned requests away, schema 8 the
+  readings of Claude Code's own usage meter, and schema 9 the list price a
+  bill states.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -215,6 +218,22 @@ it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
 export gains Compute rows whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
 ([ADR 0009](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0009-billed-charges-next-to-showback.md)).
+
+API usage billed by Anthropic and OpenAI comes from their admin cost reports,
+which you save yourself with an admin key (tokencur never fetches them):
+`tokencur import anthropic-cost FILE` reads Anthropic's `cost_report` and its
+beta `analytics/cost`, and `tokencur import openai-costs FILE` reads OpenAI's
+`organization/costs`. A file can hold one response, a list of pages, or either
+wrapped as `{"request_url", "response"}`. These become AI rows in the FOCUS
+export; the beta's list amount becomes `ListCost`, and a line with no request
+count is stated over its period in hours. One report covers the same money in
+one grouping (by model, by workspace, per day...), so an import that would add
+a second grouping on days already kept is refused rather than counting them
+twice ([ADR 0018](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0018-billed-ai-cost-from-saved-admin-reports.md)).
+**These importers are built and tested from the shapes the providers
+document; no real export has been checked against them yet.** OpenAI's spec
+does not say what unit its amounts are in; tokencur reads them as dollars, as
+its example suggests.
 
 ## Unit economics: usage value per commit and per successful change
 
@@ -440,7 +459,7 @@ last rate), then regenerates this page from that history.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1 | Repo, thesis, related work | ✅ |
-| 2 | Ingest real usage: local agent logs, and billed cost from provider exports | 🔨 Claude Code, Codex CLI, Kimi Code and RunPod billing done; Anthropic and OpenAI admin cost APIs next ([#7](https://github.com/pach-boop/tokencur/issues/7)); Gemini CLI ([#9](https://github.com/pach-boop/tokencur/issues/9)) |
+| 2 | Ingest real usage: local agent logs, and billed cost from provider exports | 🔨 Claude Code, Codex CLI, Kimi Code, RunPod billing and Anthropic and OpenAI admin cost reports done ([#7](https://github.com/pach-boop/tokencur/issues/7), documented shapes); Gemini CLI ([#9](https://github.com/pach-boop/tokencur/issues/9)) |
 | 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
@@ -452,9 +471,10 @@ last rate), then regenerates this page from that history.
 ## Limitations (honest)
 
 - Usage comes from three coding agents' local logs (Claude Code, Codex CLI, Kimi
-  Code); billed cost from RunPod exports. The
-  [Anthropic and OpenAI admin cost APIs](https://github.com/pach-boop/tokencur/issues/7)
-  are next and wait on real response samples.
+  Code); billed cost from RunPod exports and from saved Anthropic and OpenAI
+  admin cost reports. Those two importers follow the documented response
+  shapes and have not met a real export yet; tokencur does not fetch the
+  reports, since that takes an admin key.
 - The ledger can only keep usage it has seen. Run tokencur more often than
   Claude Code's `cleanupPeriodDays`, or raise that setting in
   `~/.claude/settings.json`.
