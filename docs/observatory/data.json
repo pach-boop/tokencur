@@ -1,20 +1,20 @@
 {
- "generated_at": "2026-10-03 00:26 UTC",
- "rates_as_of": "2026-10-02",
+ "generated_at": "2026-11-14 06:35 UTC",
+ "rates_as_of": "2026-11-13",
  "provenance": {
-  "tokencur": "0.4.0",
-  "curated_card": "2026-10-02",
-  "snapshot_fetched": "2026-10-01",
-  "snapshot_models": 345,
-  "snapshot_sha256": "ac4cf4f63ed7975a04402d9cfc23dd106777e32ecd0ce9b90a46bc09ca273adf"
+  "tokencur": "0.11.2",
+  "curated_card": "2026-11-13",
+  "snapshot_fetched": "2026-10-16",
+  "snapshot_models": 351,
+  "snapshot_sha256": "631edd1ebf42d65e94211ad7436c8dcc8fb2355e6bb88365f72be3eb69379d5d"
  },
  "kpis": {
-  "total_usd": 950.17,
-  "days": 53,
-  "avg_day_usd": 17.93,
-  "messages": 11579,
-  "achieved_savings_usd": 6704.73,
-  "potential_savings_usd": 213.81
+  "total_usd": 7612.06,
+  "days": 85,
+  "avg_day_usd": 89.55,
+  "messages": 83783,
+  "achieved_savings_usd": 58998.25,
+  "potential_savings_usd": 3247.99
  },
  "daily": [
   {
@@ -302,7 +302,7 @@
   {
    "day": "2026-09-28",
    "services": {
-    "Claude Code": 106.0438
+    "Claude Code": 107.5208
    }
   },
   {
@@ -320,7 +320,7 @@
   {
    "day": "2026-10-01",
    "services": {
-    "Claude Code": 95.623
+    "Claude Code": 95.7085
    }
   },
   {
@@ -332,15 +332,207 @@
   {
    "day": "2026-10-03",
    "services": {
-    "Claude Code": 10.4912
+    "Claude Code": 334.1496
+   }
+  },
+  {
+   "day": "2026-10-04",
+   "services": {
+    "Claude Code": 232.2821
+   }
+  },
+  {
+   "day": "2026-10-05",
+   "services": {
+    "Claude Code": 168.6813
+   }
+  },
+  {
+   "day": "2026-10-06",
+   "services": {
+    "Claude Code": 408.0417
+   }
+  },
+  {
+   "day": "2026-10-07",
+   "services": {
+    "Claude Code": 347.7747
+   }
+  },
+  {
+   "day": "2026-10-08",
+   "services": {
+    "Claude Code": 286.2959
+   }
+  },
+  {
+   "day": "2026-10-09",
+   "services": {
+    "Claude Code": 109.644
+   }
+  },
+  {
+   "day": "2026-10-10",
+   "services": {
+    "Claude Code": 34.0111
+   }
+  },
+  {
+   "day": "2026-10-11",
+   "services": {
+    "Claude Code": 52.9712
+   }
+  },
+  {
+   "day": "2026-10-12",
+   "services": {
+    "Claude Code": 74.0118
+   }
+  },
+  {
+   "day": "2026-10-13",
+   "services": {
+    "Claude Code": 258.525
+   }
+  },
+  {
+   "day": "2026-10-14",
+   "services": {
+    "Claude Code": 399.8119
+   }
+  },
+  {
+   "day": "2026-10-15",
+   "services": {
+    "Claude Code": 240.6468
+   }
+  },
+  {
+   "day": "2026-10-16",
+   "services": {
+    "Claude Code": 126.9666
+   }
+  },
+  {
+   "day": "2026-10-17",
+   "services": {
+    "Claude Code": 197.813
+   }
+  },
+  {
+   "day": "2026-10-18",
+   "services": {
+    "Claude Code": 206.0535
+   }
+  },
+  {
+   "day": "2026-10-19",
+   "services": {
+    "Claude Code": 291.5951
+   }
+  },
+  {
+   "day": "2026-10-20",
+   "services": {
+    "Claude Code": 88.5679
+   }
+  },
+  {
+   "day": "2026-10-21",
+   "services": {
+    "Claude Code": 203.174
+   }
+  },
+  {
+   "day": "2026-10-22",
+   "services": {
+    "Claude Code": 513.5133
+   }
+  },
+  {
+   "day": "2026-10-23",
+   "services": {
+    "Claude Code": 32.6873
+   }
+  },
+  {
+   "day": "2026-10-24",
+   "services": {
+    "Claude Code": 158.5087
+   }
+  },
+  {
+   "day": "2026-10-25",
+   "services": {
+    "Claude Code": 261.7261
+   }
+  },
+  {
+   "day": "2026-10-26",
+   "services": {
+    "Claude Code": 60.4207
+   }
+  },
+  {
+   "day": "2026-10-27",
+   "services": {
+    "Claude Code": 137.7437
+   }
+  },
+  {
+   "day": "2026-10-28",
+   "services": {
+    "Claude Code": 204.5292
+   }
+  },
+  {
+   "day": "2026-10-29",
+   "services": {
+    "Claude Code": 455.5298
+   }
+  },
+  {
+   "day": "2026-10-30",
+   "services": {
+    "Claude Code": 336.2477
+   }
+  },
+  {
+   "day": "2026-10-31",
+   "services": {
+    "Claude Code": 136.4036
+   }
+  },
+  {
+   "day": "2026-11-01",
+   "services": {
+    "Claude Code": 119.0033
+   }
+  },
+  {
+   "day": "2026-11-02",
+   "services": {
+    "Claude Code": 74.9089
+   }
+  },
+  {
+   "day": "2026-11-13",
+   "services": {
+    "Claude Code": 87.1384
+   }
+  },
+  {
+   "day": "2026-11-14",
+   "services": {
+    "Claude Code": 31.4395
    }
   }
  ],
  "by_model": [
   {
    "model": "claude-opus-5-5",
-   "cost_usd": 603.71,
-   "tokens": 1474504594
+   "cost_usd": 7073.95,
+   "tokens": 15522647990
   },
   {
    "model": "gpt-5.4",
@@ -351,6 +543,16 @@
    "model": "gpt-5.3-codex",
    "cost_usd": 139.71,
    "tokens": 405185814
+  },
+  {
+   "model": "claude-fable-5-2",
+   "cost_usd": 113.55,
+   "tokens": 101336353
+  },
+  {
+   "model": "claude-sonnet-5",
+   "cost_usd": 77.69,
+   "tokens": 235836933
   },
   {
    "model": "claude-fable-5-1",
@@ -375,42 +577,64 @@
   {
    "model": "claude-opus-4-8",
    "cost_usd": 1.26,
-   "tokens": 686048
+   "tokens": 686053
   },
   {
    "model": "gpt-5.1-codex-mini",
    "cost_usd": 0.81,
    "tokens": 15048582
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "cost_usd": 0.35,
+   "tokens": 1053730
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "cost_usd": 0.07,
+   "tokens": 1087037
   }
  ],
  "by_bucket": [
   {
    "bucket": "cache-read",
-   "cost_usd": 434.38
-  },
-  {
-   "bucket": "cache-write-1h",
-   "cost_usd": 200.28
+   "cost_usd": 3232.63
   },
   {
    "bucket": "output",
-   "cost_usd": 181.19
+   "cost_usd": 2030.33
   },
   {
-   "bucket": "input",
-   "cost_usd": 134.17
+   "bucket": "cache-write-1h",
+   "cost_usd": 1533.14
   },
   {
    "bucket": "cache-write-5m",
-   "cost_usd": 0.15
+   "cost_usd": 681.2
+  },
+  {
+   "bucket": "input",
+   "cost_usd": 134.77
   }
  ],
  "recommendations": [
   {
    "kind": "achieved",
    "title": "Prompt caching on claude-opus-5-5",
-   "savings_usd": 5391.27,
-   "savings_pct": 91.8
+   "savings_usd": 56543.79,
+   "savings_pct": 91.6
+  },
+  {
+   "kind": "potential",
+   "title": "Right-size claude-opus-5-5 → claude-sonnet-5-5",
+   "savings_usd": 3152.77,
+   "savings_pct": 44.6
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on claude-fable-5-2",
+   "savings_usd": 732.28,
+   "savings_pct": 91.3
   },
   {
    "kind": "achieved",
@@ -425,16 +649,22 @@
    "savings_pct": 90.0
   },
   {
-   "kind": "potential",
-   "title": "Right-size claude-opus-5-5 → claude-sonnet-5-5",
-   "savings_usd": 157.43,
-   "savings_pct": 26.1
+   "kind": "achieved",
+   "title": "Prompt caching on claude-sonnet-5",
+   "savings_usd": 407.86,
+   "savings_pct": 87.1
   },
   {
    "kind": "potential",
    "title": "Right-size gpt-5.4 → gpt-5.3-codex",
    "savings_usd": 50.66,
    "savings_pct": 26.7
+  },
+  {
+   "kind": "potential",
+   "title": "Right-size claude-sonnet-5 → claude-haiku-4-5",
+   "savings_usd": 38.84,
+   "savings_pct": 50.0
   },
   {
    "kind": "achieved",
@@ -480,6 +710,18 @@
   },
   {
    "kind": "achieved",
+   "title": "Prompt caching on claude-haiku-4-5-20251001",
+   "savings_usd": 0.8,
+   "savings_pct": 77.3
+  },
+  {
+   "kind": "achieved",
+   "title": "Prompt caching on claude-haiku-5-5",
+   "savings_usd": 0.06,
+   "savings_pct": 62.4
+  },
+  {
+   "kind": "achieved",
    "title": "Prompt caching on claude-opus-5",
    "savings_usd": -1.12,
    "savings_pct": -85.1
@@ -505,11 +747,11 @@
   }
  ],
  "billed": {
-  "total_usd": 2.69,
+  "total_usd": 27.52,
   "by_service": {
-   "RunPod Pods": 2.69
+   "RunPod Pods": 27.52
   },
-  "charges": 20
+  "charges": 98
  },
  "money": {
   "plans": [
@@ -527,8 +769,8 @@
     "monthly_usd": 100.0,
     "from": "2026-10-02",
     "until": null,
-    "days_counted": 2,
-    "outlay_usd": 6.57
+    "days_counted": 44,
+    "outlay_usd": 144.56
    },
    {
     "service": "Codex CLI",
@@ -553,11 +795,11 @@
    "Claude Code": 100.0
   },
   "monthly_total_usd": 100.0,
-  "window_days": 239,
-  "window_months": 7.85,
-  "estimated_outlay_usd": 99.88,
-  "api_equivalent_usd": 950.17,
-  "leverage": 9.5,
-  "effective_discount_pct": 89.5
+  "window_days": 281,
+  "window_months": 9.23,
+  "estimated_outlay_usd": 237.86,
+  "api_equivalent_usd": 7612.06,
+  "leverage": 32.0,
+  "effective_discount_pct": 96.9
  }
 }
