@@ -5,6 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **Billed API cost from Anthropic and OpenAI** (#7).
+  `tokencur import anthropic-cost FILE` reads a saved Anthropic cost
+  report, either the Legacy `cost_report` or the beta `analytics/cost`.
+  `tokencur import openai-costs FILE` reads a saved OpenAI
+  `organization/costs` report. Their lines are kept as billed charges next
+  to RunPod's and exported as FOCUS "AI and Machine Learning" rows. The
+  beta report's list amount becomes `ListCost`. A line with no request
+  count is stated over its period in hours, because FOCUS wants a quantity
+  on every usage row. tokencur reads the files you save and fetches
+  nothing. The importers follow the documented shapes and have not yet
+  met a real export (ADR 0018).
+- **No double counting across groupings.** The same money can be
+  reported by model or by workspace, per hour or per day. An import that
+  would add a second grouping on days the ledger already holds for that
+  provider is refused, and the error names the day and both groupings.
+
+### Changed
+
+- Ledger schema 9: billed charges gain `list_usd`, the list price a bill
+  states. Existing charges keep none. The ledger is backed up before the
+  upgrade, as usual.
+
 ## [0.11.3] - 2026-11-14
 
 ### Added

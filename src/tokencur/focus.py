@@ -23,6 +23,7 @@ from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
 from functools import cache
 
+from tokencur.ingest import ai_cost
 from tokencur.pricing import ModelRates, rates_for, rates_for_record
 from tokencur.records import BilledCharge, UsageRecord, parse_timestamp
 
@@ -129,7 +130,7 @@ _NOT_APPLICABLE = dict.fromkeys(
 )
 
 # What a billed charge's unit meters, for SkuMeter.
-_METER_BY_UNIT = {"Hours": "time", "GB": "disk"}
+_METER_BY_UNIT = {"Hours": "time", "GB": "disk", "Requests": "requests"}
 
 _PROVIDER_BY_SOURCE = {
     "claude-code": "Anthropic",
@@ -200,12 +201,17 @@ def to_focus_rows(
 def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
     """FOCUS rows for billed charges: real money, not showback.
 
-    BilledCost and EffectiveCost are what the provider took. No list
-    price is published per charge, so the unit price is the amount over
-    the quantity, and ListCost and ContractedCost are that price times the
-    quantity: FOCUS checks that product exactly, and dividing then
-    multiplying back can be off the amount by a rounding unit. A charge
-    with nothing billed to divide by has no unit price, an explicit null.
+    BilledCost and EffectiveCost are what the provider took. The unit
+    price is the amount over the quantity, and ContractedCost is that
+    price times the quantity: FOCUS checks that product exactly, and
+    dividing then multiplying back can be off the amount by a rounding
+    unit. ListCost is built the same way from the list amount when the
+    bill states one (Anthropic's cost report), else from the amount. A
+    charge with nothing billed to divide by has no unit price, an
+    explicit null.
+
+    RunPod's charges are Compute rows; Anthropic's and OpenAI's are AI
+    and Machine Learning rows, one SKU per model or line item (ADR 0018).
     """
     for c in charges:
         start = parse_timestamp(c.period_start)
@@ -215,16 +221,22 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
         unit = c.unit.lower()
         detail = f", {c.detail}" if c.detail else ""
         unit_price = c.amount_usd / c.quantity if c.quantity else None
-        list_cost = c.amount_usd if unit_price is None else unit_price * c.quantity
+        contracted = c.amount_usd if unit_price is None else unit_price * c.quantity
+        # A bill that states its list price (ADR 0018) sets ListCost apart.
+        listed = c.amount_usd if c.list_usd is None else c.list_usd
+        list_price = listed / c.quantity if c.quantity else None
+        list_cost = listed if list_price is None else list_price * c.quantity
+        ai = c.source in ai_cost.SOURCES  # AI model usage, not compute
+        sku = f"{c.source}/{c.resource_id}" if ai else f"{c.source}/{unit}"
         yield {
             **_NOT_APPLICABLE,
             "BilledCost": c.amount_usd,
             "EffectiveCost": c.amount_usd,
-            "ContractedCost": list_cost,
+            "ContractedCost": contracted,
             "ListCost": list_cost,
             "BillingAccountId": f"tokencur-{c.source}",
             "BillingAccountName": f"{c.provider} account",
-            "BillingAccountType": "Prepaid credits",
+            "BillingAccountType": "API organization" if ai else "Prepaid credits",
             "BillingCurrency": "USD",
             "BillingPeriodStart": _fmt(period_start),
             "BillingPeriodEnd": _fmt(_next_month(period_start)),
@@ -241,14 +253,14 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
             # Prepaid credits: the provider issues no invoice per charge.
             "InvoiceId": None,
             "InvoiceIssuerName": c.provider,
-            "ListUnitPrice": unit_price,
+            "ListUnitPrice": list_price,
             "PricingCategory": "Standard",
             # Priced in the billing currency: the PricingCurrency columns
             # repeat the billing ones.
             "PricingCurrency": "USD",
             "PricingCurrencyContractedUnitPrice": unit_price,
             "PricingCurrencyEffectiveCost": c.amount_usd,
-            "PricingCurrencyListUnitPrice": unit_price,
+            "PricingCurrencyListUnitPrice": list_price,
             "PricingQuantity": float(c.quantity),
             "PricingUnit": c.unit,
             "ProviderName": c.provider,
@@ -256,14 +268,14 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
             "ResourceId": c.resource_id,
             "ResourceName": c.resource_id,
             "ResourceType": c.resource_type,
-            "ServiceCategory": "Compute",
+            "ServiceCategory": "AI and Machine Learning" if ai else "Compute",
             "ServiceName": c.service,
             "ServiceProviderName": c.provider,
-            "ServiceSubcategory": "Containers",
-            "SkuId": f"{c.source}/{unit}",
+            "ServiceSubcategory": "Generative AI" if ai else "Containers",
+            "SkuId": sku,
             "SkuMeter": f"{c.resource_type} {_METER_BY_UNIT.get(c.unit, unit)}",
             "SkuPriceDetails": None,
-            "SkuPriceId": f"{c.source}/{unit}",
+            "SkuPriceId": f"{sku}/{unit}" if ai else sku,
             "SubAccountId": None,
             "SubAccountName": None,
             "SubAccountType": None,
