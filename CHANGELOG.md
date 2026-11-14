@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-11-14
+
 ### Added
 
 - **Right-sizing covers Claude Fable 5.2**: `tokencur recommend` compares
