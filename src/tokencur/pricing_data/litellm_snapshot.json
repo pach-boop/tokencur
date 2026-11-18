@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-11-17",
+  "fetched": "2026-11-18",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -1896,10 +1896,19 @@
   },
   "gpt-6-rosalind": {
    "cache_creation_input_token_cost": 1.875e-05,
-   "cache_read_input_token_cost": 1.5e-06,
-   "input_cost_per_token": 1.5e-05,
+   "cache_read_input_token_cost": 1e-06,
+   "history": [
+    {
+     "cache_creation_input_token_cost": 1.875e-05,
+     "cache_read_input_token_cost": 1.5e-06,
+     "input_cost_per_token": 1.5e-05,
+     "output_cost_per_token": 7.5e-05,
+     "until": "2026-11-18"
+    }
+   ],
+   "input_cost_per_token": 1e-05,
    "litellm_provider": "openai",
-   "output_cost_per_token": 7.5e-05
+   "output_cost_per_token": 5e-05
   },
   "gpt-6-sol": {
    "cache_creation_input_token_cost": 2.5e-06,
@@ -1921,6 +1930,27 @@
    "input_cost_per_token": 1e-06,
    "litellm_provider": "openai",
    "output_cost_per_token": 5e-06
+  },
+  "gpt-6.2-astra": {
+   "cache_creation_input_token_cost": 1e-05,
+   "cache_read_input_token_cost": 4e-07,
+   "input_cost_per_token": 8e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 4e-05
+  },
+  "gpt-6.2-astra-law": {
+   "cache_creation_input_token_cost": 1e-05,
+   "cache_read_input_token_cost": 4e-07,
+   "input_cost_per_token": 8e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 4e-05
+  },
+  "gpt-6.2-sol": {
+   "cache_creation_input_token_cost": 2.5e-06,
+   "cache_read_input_token_cost": 1e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 1e-05
   },
   "gpt-audio": {
    "input_cost_per_token": 2.5e-06,
