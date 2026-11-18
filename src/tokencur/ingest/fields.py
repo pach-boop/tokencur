@@ -12,6 +12,9 @@ a boolean.
 from __future__ import annotations
 
 import json
+from datetime import datetime
+
+from tokencur.records import parse_timestamp
 
 
 class Malformed(ValueError):
@@ -35,6 +38,15 @@ def obj(value: object) -> dict:
 def text(value: object, default: str = "") -> str:
     """A text field; any other type reads as ``default``."""
     return value if isinstance(value, str) else default
+
+
+def time_span(start: object, end: object) -> tuple[datetime, datetime] | None:
+    """A period from two timestamp fields; None unless it ends after it starts."""
+    begin = parse_timestamp(start) if isinstance(start, str) else None
+    finish = parse_timestamp(end) if isinstance(end, str) else None
+    if begin is None or finish is None or finish <= begin:
+        return None
+    return begin, finish
 
 
 def count(value: object) -> int:

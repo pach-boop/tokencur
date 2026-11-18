@@ -212,12 +212,16 @@ never stored.
 
 Showback values usage at list price; a bill is what a provider actually took.
 RunPod is the first billed source: `scripts/fetch_runpod_billing.py` saves the
-billing history from RunPod's REST API (the one step that goes online, when you
-run it), and `tokencur import runpod FILE` keeps it in the ledger. Reports show
-it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
-export gains Compute rows whose `BilledCost` is the billed amount, and the
+billing history of pods and network volumes from RunPod's API v2 (the one step
+that goes online, when you run it), and `tokencur import runpod FILE...` keeps
+it in the ledger. Reports show it as a separate total, "BILLED (real money,
+from provider bills)", the FOCUS export gains Compute rows for pods and Storage
+rows for network volumes whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
 ([ADR 0009](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0009-billed-charges-next-to-showback.md)).
+v2 gives no GPU time, so its charges are stated over their day; captures saved
+from the retired REST API v1 still import, and the GPU time they measured is
+kept ([ADR 0020](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0020-runpod-billing-from-api-v2.md)).
 
 API usage billed by Anthropic and OpenAI comes from their admin cost reports,
 which you save yourself with an admin key (tokencur never fetches them):
