@@ -195,6 +195,26 @@ def test_a_failing_branch_gate_is_reported():
     assert "did not run" in unrun.alert
 
 
+def test_a_gate_that_wrote_no_verdict_says_why():
+    # 2026-11-02: the Foundation re-published the pinned 1.4.0.1 file, and
+    # the branch's gate stopped before the validator, writing no verdict.
+    why = "the pinned rule file changed: sha256 9913fc8a, pinned 6ebcae49"
+
+    branch = watch.check_branch_gate(None, None, branch=True, error=why)
+    released_14 = watch.check_released_14(
+        _asset("model-1.4.json"), None, branch=True, error=why
+    )
+    released_13 = watch.check_released_13(
+        _asset("model-1.3.0.1.json", PINNED_DIGEST), None, error=why
+    )
+
+    assert branch.alert == f"The `focus-1.4` branch's own gate did not run: {why}."
+    assert why in released_14.alert
+    assert why in released_13.alert
+    # With nothing printed, the old wording stands.
+    assert watch.check_branch_gate(None, None, branch=True).outcome == "did not run"
+
+
 def test_the_marker_names_the_set_of_answers():
     a = watch.Check("x", "f", "o", "alert A")
     b = watch.Check("y", "f", "o", "alert B")
