@@ -27,7 +27,8 @@ Settings, all optional, come from the environment:
                           session (default: 300000)
   TOKENCUR_CONTEXT_WARN   context at which the status line turns yellow
                           (default: 250000)
-  TOKENCUR_WATCH_WEEK     weekly steps, in percent (default: 85,95)
+  TOKENCUR_WATCH_WEEK     weekly steps, in percent (default: 85,95); a
+                          model's own weekly limit (Fable) takes them too
   TOKENCUR_WATCH_5H       five-hour steps, in percent (default: 65,85)
 """
 
@@ -35,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -210,15 +212,25 @@ def _local(moment: str) -> str:
     return datetime.fromisoformat(moment).astimezone().strftime("%a %H:%M")
 
 
+def _measured(figures: dict) -> list[tuple[str, str, dict]]:
+    """Each window measured, as (mark name, label, figures): the week, the
+    five hours, then any model's own weekly limit (``Fable``)."""
+    windows = figures.get("windows") or {}
+    found = [(kind, label, windows.get(kind)) for kind, label in LABELS.items()]
+    models = (windows.get("seven_day") or {}).get("models") or {}
+    found += [
+        (f"seven_day_{re.sub(r'[^A-Za-z0-9]+', '_', name)}", name, window)
+        for name, window in sorted(models.items())
+    ]
+    return [(kind, label, w) for kind, label, w in found if isinstance(w, dict)]
+
+
 def summary(figures: dict, projection: bool = True) -> str:
     """One line: each window's share of its limit and, when the week's
     pace reaches its limit before the reset, when."""
     windows = figures.get("windows") or {}
     parts = []
-    for kind, label in LABELS.items():
-        window = windows.get(kind)
-        if window is None:
-            continue
+    for _, label, window in _measured(figures):
         if window.get("blocked"):
             parts.append(f"{label} at its limit until {_local(window['resets_at'])}")
         elif window.get("percent") is not None:
@@ -337,17 +349,15 @@ def watch(running=_claude_running, notify=_notify, measure=refresh) -> int:
     if cached is None:
         return 0
     figures = cached[0]
-    steps = {
-        "seven_day": _steps("TOKENCUR_WATCH_WEEK", "85,95"),
-        "five_hour": _steps("TOKENCUR_WATCH_5H", "65,85"),
-    }
-    for kind, label in LABELS.items():
-        window = (figures.get("windows") or {}).get(kind)
-        percent = window.get("percent") if window else None
+    week = _steps("TOKENCUR_WATCH_WEEK", "85,95")
+    steps = {"seven_day": week, "five_hour": _steps("TOKENCUR_WATCH_5H", "65,85")}
+    for kind, label, window in _measured(figures):
+        percent = window.get("percent")
         if percent is None:
             continue
         mark = state_dir() / f".watch_{kind}"
-        reached = max((s for s in steps[kind] if percent >= s), default=0)
+        # A model's own weekly limit takes the week's steps.
+        reached = max((s for s in steps.get(kind, week) if percent >= s), default=0)
         try:
             before = int(mark.read_text(encoding="utf-8"))
         except (OSError, ValueError):

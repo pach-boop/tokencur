@@ -256,3 +256,40 @@ def test_the_commands_answer_on_the_command_line(tmp_path, monkeypatch, capsys):
     assert "0 transcripts start with" in capsys.readouterr().err
     assert hooks.main(["nonsense"]) == 2
     assert "statusline" in capsys.readouterr().err
+
+
+def _with_fable(percent=76.0, blocked=False):
+    figures = json.loads(json.dumps(FIGURES))
+    figures["windows"]["seven_day"]["models"] = {
+        "Fable": {
+            "percent": percent,
+            "blocked": blocked,
+            "resets_at": "2026-10-21T11:00:00Z",
+        }
+    }
+    return figures
+
+
+def test_the_summary_adds_a_models_own_weekly_limit():
+    assert hooks.summary(_with_fable(), projection=False) == (
+        "week 68% · 5h 13% · Fable 76%"
+    )
+    assert hooks.summary(_with_fable(100.0, blocked=True), projection=False) == (
+        f"week 68% · 5h 13% · Fable at its limit until {_local('2026-10-21T11:00:00Z')}"
+    )
+
+
+def test_the_watch_tells_a_models_limit_on_the_weeks_steps(_state):
+    notices = []
+    shares = iter([70.0, 86.0, 90.0])
+
+    def measure():
+        figures = _with_fable(next(shares))
+        figures["windows"]["five_hour"] = None
+        _cache(_state, figures)
+
+    for _ in range(3):
+        hooks.watch(lambda: True, lambda t, _: notices.append(t), measure)
+
+    assert notices == ["tokencur: Fable at 86%"]
+    assert (_state / ".watch_seven_day_Fable").read_text(encoding="utf-8") == "85"

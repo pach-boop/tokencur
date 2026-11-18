@@ -356,6 +356,9 @@ def _limit_hit(line_entry: dict) -> LimitHit | None:
 
 #: The limits whose meter tokencur reads, as Claude Code names them.
 _METERED = ("five_hour", "seven_day")
+#: A weekly limit of one model, as the meter's list of limits names it
+#: (``kind``), read as ``seven_day:<the model's name>`` (ADR 0015).
+_MODEL_WEEKLY = "weekly_scoped"
 
 
 def config_path() -> Path:
@@ -401,6 +404,10 @@ def meter_status(path: Path | None = None) -> MeterStatus:
     project settings; it is decoded as JSON to reach this key, and nothing
     else in it is read (ADR 0015). An absent, unreadable or reshaped file
     gives no readings.
+
+    A model with a weekly limit of its own (Fable, since 2026-11) is listed
+    under ``utilization.limits`` as ``weekly_scoped``, with the model's name;
+    it is read as the limit ``seven_day:<name>``.
     """
     target = path or config_path()
     try:
@@ -417,21 +424,17 @@ def meter_status(path: Path | None = None) -> MeterStatus:
         fetched_at = datetime.fromtimestamp(fetched / 1000, UTC)
     except (OverflowError, OSError, ValueError):
         return MeterStatus(file=True, found=True)
+    utilization = obj(cached.get("utilization"))
+    found = [
+        (kind, limit.get("utilization"), limit.get("resets_at"))
+        for kind in _METERED
+        if (limit := obj(utilization.get(kind)))
+    ]
+    found += _model_limits(utilization.get("limits"))
     readings = []
-    for kind in _METERED:
-        limit = obj(obj(cached.get("utilization")).get(kind))
-        percent, resets = limit.get("utilization"), text(limit.get("resets_at"))
-        if not _is_amount(percent) or percent > 100 or not resets:
-            continue
-        try:
-            resets_at = datetime.fromisoformat(resets)
-            if resets_at.tzinfo is None:
-                resets_at = resets_at.replace(tzinfo=UTC)  # as parse_timestamp reads it
-            # Logged as 02:59:59.835 for a limit that resets at 03:00.
-            resets_at = (resets_at.astimezone(UTC) + timedelta(seconds=30)).replace(
-                second=0, microsecond=0
-            )
-        except (ValueError, OverflowError):
+    for kind, percent, resets in found:
+        resets_at = _meter_reset(text(resets))
+        if not _is_amount(percent) or percent > 100 or resets_at is None:
             continue
         readings.append(
             MeterReading(
@@ -443,6 +446,39 @@ def meter_status(path: Path | None = None) -> MeterStatus:
             )
         )
     return MeterStatus(file=True, found=True, readings=readings)
+
+
+def _model_limits(listed: object) -> list[tuple[str, object, object]]:
+    """The meter's weekly limits of one model, as (``seven_day:<name>``,
+    percent, reset). Limits scoped otherwise (to a surface, or to a model
+    and a surface) are left out: their usage is not one model's."""
+    found = []
+    for item in listed if isinstance(listed, list) else []:
+        limit = obj(item)
+        scope = obj(limit.get("scope"))
+        name = text(obj(scope.get("model")).get("display_name")).strip()
+        if limit.get("kind") != _MODEL_WEEKLY or not name or scope.get("surface"):
+            continue
+        found.append(
+            (f"seven_day:{name}", limit.get("percent"), limit.get("resets_at"))
+        )
+    return found
+
+
+def _meter_reset(resets: str) -> datetime | None:
+    """A meter reset, rounded to the minute; None when it is no time."""
+    if not resets:
+        return None
+    try:
+        resets_at = datetime.fromisoformat(resets)
+        if resets_at.tzinfo is None:
+            resets_at = resets_at.replace(tzinfo=UTC)  # as parse_timestamp reads it
+        # Logged as 02:59:59.835 for a limit that resets at 03:00.
+        return (resets_at.astimezone(UTC) + timedelta(seconds=30)).replace(
+            second=0, microsecond=0
+        )
+    except (ValueError, OverflowError):
+        return None
 
 
 @dataclass(frozen=True)

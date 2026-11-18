@@ -376,6 +376,18 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
   $1,412. The current share and the week's projection then use that limit,
   and the estimate from ceilings hit stays next to it
   ([ADR 0015](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0015-read-the-agents-own-usage-meter.md)).
+- **A model's own weekly limit.** Since November 2026 the meter also lists a
+  weekly limit for Fable alone, on top of the plan's. tokencur reads it from
+  the same key and sets it against Fable's usage value only:
+
+  ```text
+  Fable has a weekly limit of its own: $236.11 of Fable's usage value = 76% of it by Claude Code's meter (75% at Tue 2026-11-17 18:02 CST); the meter puts it at about $311.84, $75.73 left
+  ```
+
+  Fable also fills the plan's week faster per dollar of usage value. On the
+  week to 2026-11-18, the meter counted $6.15 of Fable usage per point of the
+  week. The plan's earlier weeks, almost all Opus 5.5, took $13.30 to $14.40
+  per point.
 - **A gauge, not a balance.** Limits are not priced like the API, and usage
   these logs do not hold (claude.ai chat, Claude Code's background calls)
   draws on the same limits. Several agents on one subscription share the same
@@ -384,7 +396,8 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
 `tokencur limits --json` prints the same figures for scripts: per window the
 usage value, the share of the limit and what it was measured against
 (`meter`, `meter_reading` or `lowest_ceiling`), the reset, and for the week
-when its pace reaches the limit. The status line and hooks in
+when its pace reaches the limit and, under `models`, each model's own weekly
+limit with the same figures. The status line and hooks in
 [`contrib/claude-code/`](https://github.com/pach-boop/tokencur/tree/main/contrib/claude-code)
 read it.
 

@@ -19,6 +19,9 @@ API-equivalent usage value:
   set against the value used by then, it also says what the whole limit
   is worth (ADR 0015). Several readings in one window place the meter on
   a line, which it follows more closely than a share of a single reading.
+- A model can have a weekly limit of its own on top of the plan's (Fable,
+  since 2026-11). The meter reads it as ``seven_day:<model>``; it is set
+  against that model's usage value only.
 
 These are estimates by nature. Limits are not priced like the API, and
 usage the logs do not hold (claude.ai chat, Claude Code's own background
@@ -28,6 +31,7 @@ calls) draws on the same limits. Only Claude Code usage is measured.
 from __future__ import annotations
 
 import os
+import re
 from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
@@ -112,6 +116,8 @@ class Limits:
     plans_from: str = ""  # where the plans were read, for the view
     implausible: int = 0  # hits left out: their reset does not fit the window
     unpriced: dict[str, int] = field(default_factory=dict)  # model -> calls
+    #: a model's own weekly limit, by the model's name in the meter
+    models: dict[str, Window] = field(default_factory=dict)
 
 
 def plans_path(explicit: Path | None = None) -> Path | None:
@@ -226,6 +232,11 @@ def limits(
         kind: _with_meter(window, meter.get(kind), timeline)
         for kind, window in current.items()
     }
+    models = {
+        kind.split(":", 1)[1]: _model_week(kind, reading, records, now)
+        for kind, reading in sorted(meter.items())
+        if kind.startswith("seven_day:")
+    }
     starts = [c.resets_at - WINDOWS[c.kind] for c in ceilings]
     starts += [w.start for w in current.values() if w is not None]
     shown_from = min(starts, default=now)
@@ -244,7 +255,34 @@ def limits(
         plans_from=plans_from,
         implausible=implausible,
         unpriced=unpriced,
+        models=models,
     )
+
+
+def of_model(name: str, model: str) -> bool:
+    """Whether the model id ``model`` is the model the meter calls ``name``:
+    "Fable" is ``claude-fable-5-2`` and every other Fable, "Fable 5.2" only
+    ``claude-fable-5-2``. Ids are compared by their dash-separated parts."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return bool(slug) and f"-{slug}-" in f"-{model.lower()}-"
+
+
+def _model_week(
+    kind: str, meter: _Meter, records: list[UsageRecord], now: datetime
+) -> Window:
+    """The open week of one model's own limit, valued by its calls only."""
+    name = kind.split(":", 1)[1]
+    timeline = _Timeline([r for r in records if of_model(name, r.model)])
+    start = meter.resets - WINDOWS["seven_day"]
+    window = Window(
+        kind,
+        start,
+        meter.resets,
+        timeline.value(start, now),
+        blocked=meter.percent >= 100,
+        estimated=False,
+    )
+    return _with_meter(window, meter, timeline) or window
 
 
 def _plan_at(plans: list[dict], day: date) -> str:
@@ -304,7 +342,8 @@ def _meter_now(
         )
         if at is None or resets is None or not at <= now < resets:
             continue
-        if reading.kind in WINDOWS and not resets - at > WINDOWS[reading.kind]:
+        span = WINDOWS.get(reading.kind.split(":", 1)[0])
+        if span is not None and not resets - at > span:
             open_now.setdefault(reading.kind, []).append(
                 _Meter(reading.percent, at, resets)
             )
@@ -574,7 +613,9 @@ def as_dict(result: Limits) -> dict:
     (``"meter"``), the meter's own reading when it was too low to say
     (``"meter_reading"``), else against the lowest ceiling seen on this
     plan (``"lowest_ceiling"``); null when there is nothing to set it
-    against."""
+    against. A model with a weekly limit of its own has the same figures
+    under the week's ``models``, keyed by the model's name in the meter and
+    valued by that model's calls only."""
 
     def iso(moment: datetime | None) -> str | None:
         if moment is None:
@@ -585,7 +626,9 @@ def as_dict(result: Limits) -> dict:
         current = result.current[kind]
         if current is None:
             return None
-        lowest = _lowest(result, kind)
+        return figures(current, _lowest(result, kind))
+
+    def figures(current: Window, lowest: float | None) -> dict:
         if (share := meter_share(current)) is not None:
             percent, reference = 100 * share, "meter"
         elif current.meter_percent is not None:
@@ -620,6 +663,10 @@ def as_dict(result: Limits) -> dict:
         }
 
     week = window("seven_day")
+    if week is not None:
+        week["models"] = {
+            name: figures(model, None) for name, model in result.models.items()
+        }
     projection = project(result)
     if week is not None and projection is not None:
         week["projection"] = {
@@ -702,6 +749,8 @@ def _section(result: Limits, kind: str, at) -> list[str]:
             f"  the meter puts the whole limit at about ${window.meter_limit:,.2f} "
             f"of usage value{line}{compare}"
         )
+    if kind == "seven_day":
+        lines += [_model_line(n, w, at) for n, w in result.models.items()]
     on_plan = " on this plan" if result.plan else ""
     if references:
         recent = sorted(references, key=lambda c: c.hit_at, reverse=True)
@@ -734,6 +783,31 @@ def _section(result: Limits, kind: str, at) -> list[str]:
         )
     lines.append("")
     return lines
+
+
+def _model_line(name: str, window: Window, at) -> str:
+    """One model's own weekly limit, by Claude Code's meter."""
+    read = f"{window.meter_percent:.0f}% at {at(window.meter_at)}"
+    if window.meter_readings > 1:
+        read = f"a line through {window.meter_readings} readings, the last {read}"
+    own = f"  {name} has a weekly limit of its own"
+    if window.blocked:
+        return (
+            f"{own}, reached by Claude Code's meter ({read}): {name} waits until "
+            f"{at(window.end)}, other models do not"
+        )
+    share = meter_share(window)
+    if share is None or window.meter_limit is None:
+        return (
+            f"{own}: Claude Code's meter read {read}, too little to tell what it "
+            "is worth"
+        )
+    left = max(window.meter_limit - window.value, 0.0)
+    return (
+        f"{own}: ${window.value:,.2f} of {name}'s usage value = {share:.0%} of it "
+        f"by Claude Code's meter ({read}); the meter puts it at about "
+        f"${window.meter_limit:,.2f}, ${left:,.2f} left"
+    )
 
 
 def _projection(result: Limits, projection: Projection, at) -> str:
