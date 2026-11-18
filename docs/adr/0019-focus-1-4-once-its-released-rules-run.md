@@ -60,3 +60,16 @@ supersedes ADR 0016, and the watch's 1.3 check retires.
 - Until the merge, the branch is checked against prerelease rules, which
   the Foundation can replace. The hash pin makes a replacement visible,
   and the watch reports a newer prerelease file.
+
+## Update, 2026-11-17
+
+On 2026-11-02 the Foundation re-published `model-1.4.0.1.json` under the
+same name. The pin stopped matching and the gate refused to run (issue
+#41). The new file, sha256 `9913fc8a…`, differs from the 1.4 rule file
+of the same prerelease only in its version and in one dependency of two
+rules: `CAU-CommitmentDiscountUnit-C-005-C` and `-C-006-C` now depend on
+`CAU-CommitmentDiscountQuantity-C-003-C`, not `-C-000-C`. That change is
+what lets the validator run: `focus-validator` 2.2.1 still stops on the
+1.4 files with the "Active-edge cycle" error, the released one included.
+The export passes the new file as it passed the old one, 351 rules and
+none failing, so the pin moves to it.
