@@ -111,7 +111,14 @@ def _ran(report: dict) -> str:
     return f"fails {failed} ({report['summary']})"
 
 
-def check_released_13(asset: dict | None, report: dict | None) -> Check:
+def _why(error: str) -> str:
+    """``": <the gate's last words>"``, or nothing when it left none."""
+    return f": {_short(error)}" if error.strip() else ""
+
+
+def check_released_13(
+    asset: dict | None, report: dict | None, error: str = ""
+) -> Check:
     """Main's export, strict, on the 1.3 file the validator downloads by default."""
     name = "1.3 released, nothing tolerated"
     if asset is None:
@@ -120,7 +127,9 @@ def check_released_13(asset: dict | None, report: dict | None) -> Check:
         )
     rules = asset["name"]
     if report is None or report.get("summary") is None:
-        error = _short(report["last_line"]) if report else "the gate did not run"
+        error = _short(
+            report["last_line"] if report else error or "the gate did not run"
+        )
         return Check(
             name,
             rules,
@@ -155,7 +164,9 @@ def check_released_13(asset: dict | None, report: dict | None) -> Check:
     return Check(name, rules, "fails only the tolerated rule")
 
 
-def check_released_14(asset: dict | None, report: dict | None, branch: bool) -> Check:
+def check_released_14(
+    asset: dict | None, report: dict | None, branch: bool, error: str = ""
+) -> Check:
     """The branch's export, strict, on the 1.4 file the validator downloads."""
     name = "1.4 released, on the focus-1.4 branch"
     if not branch:
@@ -166,11 +177,13 @@ def check_released_14(asset: dict | None, report: dict | None, branch: bool) -> 
         )
     rules = asset["name"]
     if report is None:
+        why = _why(error)
         return Check(
             name,
             rules,
-            "the gate did not run",
-            f"The `{BRANCH}` branch's gate did not run on released 1.4 rules `{rules}`.",
+            f"the gate did not run{why}",
+            f"The `{BRANCH}` branch's gate did not run on released 1.4 rules "
+            f"`{rules}`{why}",
         )
     if report.get("summary") is None:
         # The expected answer: focus-validator 2.2.1 crashes on model-1.4.json.
@@ -195,16 +208,22 @@ def check_released_14(asset: dict | None, report: dict | None, branch: bool) -> 
     )
 
 
-def check_branch_gate(newest: dict | None, report: dict | None, branch: bool) -> Check:
+def check_branch_gate(
+    newest: dict | None, report: dict | None, branch: bool, error: str = ""
+) -> Check:
     """The branch's own gate, on the prerelease rules it pins."""
     name = "focus-1.4 branch's own gate"
     if not branch:
         return Check(name, "—", "no branch", f"The `{BRANCH}` branch is missing.")
     if report is None or not report["passed"]:
-        outcome = _ran(report) if report and report.get("summary") else "did not run"
+        if report and report.get("summary"):
+            outcome = _ran(report)
+        else:
+            outcome = "did not run" + _why(report["last_line"] if report else error)
         rules = report["rules"] if report else "—"
+        end = "" if outcome.endswith((".", "…")) else "."
         return Check(
-            name, rules, outcome, f"The `{BRANCH}` branch's own gate {outcome}."
+            name, rules, outcome, f"The `{BRANCH}` branch's own gate {outcome}{end}"
         )
     rules = report["rules"]
     if newest is not None and newest["name"] != rules:
@@ -302,8 +321,9 @@ def _fetch_branch(directory: Path) -> Path | None:
     return directory
 
 
-def _gate(checkout: Path, *args: str) -> dict | None:
-    """Run a checkout's gate; its JSON verdict, or None if it wrote none."""
+def _gate(checkout: Path, *args: str) -> tuple[dict | None, str]:
+    """Run a checkout's gate: its JSON verdict (None if it wrote none) and
+    the last line it printed, which says why when there is no verdict."""
     with tempfile.TemporaryDirectory() as tmp:
         report = Path(tmp) / "report.json"
         result = subprocess.run(
@@ -318,10 +338,16 @@ def _gate(checkout: Path, *args: str) -> dict | None:
             capture_output=True,
             text=True,
         )
+        lines = [
+            line
+            for line in (result.stdout + result.stderr).splitlines()
+            if line.strip()
+        ]
+        last = lines[-1] if lines else ""
         if not report.exists():
             print(result.stdout[-2000:] + result.stderr[-2000:], file=sys.stderr)
-            return None
-        return json.loads(report.read_text(encoding="utf-8"))
+            return None, last
+        return json.loads(report.read_text(encoding="utf-8")), last
 
 
 def _gh(*args: str) -> str:
@@ -384,23 +410,22 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         rules = Path(tmp) / "rules"
         rules.mkdir()
-        report_13 = report_14 = report_branch = None
+        none: tuple[dict | None, str] = (None, "")
+        run_13 = run_14 = run_branch = none
         if asset_13:
-            report_13 = _gate(
-                REPO, "--rules", str(_download(asset_13, rules)), "--strict"
-            )
+            run_13 = _gate(REPO, "--rules", str(_download(asset_13, rules)), "--strict")
         branch = _fetch_branch(Path(tmp) / BRANCH)
         if branch:
             if asset_14:
-                report_14 = _gate(
+                run_14 = _gate(
                     branch, "--rules", str(_download(asset_14, rules)), "--strict"
                 )
-            report_branch = _gate(branch)
+            run_branch = _gate(branch)
 
     checks = [
-        check_released_13(asset_13, report_13),
-        check_released_14(asset_14, report_14, branch is not None),
-        check_branch_gate(newest_14, report_branch, branch is not None),
+        check_released_13(asset_13, *run_13),
+        check_released_14(asset_14, run_14[0], branch is not None, run_14[1]),
+        check_branch_gate(newest_14, run_branch[0], branch is not None, run_branch[1]),
     ]
     body = render(checks, importlib.metadata.version("focus-validator"))
     if any(c.alert for c in checks) and not args.dry_run:
