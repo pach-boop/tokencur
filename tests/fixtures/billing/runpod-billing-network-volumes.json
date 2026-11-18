@@ -1,0 +1,16 @@
+{
+ "captured_at": "20261118T044100Z",
+ "request_url": "https://api.runpod.io/v2/billing/network-volumes?bucketSize=day&startTime=2026-09-01T00%3A00%3A00Z&endTime=2026-11-19T00%3A00%3A00Z",
+ "response": {
+  "records": [
+   {"startTime": "2026-11-15T00:00:00Z", "endTime": "2026-11-16T00:00:00Z", "networkVolumeId": "vol-one", "totalAmount": 0.0467, "standardAmount": 0.0467, "highPerformanceAmount": 0},
+   {"startTime": "2026-11-16T00:00:00Z", "endTime": "2026-11-17T00:00:00Z", "networkVolumeId": "vol-one", "totalAmount": 0.0467, "standardAmount": 0.0467, "highPerformanceAmount": 0}
+  ],
+  "metadata": {
+   "query": {"startTime": "2026-09-01T00:00:00Z", "endTime": "2026-11-19T00:00:00Z", "bucketSize": "day"},
+   "recordCount": 2,
+   "totals": {"totalAmount": 0.0934, "standardAmount": 0.0934, "highPerformanceAmount": 0},
+   "uniqueNetworkVolumeCount": 1
+  }
+ }
+}

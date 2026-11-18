@@ -5,6 +5,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- **RunPod billing from API v2** (#49, ADR 0020). REST API v1, which
+  `scripts/fetch_runpod_billing.py` called, went away between 14 and 17
+  November 2026, so no RunPod bill reached the ledger after 14 November.
+  The script now calls API v2 and saves two files, pods and network
+  volumes, which `tokencur import runpod` takes together. v2 gives no GPU
+  time: its charges are stated over their bucket, in hours, and the
+  detail gives the GPU, CPU and disk split. Saved v1 captures still
+  import, and the GPU time they measured is kept when a v2 capture bills
+  the same pod and day again. Report columns fit longer service names.
+
+### Added
+
+- **Network volume storage as billed cost.** RunPod bills a network volume
+  while it exists, with or without a pod, and v1 never listed it. It is now
+  its own service, `RunPod Network Volumes`, and FOCUS `Storage` rows
+  (`File Storage`). A real capture also listed 14 pod charges from October
+  that no v1 capture had.
+- Ledger schema 10: billed charges record whether their quantity was
+  stated over the period instead of measured (`quantity_stated`). The
+  upgrade marks the Anthropic and OpenAI lines stated that way.
+
 ## [0.13.0] - 2026-11-17
 
 ### Added

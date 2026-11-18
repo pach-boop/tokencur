@@ -70,9 +70,9 @@
   `tokencur prices` asks for. Three scripts go online when you run them:
   `scripts/update_pricing_snapshot.py` downloads the LiteLLM price database
   (also run by the daily price-watch action);
-  `scripts/fetch_runpod_billing.py` downloads your RunPod billing history,
-  sending the API key only in the Authorization header and never writing
-  it; and `scripts/fetch_github_ci.py` lists one GitHub Actions workflow's
+  `scripts/fetch_runpod_billing.py` downloads your RunPod billing history
+  (pods and network volumes) from api.runpod.io, sending the API key only
+  in the Authorization header and never writing it; and `scripts/fetch_github_ci.py` lists one GitHub Actions workflow's
   runs. It runs `git remote get-url origin` to find the repository unless
   you name it, and it needs no token for a public repository. A token
   you set in `$GITHUB_TOKEN` or `$GH_TOKEN` goes only to api.github.com,

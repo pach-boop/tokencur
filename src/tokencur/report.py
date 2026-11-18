@@ -112,8 +112,12 @@ def summarize(
             acc = by_service.setdefault(c.service, [0.0, 0])
             acc[0] += c.amount_usd
             acc[1] += 1
+        # The names in one column, with room after the longest.
+        width = max(14, *(len(service) + 1 for service in by_service))
         for service, (amount, n) in sorted(by_service.items()):
-            lines.append(f"  {service:<14}${amount:,.2f}  ({n} charge{'s' * (n != 1)})")
+            lines.append(
+                f"  {service:<{width}}${amount:,.2f}  ({n} charge{'s' * (n != 1)})"
+            )
         if fx:
             lines.append(_converted(billed, fx))
     if unpriced:

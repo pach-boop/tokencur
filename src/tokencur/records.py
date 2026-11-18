@@ -77,6 +77,9 @@ class BilledCharge:
     amount_usd: float  # what was billed
     detail: str = ""  # a note for people, e.g. "50 GB disk"
     list_usd: float | None = None  # at list price, when the bill states it
+    # The bill gave no usage: `quantity` is the period's length in hours,
+    # which FOCUS needs on a usage row, not usage measured (ADR 0018).
+    quantity_stated: bool = False
 
 
 @dataclass(frozen=True, slots=True)

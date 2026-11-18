@@ -39,8 +39,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from tokencur.ingest.fields import obj, text
-from tokencur.records import BilledCharge, parse_timestamp
+from tokencur.ingest.fields import obj, text, time_span
+from tokencur.records import BilledCharge
 
 # Dimensions of a legacy Anthropic result, in the order a detail names them.
 _LEGACY_DIMENSIONS = (
@@ -187,7 +187,7 @@ def _grouping(url: str, width_parameter: str) -> tuple[list[str], str] | None:
 
 
 def _legacy_line(bucket: dict, result: dict) -> _Line | None:
-    span = _span(bucket.get("starting_at"), bucket.get("ending_at"))
+    span = time_span(bucket.get("starting_at"), bucket.get("ending_at"))
     amount = _cents(result.get("amount"))
     if span is None or amount is None or not _usd(result.get("currency")):
         return None
@@ -196,7 +196,7 @@ def _legacy_line(bucket: dict, result: dict) -> _Line | None:
 
 
 def _analytics_line(row: dict) -> _Line | None:
-    span = _span(row.get("starting_at"), row.get("ending_at"))
+    span = time_span(row.get("starting_at"), row.get("ending_at"))
     cost = obj(row.get("cost"))
     amount = _cents(cost.get("amount"))
     if span is None or amount is None or not _usd(cost.get("currency")):
@@ -286,15 +286,8 @@ def _charge(
         amount_usd=line.amount,
         detail=", ".join(notes),
         list_usd=line.list_amount,
+        quantity_stated=not line.requests,
     )
-
-
-def _span(start: object, end: object) -> tuple[datetime, datetime] | None:
-    begin = parse_timestamp(start) if isinstance(start, str) else None
-    finish = parse_timestamp(end) if isinstance(end, str) else None
-    if begin is None or finish is None or finish <= begin:
-        return None
-    return begin, finish
 
 
 def _cents(value: object) -> float | None:

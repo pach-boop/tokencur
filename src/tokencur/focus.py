@@ -210,8 +210,9 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
     charge with nothing billed to divide by has no unit price, an
     explicit null.
 
-    RunPod's charges are Compute rows; Anthropic's and OpenAI's are AI
-    and Machine Learning rows, one SKU per model or line item (ADR 0018).
+    RunPod's pods are Compute rows and its network volumes Storage rows
+    (ADR 0020); Anthropic's and OpenAI's are AI and Machine Learning
+    rows, one SKU per model or line item (ADR 0018).
     """
     for c in charges:
         start = parse_timestamp(c.period_start)
@@ -227,7 +228,15 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
         list_price = listed / c.quantity if c.quantity else None
         list_cost = listed if list_price is None else list_price * c.quantity
         ai = c.source in ai_cost.SOURCES  # AI model usage, not compute
-        sku = f"{c.source}/{c.resource_id}" if ai else f"{c.source}/{unit}"
+        if ai:
+            sku = f"{c.source}/{c.resource_id}"
+            category, subcategory = "AI and Machine Learning", "Generative AI"
+        elif c.resource_type == "network volume":
+            sku = f"{c.source}/network-volume/{unit}"
+            category, subcategory = "Storage", "File Storage"
+        else:
+            sku = f"{c.source}/{unit}"
+            category, subcategory = "Compute", "Containers"
         yield {
             **_NOT_APPLICABLE,
             "BilledCost": c.amount_usd,
@@ -268,10 +277,10 @@ def charge_rows(charges: Iterable[BilledCharge]) -> Iterator[dict]:
             "ResourceId": c.resource_id,
             "ResourceName": c.resource_id,
             "ResourceType": c.resource_type,
-            "ServiceCategory": "AI and Machine Learning" if ai else "Compute",
+            "ServiceCategory": category,
             "ServiceName": c.service,
             "ServiceProviderName": c.provider,
-            "ServiceSubcategory": "Generative AI" if ai else "Containers",
+            "ServiceSubcategory": subcategory,
             "SkuId": sku,
             "SkuMeter": f"{c.resource_type} {_METER_BY_UNIT.get(c.unit, unit)}",
             "SkuPriceDetails": None,
