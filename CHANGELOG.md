@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-17
+
 ### Added
 
 - **A model's own weekly limit** (ADR 0015). Since 2026-11, Claude Code's
