@@ -3,6 +3,7 @@
 import json
 import sqlite3
 from contextlib import closing
+from dataclasses import replace
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
@@ -464,3 +465,188 @@ def test_a_reset_without_a_zone_reads_as_utc(tmp_path, monkeypatch):
 
     (five, _) = claude_code.meter_readings(path)
     assert five.resets_at == "2026-10-15T03:00:00Z"
+
+
+# A model's own weekly limit (Fable, since 2026-11)
+
+WEEK_RESET = "2026-10-21T10:59:59.835233+00:00"
+
+
+def _model_limits(path, fable=60, **extra):
+    """A state file whose meter lists a weekly limit of Fable's own, next
+    to limits tokencur leaves out: the session, one scoped to a surface,
+    and entries that are no limit."""
+    _state(path)
+    state = json.loads(path.read_text(encoding="utf-8"))
+    state["cachedUsageUtilization"]["utilization"]["limits"] = [
+        {"kind": "session", "percent": 46, "resets_at": WEEK_RESET, "scope": None},
+        {"kind": "weekly_all", "percent": 20, "resets_at": WEEK_RESET, "scope": None},
+        {
+            "kind": "weekly_scoped",
+            "percent": fable,
+            "severity": "warning",
+            "resets_at": WEEK_RESET,
+            "scope": {"model": {"id": None, "display_name": "Fable"}, "surface": None},
+            "is_active": True,
+        },
+        {
+            "kind": "weekly_scoped",
+            "percent": 10,
+            "resets_at": WEEK_RESET,
+            "scope": {"model": None, "surface": {"display_name": "Cowork"}},
+        },
+        {"kind": "weekly_scoped", "percent": 5, "resets_at": WEEK_RESET},
+        "not a limit",
+    ]
+    state["cachedUsageUtilization"]["utilization"].update(extra)
+    path.write_text(json.dumps(state), encoding="utf-8")
+    return path
+
+
+def _priced_call(when, dollars, model, input_rate):
+    return replace(
+        _call(when, dollars),
+        model=model,
+        input_tokens=round(dollars / input_rate * 1_000_000),
+        record_id=f"r:{model}:{when}",
+    )
+
+
+FABLE_RECORDS = [
+    *RECORDS,  # $50 of Opus 4.8
+    _priced_call("2026-10-14T23:00:00", 30.0, "claude-fable-5-2", 8.0),
+]
+WEEK_READINGS = [
+    _reading("seven_day", 20.0, resets="2026-10-21T11:00:00Z"),
+    _reading("seven_day:Fable", 60.0, resets="2026-10-21T11:00:00Z"),
+]
+
+
+def test_a_models_own_weekly_limit_is_read_and_other_scopes_are_not(tmp_path):
+    readings = claude_code.meter_readings(_model_limits(tmp_path / ".claude.json"))
+
+    assert readings == [
+        _reading("five_hour", 46.0),
+        _reading("seven_day", 20.0, resets="2026-10-21T11:00:00Z"),
+        _reading("seven_day:Fable", 60.0, resets="2026-10-21T11:00:00Z"),
+    ]
+
+
+@pytest.mark.parametrize("bad", [-1, 101, "60", None])
+def test_a_model_limit_that_is_no_percent_is_skipped(tmp_path, bad):
+    readings = claude_code.meter_readings(_model_limits(tmp_path / "s.json", bad))
+
+    assert [r.kind for r in readings] == ["five_hour", "seven_day"]
+
+
+def test_a_reshaped_list_of_limits_gives_the_two_windows_still(tmp_path):
+    path = _model_limits(tmp_path / "s.json", limits={"kind": "weekly_scoped"})
+
+    assert [r.kind for r in claude_code.meter_readings(path)] == [
+        "five_hour",
+        "seven_day",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("name", "model", "same"),
+    [
+        ("Fable", "claude-fable-5-2", True),
+        ("Fable", "claude-fable-5", True),
+        ("Fable 5.2", "claude-fable-5-2", True),
+        ("Fable 5.2", "claude-fable-5-1", False),
+        ("Fable", "claude-mythos-5-2", False),  # the meter names Fable only
+        ("Fable", "claude-opus-5-5", False),
+        ("Opus", "claude-opus-5-5", True),
+        ("", "claude-fable-5-2", False),
+    ],
+)
+def test_a_meter_name_picks_its_model_ids(name, model, same):
+    assert limits.of_model(name, model) is same
+
+
+def test_a_model_limit_is_valued_by_that_models_calls_only():
+    result = limits.limits(FABLE_RECORDS, [], None, NOW, readings=WEEK_READINGS)
+
+    fable = result.models["Fable"]
+    assert (fable.start, fable.end) == (_t("2026-10-14T11:00"), _t("2026-10-21T11:00"))
+    assert fable.value == pytest.approx(30.0)  # the $50 of Opus are not Fable's
+    assert fable.meter_limit == pytest.approx(50.0)  # $30 was 60%
+    assert result.current["seven_day"].value == pytest.approx(80.0)
+    out = limits.render(result, tz=UTC)
+    assert (
+        "  Fable has a weekly limit of its own: $30.00 of Fable's usage value = "
+        "60% of it by Claude Code's meter (60% at Thu 2026-10-15 01:29 UTC); the "
+        "meter puts it at about $50.00, $20.00 left"
+    ) in out
+
+
+def test_the_json_gives_a_model_limit_under_the_week():
+    result = limits.limits(FABLE_RECORDS, [], None, NOW, readings=WEEK_READINGS)
+
+    week = limits.as_dict(result)["windows"]["seven_day"]
+
+    fable = week["models"]["Fable"]
+    assert (fable["usage_value"], fable["percent"], fable["percent_of"]) == (
+        30.0,
+        60.0,
+        "meter",
+    )
+    assert fable["meter"]["limit"] == 50.0
+
+
+def test_without_a_model_limit_the_week_lists_none():
+    result = limits.limits(FABLE_RECORDS, [], None, NOW, readings=WEEK_READINGS[:1])
+
+    assert limits.as_dict(result)["windows"]["seven_day"]["models"] == {}
+    assert "of its own" not in limits.render(result, tz=UTC)
+
+
+def test_a_model_limit_reached_says_only_that_model_waits():
+    full = [WEEK_READINGS[0], replace(WEEK_READINGS[1], percent=100.0)]
+
+    result = limits.limits(FABLE_RECORDS, [], None, NOW, readings=full)
+
+    assert result.models["Fable"].blocked
+    assert "Fable waits until Wed 2026-10-21 11:00 UTC, other models do not" in (
+        limits.render(result, tz=UTC)
+    )
+
+
+def test_a_low_model_reading_implies_no_limit():
+    low = [WEEK_READINGS[0], replace(WEEK_READINGS[1], percent=4.0)]
+
+    result = limits.limits(FABLE_RECORDS, [], None, NOW, readings=low)
+
+    assert result.models["Fable"].meter_limit is None
+    assert "Claude Code's meter read 4% at" in limits.render(result, tz=UTC)
+
+
+def test_a_model_reading_from_a_closed_week_is_not_current():
+    old = replace(
+        WEEK_READINGS[1],
+        fetched_at="2026-10-07T00:00:00Z",
+        resets_at="2026-10-07T11:00:00Z",
+    )
+
+    result = limits.limits(FABLE_RECORDS, [], None, NOW, readings=[old])
+
+    assert result.models == {}
+
+
+def test_limits_keeps_a_model_limit_in_the_ledger(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "projects"
+    root.mkdir()
+    monkeypatch.setattr(
+        sources, "DEFAULT_SOURCES", ((root, claude_code.iter_usage_records),)
+    )
+    monkeypatch.setattr(cli, "load_records", lambda: FABLE_RECORDS)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(limits, "limits", partial(limits.limits, now=NOW))
+    _model_limits(tmp_path / ".claude.json")
+
+    assert cli.main(["limits"]) == 0
+
+    kinds = sorted(r.kind for r in ledger.read_meter_readings())
+    assert kinds == ["five_hour", "seven_day", "seven_day:Fable"]
+    assert "Fable has a weekly limit of its own" in capsys.readouterr().out

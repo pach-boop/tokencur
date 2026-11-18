@@ -126,7 +126,7 @@ class MeterReading:
     last fetched it: Claude Code's own usage meter (``/usage``; ADR 0015)."""
 
     source: str  # the agent that fetched it, e.g. "claude-code"
-    kind: str  # the limit: "five_hour", "seven_day"
+    kind: str  # the limit: "five_hour", "seven_day", or "seven_day:<model>"
     fetched_at: str  # when the agent fetched it, ISO 8601 UTC
     percent: float  # share of the limit used, 0-100
     resets_at: str  # when that limit resets, ISO 8601 UTC

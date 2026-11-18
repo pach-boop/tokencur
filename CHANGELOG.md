@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **A model's own weekly limit** (ADR 0015). Since 2026-11, Claude Code's
+  meter lists a weekly limit for Fable alone, on top of the plan's.
+  `tokencur limits` reads it from the same key and stores it in the ledger
+  with the other readings, as the limit `seven_day:Fable`. It sets the
+  limit against Fable's usage value only, and shows the share used, what
+  the whole limit is worth and how much is left. `--json` lists it under
+  the week's `models`. The status line and the session-start notice add
+  `Fable 76%`, and the limits watch reports it at the week's steps.
+
 ## [0.12.0] - 2026-11-14
 
 ### Added

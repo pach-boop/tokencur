@@ -92,3 +92,46 @@ counts); tokencur measures it and does not explain it.
 - The view says which it used ("a line through 9 readings") and gives the
   base and the value per point; the JSON adds `base_percent` and
   `readings` to the meter.
+
+## Update 2026-11-17: a model's own weekly limit
+
+Since November 2026 the meter also lists its limits under
+`utilization.limits`. That list holds the five hours (`session`), the week
+(`weekly_all`) and a new kind, the weekly limit of one model
+(`weekly_scoped`, with `scope.model.display_name` "Fable"). On 2026-11-17
+it read 75%, severity "warning", while the week read 39%. A second new
+field, `weekly_scoped_shares`, said that Fable may use 50% of the week and
+had used 38 points of it.
+
+The meter also values Fable differently from the API price. On the week
+to 2026-11-18, Fable's 38 points came with $233.88 of Fable usage value,
+$6.15 a point. The plan's earlier weeks, almost all Opus 5.5, took $13.30
+to $14.40 a point. One dollar of Fable usage value thus moves the week's
+meter about twice as far as one dollar of Opus. Per token it is about four
+times, since Fable's list price is twice Opus's. The week's line above
+holds while the mix of models stays the same.
+
+- Read the `weekly_scoped` entries of `utilization.limits` that name a
+  model and no surface, as the limit `seven_day:<model name>`: percent and
+  reset, rounded as above. Entries scoped to a surface, and malformed
+  entries, are skipped. Nothing else in the list is read: the five-hour
+  and weekly limits still come from their own keys, and
+  `weekly_scoped_shares` is not read.
+- A model's limit is a week with the bounds of the plan's week. It is set
+  against the usage value of that model's calls only. A model id matches
+  when the name's words are dash-separated parts of it: "Fable" is every
+  `claude-fable-*`, and Mythos is not Fable. The share, the limit it
+  implies and the line follow the rules above. A reading of 100% means
+  that model waits until the reset; other models do not.
+- `--json` adds the week's `models`, by name. The hooks show them and
+  watch them at the week's steps.
+
+Consequences:
+
+- A Fable week shows its own ceiling before Fable is turned away, and how
+  much of it is left.
+- Not done: a line for the week per model. The shares could split the
+  week's readings into Fable's points and the rest, so the line would no
+  longer depend on the mix. One week of readings is too little to fit
+  that, so tokencur shows the two limits and leaves the week's line as it
+  is.
