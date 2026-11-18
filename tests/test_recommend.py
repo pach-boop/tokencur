@@ -116,6 +116,7 @@ def test_rightsizing_covers_the_current_claude_lineup():
     from tokencur.recommend import DOWNSIZE
 
     for model in (
+        "claude-fable-5-2",
         "claude-fable-5-1",
         "claude-opus-5-5",
         "claude-sonnet-5-5",

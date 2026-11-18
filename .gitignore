@@ -15,9 +15,11 @@ venv/
 data/
 *.parquet
 
-# Re-include the package dir: secret-hygiene patterns like *token*
-# (common in global excludesFiles) would otherwise ignore it.
+# Re-include tokencur's own files: secret-hygiene patterns like *token*
+# (common in global excludesFiles) would otherwise ignore them.
 !src/tokencur/
+!contrib/claude-code/tokencur_hooks.py
+!contrib/claude-code/systemd/tokencur-limits-watch.*
 
 # Validator scratch output
 focus_validator_detailed.log

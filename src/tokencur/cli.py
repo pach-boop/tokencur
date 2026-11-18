@@ -13,9 +13,10 @@ included, ``--until`` the first day excluded, so ``--since 2026-09-01
 from __future__ import annotations
 
 import argparse
+import json
 import sqlite3
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
 from datetime import date
 from pathlib import Path
 
@@ -32,10 +33,10 @@ from tokencur import (
 )
 from tokencur.export import export_csv
 from tokencur.focus import undated_count, unpriced_models
-from tokencur.ingest import claude_code, github_ci, runpod
+from tokencur.ingest import ai_cost, claude_code, github_ci, runpod
 from tokencur.pricing import ConfigError, load_discounts, provenance
 from tokencur.recommend import recommendations, render
-from tokencur.records import UsageRecord, in_period
+from tokencur.records import BilledCharge, UsageRecord, in_period
 from tokencur.report import summarize
 from tokencur.sources import load_records
 from tokencur.terminal import home_relative
@@ -157,8 +158,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     keep.add_argument(
         "provider",
-        choices=["runpod", "github-ci"],
-        help="runpod: a billing export; github-ci: a CI capture (ADR 0013)",
+        choices=["runpod", "anthropic-cost", "openai-costs", "github-ci"],
+        help=(
+            "runpod: a billing export; anthropic-cost, openai-costs: a saved "
+            "admin cost report (ADR 0018); github-ci: a CI capture (ADR 0013)"
+        ),
     )
     keep.add_argument("files", nargs="+", type=Path, help="files to import")
     keep.set_defaults(handler=_import)
@@ -174,6 +178,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="subscriptions.json with dated plans, to tell ceilings of "
         "different plans apart (default: ./subscriptions.json, else "
         "~/.config/tokencur/subscriptions.json)",
+    )
+    plan.add_argument(
+        "--json",
+        action="store_true",
+        help="print the figures as JSON, for scripts such as a status line",
     )
     plan.set_defaults(handler=_limits)
 
@@ -248,12 +257,14 @@ def _records(args: argparse.Namespace) -> list[UsageRecord] | None:
     root = getattr(args, "root", None)
     if root is not None:
         if not root.exists():
-            return _fail(f"{root} does not exist")
+            _fail(f"{root} does not exist")
+            return None
         records = list(claude_code.iter_usage_records(root))
     else:
         records = load_records()
     if not records:
-        return _fail(_NOTHING)
+        _fail(_NOTHING)
+        return None
     return in_period(records, args.since, args.until)
 
 
@@ -331,7 +342,7 @@ def _outcomes(args: argparse.Namespace) -> int:
     if records is None:
         return 1
     if args.sessions:
-        result = sessions.session_outcomes(
+        by_session = sessions.session_outcomes(
             records,
             _claude_code_counters(),
             repos=args.repos,
@@ -341,7 +352,7 @@ def _outcomes(args: argparse.Namespace) -> int:
             period=_period(args),
             ci_runs=ledger.read_ci_runs(),
         )
-        print(sessions.render(result, top=args.top))
+        print(sessions.render(by_session, top=args.top))
         return 0
     result = outcomes.outcomes(
         records,
@@ -368,10 +379,13 @@ def _limits(args: argparse.Namespace) -> int:
     if not records:
         _fail(_NOTHING)
         return 1
+    broken: list[str] = []
     for root, ingest in sources.DEFAULT_SOURCES:
         if ingest is claude_code.iter_usage_records and root.exists():
-            ledger.record_limit_hits(claude_code.iter_limit_hits(root))
-            ledger.record_meter_readings(claude_code.meter_readings())
+            stubs, meter = claude_code.limit_stubs(root), claude_code.meter_status()
+            ledger.record_limit_hits(stubs.hits)
+            ledger.record_meter_readings(meter.readings)
+            broken = doctor.plan_limit_problems(meter, stubs)
     plans = limits.plans_path(args.plans)
     if plans is not None and not plans.is_file():
         _fail(f"{plans} does not exist")
@@ -383,7 +397,12 @@ def _limits(args: argparse.Namespace) -> int:
         plans_from=home_relative(plans.absolute()) if plans else "",
         readings=ledger.read_meter_readings(),
     )
-    print(limits.render(result))
+    if args.json:
+        print(json.dumps(limits.as_dict(result), indent=2))
+    else:
+        print(limits.render(result))
+    if broken:
+        print(f"warning: {'; '.join(broken)} (see `tokencur doctor`)", file=sys.stderr)
     return 0
 
 
@@ -425,11 +444,20 @@ def _import(args: argparse.Namespace) -> int:
             return 1
     if args.provider == "github-ci":
         return _import_ci(args.files)
-    charges = []
-    for path in args.files:
-        charges.extend(runpod.iter_charges(path))
+    read = _CHARGE_READERS[args.provider]
+    charges = [charge for path in args.files for charge in read(path)]
     if not charges:
         _fail("no billed charges in those files")
+        return 1
+    clashes = ai_cost.conflicts(charges, ledger.read_charges())
+    for clash in clashes:
+        _fail(
+            f"{clash.source} cost from {clash.day} is already grouped as "
+            f"{clash.kept}; these files group it as {clash.incoming}. "
+            "Keeping both would count the same money twice: import one "
+            "grouping per day"
+        )
+    if clashes:
         return 1
     added = ledger.record_charges(charges)
     total = sum(c.amount_usd for c in charges)
@@ -439,6 +467,13 @@ def _import(args: argparse.Namespace) -> int:
         f"{providers} — {ledger.default_path()}"
     )
     return 0
+
+
+_CHARGE_READERS: dict[str, Callable[[Path], Iterator[BilledCharge]]] = {
+    "runpod": runpod.iter_charges,
+    "anthropic-cost": ai_cost.iter_anthropic,
+    "openai-costs": ai_cost.iter_openai,
+}
 
 
 def _import_ci(files: list[Path]) -> int:

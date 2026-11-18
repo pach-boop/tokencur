@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 
 def table(
-    header: tuple[str, ...], rows: list[tuple[str, ...]], left: int = 1
+    header: tuple[str, ...], rows: Sequence[tuple[str, ...]], left: int = 1
 ) -> list[str]:
     """Columns as wide as their widest cell: the first ``left`` columns
     (labels) aligned left, the rest (numbers) right.

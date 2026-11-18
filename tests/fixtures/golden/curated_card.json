@@ -29,6 +29,16 @@
   },
   "history": []
  },
+ "claude-fable-5-2": {
+  "current": {
+   "cache_read": 0.2,
+   "cache_write_1h": 16.0,
+   "cache_write_5m": 10.0,
+   "input": 8.0,
+   "output": 40.0
+  },
+  "history": []
+ },
  "claude-haiku-4-5": {
   "current": {
    "cache_read": 0.1,
@@ -56,6 +66,16 @@
    "cache_write_5m": 12.5,
    "input": 10.0,
    "output": 50.0
+  },
+  "history": []
+ },
+ "claude-mythos-5-2": {
+  "current": {
+   "cache_read": 0.2,
+   "cache_write_1h": 16.0,
+   "cache_write_5m": 10.0,
+   "input": 8.0,
+   "output": 40.0
   },
   "history": []
  },

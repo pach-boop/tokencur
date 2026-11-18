@@ -21,6 +21,7 @@ import json
 import re
 from collections.abc import Iterator
 from pathlib import Path
+from typing import TypeGuard
 
 from tokencur.ingest.fields import text
 from tokencur.records import CIRun, parse_timestamp
@@ -80,7 +81,7 @@ def _run(row: object, repo: str, workflow: str, captured: str) -> CIRun | None:
     )
 
 
-def _positive(value: object) -> bool:
+def _positive(value: object) -> TypeGuard[int]:
     return type(value) is int and value > 0
 
 

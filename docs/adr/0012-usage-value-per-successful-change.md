@@ -81,7 +81,7 @@ the text. SECURITY.md lists both.
 ## Update 2026-10-14
 
 Some repositories land their work on a branch that is not the default
-one: the maintainer's `justiciera` works on `motor-pixel`, 103 commits
+one: one of the maintainer's works on a long-lived branch, 103 commits
 ahead of a `main` nobody touches, with no `origin`, so every change read
 as not landed. Such a repository names its work branch in its own git
 config, `git config tokencur.branch <name>` (a local branch, or a

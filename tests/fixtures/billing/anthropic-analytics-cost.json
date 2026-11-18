@@ -1,0 +1,23 @@
+{
+  "captured_at": "2026-11-04T12:00:00Z",
+  "request_url": "https://api.anthropic.com/v1/organizations/analytics/cost?starting_at=2026-11-01T00:00:00Z&ending_at=2026-11-03T00:00:00Z&time_bucket_width=1d&group_by[]=model&group_by[]=workspace_id",
+  "response": {
+    "data": [
+      {
+        "starting_at": "2026-11-01T00:00:00Z",
+        "ending_at": "2026-11-02T00:00:00Z",
+        "group": {"model": "claude-sonnet-4-5", "workspace_id": "wrkspc_fixture01", "token_type": null},
+        "cost": {"amount": "41280.000000", "list_amount": "51600.000000", "currency": "USD", "requests": 1200}
+      },
+      {
+        "starting_at": "2026-11-02T00:00:00Z",
+        "ending_at": "2026-11-03T00:00:00Z",
+        "group": {"model": "claude-haiku-4-5", "workspace_id": null, "token_type": null},
+        "cost": {"amount": "99.500000", "list_amount": "99.500000", "currency": "USD", "requests": null}
+      }
+    ],
+    "data_refreshed_at": "2026-11-04T08:00:00Z",
+    "has_more": false,
+    "next_page": null
+  }
+}

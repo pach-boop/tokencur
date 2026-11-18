@@ -119,11 +119,10 @@ def session_outcomes(
     asked = {_root(finder, repo) for repo in repos}
     sessions: dict[str, SessionOutcome] = {}
     calls_in: dict[Path, list[tuple[datetime, str]]] = defaultdict(list)
-    value_in: Counter = Counter()
+    value_in: dict[Path, float] = defaultdict(float)
     for record in records:
         root = finder.root(record.cwd)
-        in_repo = isinstance(root, Path)
-        if asked and not (in_repo and root in asked):
+        if asked and not (isinstance(root, Path) and root in asked):
             continue
         key = (
             counters.chain_end(record.session_id)
@@ -138,7 +137,7 @@ def session_outcomes(
         moment = parse_timestamp(record.timestamp)
         if moment and (outcome.start is None or moment < outcome.start):
             outcome.start = moment
-        if in_repo:
+        if isinstance(root, Path):
             outcome.calls_by_repo[root] += 1
             value_in[root] += cost or 0.0
             if moment:
@@ -245,7 +244,7 @@ def render(result: SessionsResult, top: int = 20) -> str:
         reproduce,
         "",
     ]
-    header = (
+    header: tuple[str, ...] = (
         "session",
         "started (UTC)",
         "repository",
@@ -290,7 +289,7 @@ def _row(s: SessionOutcome, with_ci: bool = False) -> tuple[str, ...]:
         where += f" +{len(repos) - 1}"
     retries = s.retry_share
     per = s.per_success
-    cells = (
+    cells: tuple[str, ...] = (
         s.session[:8],
         s.start.strftime("%Y-%m-%d %H:%M") if s.start else "undated",
         where,

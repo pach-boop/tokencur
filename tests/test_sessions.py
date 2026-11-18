@@ -260,7 +260,7 @@ def test_the_default_branch_is_origins_and_its_local_twin(tmp_path):
 
 
 def test_a_repository_can_name_the_branch_its_work_lands_on(tmp_path):
-    """Like a repository that works on motor-pixel while main stays behind."""
+    """Like a repository that works on another branch while main stays behind."""
     repo = make_repo(tmp_path / "app")
     commit(repo, "2026-09-10 09:00:00", name="base.txt")
     git(repo, "checkout", "-q", "-b", "work")

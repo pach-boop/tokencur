@@ -96,6 +96,8 @@ tokencur recommend             # avoided cost + what-if headroom
 tokencur export sept.csv --since 2026-09-01 --until 2026-10-01   # one billing period
 tokencur doctor                # read-only health check: log formats, ledger, pricing
 tokencur import runpod FILE    # billed cost: a RunPod billing export
+tokencur import anthropic-cost FILE   # billed cost: a saved Anthropic cost report
+tokencur import openai-costs FILE     # billed cost: a saved OpenAI costs report
 tokencur outcomes [REPO...]    # usage value per commit, repository by repository
 tokencur outcomes --sessions   # usage value per change that landed and stayed
 tokencur limits                # how close the 5-hour and weekly plan limits are
@@ -198,8 +200,9 @@ history:
   Codex re-sent reports earlier versions double counted (see the changelog);
   schema 3 records each call's price-changing request options, schema 4 billed
   charges, schema 5 the directory each call ran in, schema 6 CI runs, and
-  schema 7 the plan limits that turned requests away, and schema 8 the
-  readings of Claude Code's own usage meter.
+  schema 7 the plan limits that turned requests away, schema 8 the
+  readings of Claude Code's own usage meter, and schema 9 the list price a
+  bill states.
 
 The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
@@ -215,6 +218,22 @@ it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
 export gains Compute rows whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
 ([ADR 0009](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0009-billed-charges-next-to-showback.md)).
+
+API usage billed by Anthropic and OpenAI comes from their admin cost reports,
+which you save yourself with an admin key (tokencur never fetches them):
+`tokencur import anthropic-cost FILE` reads Anthropic's `cost_report` and its
+beta `analytics/cost`, and `tokencur import openai-costs FILE` reads OpenAI's
+`organization/costs`. A file can hold one response, a list of pages, or either
+wrapped as `{"request_url", "response"}`. These become AI rows in the FOCUS
+export; the beta's list amount becomes `ListCost`, and a line with no request
+count is stated over its period in hours. One report covers the same money in
+one grouping (by model, by workspace, per day...), so an import that would add
+a second grouping on days already kept is refused rather than counting them
+twice ([ADR 0018](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0018-billed-ai-cost-from-saved-admin-reports.md)).
+**These importers are built and tested from the shapes the providers
+document; no real export has been checked against them yet.** OpenAI's spec
+does not say what unit its amounts are in; tokencur reads them as dollars, as
+its example suggests.
 
 ## Unit economics: usage value per commit and per successful change
 
@@ -253,7 +272,7 @@ session   started (UTC)     repository            calls  usage value  prompts  A
 - **Success means it stayed.** A change succeeds when it reaches the default
   branch and is never reverted; a rebased copy is the same change. A
   repository whose work lands on another branch names it in its own git
-  config, `git config tokencur.branch motor-pixel`, and the view says so.
+  config, `git config tokencur.branch develop`, and the view says so.
 - **A change goes to the session behind it:** the last one that worked in its
   repository in the day before the commit.
 - **What a person put in:** prompts count the messages a person typed, and API
@@ -310,6 +329,13 @@ never writes to the transcript. `doctor` compares that with tokencur's value of
 the same sessions, and flags a gap either way: below 85% means calls are going
 missing, above 105% means calls are being counted twice.
 
+And it checks the two things `tokencur limits` reads from Claude Code, neither
+of them documented: its `/usage` meter in `~/.claude.json`, and the stub it
+logs when a limit turns a request away. A meter fetched long ago is normal; a
+meter key that is there but gives no reading, or a `rate_limit` stub that gives
+no limit hit, is a problem, because `limits` would quietly fall back to less.
+`limits` itself prints one warning line when either breaks.
+
 ## Plan limits: how much of a subscription is left
 
 A subscription such as Claude Max caps usage in a five-hour window and a
@@ -342,16 +368,25 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
 - **Claude Code's own meter, when it is fresh.** Claude Code caches the
   percent its `/usage` meter last showed. When that reading was taken in the
   current window, the view shows it with its time, and divides the value used
-  by then by it: what the whole limit is worth in usage value. The current
-  share and the week's projection then use that limit, and the estimate from
-  ceilings hit stays next to it. On the first reading the weekly limit came
-  to $1,062.95, against a weekly ceiling hit the day before at $1,063.07; the
-  five-hour limit came to $166.32, against ceilings hit near $135
+  by then by it: what the whole limit is worth in usage value. With three
+  readings or more in the window, spread over 20 points or more, it fits a
+  line through them instead, because the meter does not start at zero: one
+  week's nine readings sat within 0.4 points of percent = 5.7 + usage value /
+  $15.03, while one reading at a time put the limit anywhere from $1,063 to
+  $1,412. The current share and the week's projection then use that limit,
+  and the estimate from ceilings hit stays next to it
   ([ADR 0015](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0015-read-the-agents-own-usage-meter.md)).
 - **A gauge, not a balance.** Limits are not priced like the API, and usage
   these logs do not hold (claude.ai chat, Claude Code's background calls)
   draws on the same limits. Several agents on one subscription share the same
   windows, so one command shows all of them how close the next hit is.
+
+`tokencur limits --json` prints the same figures for scripts: per window the
+usage value, the share of the limit and what it was measured against
+(`meter`, `meter_reading` or `lowest_ceiling`), the reset, and for the week
+when its pace reaches the limit. The status line and hooks in
+[`contrib/claude-code/`](https://github.com/pach-boop/tokencur/tree/main/contrib/claude-code)
+read it.
 
 Only `tokencur limits` looks for limit hits (a fast filter over the logs, about
 a second on a 1 GB history), so other commands stay as fast as before
@@ -424,7 +459,7 @@ last rate), then regenerates this page from that history.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1 | Repo, thesis, related work | ✅ |
-| 2 | Ingest real usage: local agent logs, and billed cost from provider exports | 🔨 Claude Code, Codex CLI, Kimi Code and RunPod billing done; Anthropic and OpenAI admin cost APIs next ([#7](https://github.com/pach-boop/tokencur/issues/7)); Gemini CLI ([#9](https://github.com/pach-boop/tokencur/issues/9)) |
+| 2 | Ingest real usage: local agent logs, and billed cost from provider exports | 🔨 Claude Code, Codex CLI, Kimi Code, RunPod billing and Anthropic and OpenAI admin cost reports done ([#7](https://github.com/pach-boop/tokencur/issues/7), documented shapes); Gemini CLI ([#9](https://github.com/pach-boop/tokencur/issues/9)) |
 | 3 | FOCUS normalizer + CSV export, gated in CI by the [Foundation's own validator](https://github.com/finopsfoundation/focus_validator), cross-checked against [official sample data](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS-Sample-Data) | ✅ |
 | 4 | DuckDB + Streamlit dashboard: trends, top spend, unit economics | ✅ v1 |
 | 5 | Recommendation engine: caching ROI (measured) + model right-sizing (what-if) | ✅ v1 — batch and local-vs-API break-even need user-supplied inputs, next |
@@ -436,9 +471,10 @@ last rate), then regenerates this page from that history.
 ## Limitations (honest)
 
 - Usage comes from three coding agents' local logs (Claude Code, Codex CLI, Kimi
-  Code); billed cost from RunPod exports. The
-  [Anthropic and OpenAI admin cost APIs](https://github.com/pach-boop/tokencur/issues/7)
-  are next and wait on real response samples.
+  Code); billed cost from RunPod exports and from saved Anthropic and OpenAI
+  admin cost reports. Those two importers follow the documented response
+  shapes and have not met a real export yet; tokencur does not fetch the
+  reports, since that takes an admin key.
 - The ledger can only keep usage it has seen. Run tokencur more often than
   Claude Code's `cleanupPeriodDays`, or raise that setting in
   `~/.claude/settings.json`.
@@ -456,8 +492,12 @@ last rate), then regenerates this page from that history.
   smaller models for web search, web fetch and session titles, and some
   main-model calls such as compaction. Its own end-of-session counters show
   tokencur's Claude Code value is a slight underestimate: on the maintainer's
-  sessions, tokencur sees 93.6% of the cost Claude Code counted.
+  sessions, tokencur sees 95% of the cost Claude Code counted.
   `tokencur doctor` measures this on your own logs.
+- Claude Code's subagents (Task and workflow agents) never log their calls'
+  final output count. Once a session closes, tokencur fills it in from Claude
+  Code's counters, in even shares over those calls (ADR 0017); until then a
+  session's subagent output reads low.
 - Usage value per commit counts commits on the checked-out branch, and a commit
   says nothing about size or quality. Usage logged before tokencur 0.3 kept no
   working directory; it is attributed only if its log is still on disk.
@@ -475,7 +515,7 @@ last rate), then regenerates this page from that history.
   land on the next UTC day.
 - Targets FOCUS 1.4, checked in CI by the Foundation's `focus-validator` on its 1.4.0.1
   rules, a prerelease pinned by hash, with nothing tolerated
-  ([ADR 0017](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0017-focus-1-4-once-its-released-rules-run.md)).
+  ([ADR 0019](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0019-focus-1-4-once-its-released-rules-run.md)).
   The released 1.4 rule file crashes the validator; a weekly
   [focus-watch action](https://github.com/pach-boop/tokencur/blob/main/.github/workflows/focus-watch.yml)
   opens an issue the day it runs. The text of 1.4 removes `ProviderName` and

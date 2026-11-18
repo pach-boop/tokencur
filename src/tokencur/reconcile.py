@@ -7,7 +7,9 @@ ends, the cost it counted for each model (``cost-state`` lines; see
 calls the transcripts record. Comparing the two measures what the
 transcripts never show: internal calls to smaller models (web search,
 web fetch, session titles) and some main-model calls, compaction among
-them.
+them. The output subagent transcripts log short is already filled in
+from these counters at ingest (``claude_code._top_up``), so what remains
+is calls no transcript holds.
 
 A session continued in another one hands its counters on, so a chain of
 sessions is compared as one: Claude Code's counters at the end of the

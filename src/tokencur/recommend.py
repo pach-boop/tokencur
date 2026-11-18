@@ -31,6 +31,7 @@ from tokencur.records import UsageRecord
 # Curated "one tier down" pairs. Only emitted when the sibling is
 # actually cheaper on both input and output at list rates.
 DOWNSIZE = {
+    "claude-fable-5-2": "claude-opus-5-5",
     "claude-fable-5-1": "claude-opus-5-5",
     "claude-opus-5-5": "claude-sonnet-5-5",
     "claude-sonnet-5-5": "claude-haiku-4-5",
@@ -132,6 +133,8 @@ def model_rightsizing(records: Iterable[UsageRecord]) -> list[Recommendation]:
     for model, (current, downsized) in sums.items():
         sibling = DOWNSIZE[model.split("/")[-1]]
         now, now_sibling = rates_for(model), rates_for(sibling)
+        if now is None or now_sibling is None:
+            continue  # one of the pair has no rate today — nothing to compare
         if now_sibling.input >= now.input or now_sibling.output >= now.output:
             continue  # curated pair is not actually cheaper — skip
         if current - downsized < 1.0:

@@ -10,7 +10,8 @@ Two layers, curated first:
 1. ``RATE_CARD`` — the hand-maintained Anthropic card (dated, sourced):
    every model on Anthropic's pricing page as of ``AS_OF``. Writes cost
    1.25x the input rate (5-minute TTL) or 2x (1-hour TTL); reads 0.1x,
-   except where the page says otherwise (Opus 5.5, Fable 5.1).
+   except where the page says otherwise (Opus 5.5, Sonnet 5.5, Fable
+   5.1 and 5.2).
 2. A vendored snapshot of the community-maintained LiteLLM price
    database (see ``scripts/update_pricing_snapshot.py``) as fallback,
    which extends coverage to OpenAI/Gemini and future models. Cache
@@ -32,7 +33,7 @@ from pathlib import Path
 from tokencur import __version__
 from tokencur.records import UsageRecord, parse_timestamp
 
-AS_OF = "2026-10-14"
+AS_OF = "2026-11-13"
 SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing"
 
 
@@ -59,14 +60,16 @@ def _anthropic_rates(input: float, output: float, read: float = 0.10) -> ModelRa
 
 
 RATE_CARD: dict[str, ModelRates] = {
-    # Anthropic's pricing page on 2026-10-14 (SOURCE), top to bottom.
-    # Cache hits cost 0.025x input on Fable 5.1 / Mythos 5.1 ($0.25)
-    # and 0.05x on Opus 5.5 ($0.20) and Sonnet 5.5 ($0.10, since
-    # 2026-10-07); every other model uses 0.1x. Haiku 5.5 (2026-10-07)
-    # is left out: it is priced by prompt length (over 100k tokens pays
-    # more), a tier this card does not model yet. Until it does, the
-    # community snapshot values it at the short-prompt rate, which
-    # underestimates prompts over 100k tokens.
+    # Anthropic's pricing page on 2026-11-13 (SOURCE), top to bottom.
+    # Cache hits cost 0.025x input on Fable 5.2 / Mythos 5.2 ($0.20)
+    # and Fable 5.1 / Mythos 5.1 ($0.25), and 0.05x on Opus 5.5 ($0.20)
+    # and Sonnet 5.5 ($0.10, since 2026-10-07); every other model uses
+    # 0.1x. Haiku 5.5 (2026-10-07) is left out: it is priced by prompt
+    # length (over 100k tokens pays more), a tier this card does not
+    # model yet. Until it does, the community snapshot values it at the
+    # short-prompt rate, which underestimates prompts over 100k tokens.
+    "claude-fable-5-2": _anthropic_rates(8.00, 40.00, read=0.025),
+    "claude-mythos-5-2": _anthropic_rates(8.00, 40.00, read=0.025),
     "claude-fable-5-1": _anthropic_rates(10.00, 50.00, read=0.025),
     "claude-mythos-5-1": _anthropic_rates(10.00, 50.00, read=0.025),
     "claude-fable-5": _anthropic_rates(10.00, 50.00),

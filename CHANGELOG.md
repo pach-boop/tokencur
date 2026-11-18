@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
-- **tokencur targets FOCUS 1.4** (ADR 0017, superseding ADR 0016). CI fails
+- **tokencur targets FOCUS 1.4** (ADR 0019, superseding ADR 0016). CI fails
   unless the export passes the Foundation's `focus-validator` on its 1.4.0.1
   rules, a prerelease pinned by SHA-256, with nothing tolerated: 351 rules
   pass. The released 1.4 rule file crashes the validator 2.2.1.
@@ -18,8 +18,114 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   still require them. 67 columns, up from 65; every value exported before is
   unchanged.
 
+## [0.12.0] - 2026-11-14
+
 ### Added
 
+- **Billed API cost from Anthropic and OpenAI** (#7).
+  `tokencur import anthropic-cost FILE` reads a saved Anthropic cost
+  report, either the Legacy `cost_report` or the beta `analytics/cost`.
+  `tokencur import openai-costs FILE` reads a saved OpenAI
+  `organization/costs` report. Their lines are kept as billed charges next
+  to RunPod's and exported as FOCUS "AI and Machine Learning" rows. The
+  beta report's list amount becomes `ListCost`. A line with no request
+  count is stated over its period in hours, because FOCUS wants a quantity
+  on every usage row. tokencur reads the files you save and fetches
+  nothing. The importers follow the documented shapes and have not yet
+  met a real export (ADR 0018).
+- **No double counting across groupings.** The same money can be
+  reported by model or by workspace, per hour or per day. An import that
+  would add a second grouping on days the ledger already holds for that
+  provider is refused, and the error names the day and both groupings.
+
+### Changed
+
+- Ledger schema 9: billed charges gain `list_usd`, the list price a bill
+  states. Existing charges keep none. The ledger is backed up before the
+  upgrade, as usual.
+
+## [0.11.3] - 2026-11-14
+
+### Added
+
+- **Right-sizing covers Claude Fable 5.2**: `tokencur recommend` compares
+  its usage against Claude Opus 5.5, the tier below, as it already did for
+  Fable 5.1.
+
+### Fixed
+
+- **Session logs follow `CLAUDE_CONFIG_DIR`.** With that variable set,
+  Claude Code keeps its logs in `$CLAUDE_CONFIG_DIR/projects`, and tokencur
+  kept looking in `~/.claude/projects`: it read the usage meter from one
+  place and the usage from another, or found no logs at all. The scan and
+  the Claude Code hooks' `context` command now look where Claude Code
+  writes.
+
+### Changed
+
+- Examples in the README, an ADR and a docstring name a generic branch
+  instead of one from a private repository.
+- **The package's type annotations are checked.** CI runs mypy, pinned
+  like ruff, on `src/tokencur`. The 38 errors of its first run are fixed
+  with annotations and type guards. `tokencur recommend` now skips a
+  model pair when one of the two has no rate today, where it would have
+  stopped with an error. Nothing else behaves differently.
+
+## [0.11.2] - 2026-11-13
+
+### Added
+
+- **Claude Fable 5.2 and Claude Mythos 5.2 are priced**: $8 input and $40
+  output per MTok, with cache reads at $0.20 (0.025x input), on the
+  curated card, now as of Anthropic's pricing page on 2026-11-13. Until
+  now their calls surfaced as unpriced usage, so figures for periods that
+  include them were low by that usage.
+
+### Fixed
+
+- **The test suite passes again, whatever the date.** A test of
+  `tokencur limits` read the real clock against a usage meter whose week
+  closed on 2026-10-21 at 11:00 UTC, and failed from that minute on. That
+  stopped the daily price-watch refresh, which runs the suite before it
+  commits and has not completed since 2026-10-20, and failed CI on every
+  pull request opened after. The test now sets the clock it needs. The
+  package itself did not change.
+
+## [0.11.1] - 2026-10-20
+
+### Fixed
+
+- **Claude Code subagents' output is no longer valued at a few tokens a
+  call.** A Task or workflow agent's transcript logs each call while it
+  streams and never logs the final output count. Once a session closes,
+  tokencur fills that count in from Claude Code's own counters, spread
+  evenly over the calls that lack it (ADR 0017). On the maintainer's logs
+  this added 23.9M output tokens over 15,688 calls and raised `doctor`'s
+  reconciliation from 85% to 95%. `doctor` says how many calls were filled
+  in and how many wait for their session to close. Earlier figures for
+  sessions that ran subagents or workflows were low by their output.
+
+## [0.11.0] - 2026-10-20
+
+### Added
+
+- **`tokencur doctor` checks the plan limits' inputs**: Claude Code's `/usage`
+  meter (a key that is there but gives no reading is a problem; an old reading,
+  or none with an API key, is not) and its `rate_limit` stubs (each must still
+  give a limit hit). `tokencur limits` prints one warning line on stderr when
+  either breaks, so it no longer falls back without saying why.
+- `tokencur limits --json`: the figures behind the view, for scripts. Per
+  window the usage value, the share of the limit and what it is measured
+  against (Claude Code's meter, its own low reading, or the lowest ceiling
+  seen), the reset, and the week's projection. The view and the JSON come
+  from the same code, so they cannot drift apart.
+- **A Claude Code status line and hooks** in `contrib/claude-code/`
+  (standard library only, no tokens): the session's context against a cut and
+  the plan limits in the status line; a session-start notice with the limits,
+  the week's projection and the command that measures the session's real
+  context; a session log; and a systemd timer that sends a desktop notice
+  once per step a limit crosses. They read `tokencur limits --json` through a
+  cache, so several sessions share one measurement.
 - **A weekly FOCUS watch** (the `focus-watch` workflow, Mondays). It runs the
   newest `focus-validator` three ways: main's export on the 1.3 rules the
   validator downloads by default, tolerating nothing; the `focus-1.4`
@@ -30,6 +136,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - `scripts/validate_focus.py` takes `--rules` (a local rule file in place of
   the pinned one), `--strict` (tolerate nothing) and `--report` (the verdict
   as JSON).
+
+### Changed
+
+- **`tokencur limits` reads the meter as a line.** With three readings or
+  more in the window, spread over 20 points or more, it fits percent = base +
+  usage value / value per point, and takes the whole limit and the current
+  share from that line (ADR 0015, update 2026-10-20). A single reading's share
+  put one week's limit anywhere from $1,063 to $1,412; the line held its nine
+  readings within 0.4 points. Only readings on the plan in force count. The
+  JSON's meter gains `base_percent` and `readings`.
 
 ## [0.10.0] - 2026-10-15
 

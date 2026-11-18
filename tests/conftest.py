@@ -20,6 +20,13 @@ def _no_host_logs(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_host_claude_state(monkeypatch, tmp_path_factory):
+    """No test may read the Claude Code state file (its usage meter) of the
+    machine it runs on. Tests that need one write it here."""
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path_factory.mktemp("claude")))
+
+
+@pytest.fixture(autouse=True)
 def _no_host_git_config(monkeypatch, tmp_path_factory):
     """A test's git repositories carry their own identity, never the host's."""
     empty = tmp_path_factory.mktemp("gitconfig") / "config"

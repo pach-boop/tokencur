@@ -39,11 +39,12 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Lint and format with the pinned ruff (CI runs the same two commands), and
-optionally let pre-commit run them before every commit:
+Lint and format with the pinned ruff and check the types with the pinned
+mypy (CI runs the same three commands), and optionally let pre-commit run
+ruff before every commit:
 
 ```bash
-ruff check . && ruff format --check .
+ruff check . && ruff format --check . && mypy
 pip install pre-commit && pre-commit install   # optional
 ```
 
@@ -53,7 +54,7 @@ and installs the wheel. Leaked file or database handles fail the suite.
 
 The FOCUS conformance gate runs the FinOps Foundation's own validator
 (Python 3.12+) on its FOCUS 1.4.0.1 rules, a prerelease, which it
-downloads and checks against a pinned SHA-256 (ADR 0017):
+downloads and checks against a pinned SHA-256 (ADR 0019):
 
 ```bash
 pip install focus-validator==2.2.1 pyarrow==24.0.0  # pyarrow 26 needs numpy 2
