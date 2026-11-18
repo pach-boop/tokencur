@@ -5,6 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+
+- **Network volume storage as billed cost.** RunPod bills a network volume
+  while it exists, with or without a pod, and v1 never listed it. It is now
+  its own service, `RunPod Network Volumes`, and FOCUS `Storage` rows
+  (`File Storage`). A real capture also listed 14 pod charges from October
+  that no v1 capture had.
+- Ledger schema 10: billed charges record whether their quantity was
+  stated over the period instead of measured (`quantity_stated`). The
+  upgrade marks the Anthropic and OpenAI lines stated that way.
+
+### Changed
+
+- **Commands read only the Claude Code logs that changed** (ADR 0019).
+  What each transcript gives the scan is kept in a cache with the file's
+  size and modification time. A run reads again only the files that
+  changed since the last run. On 3.2 GB of logs, `tokencur limits` reads
+  usage in about 1 s instead of 13, and its limit hits in under 1 s
+  instead of 4. Results are the same as a full read, record by record. The
+  first run after an upgrade reads everything once. The cache is at
+  `~/.cache/tokencur/scan-cache.sqlite3` (honours `$XDG_CACHE_HOME`, or
+  `$TOKENCUR_CACHE`; `TOKENCUR_CACHE=off` turns it off). It holds the
+  same metadata the ledger does, never message content.
+
 ### Fixed
 
 - **RunPod billing from API v2** (#49, ADR 0020). REST API v1, which
@@ -16,17 +40,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   detail gives the GPU, CPU and disk split. Saved v1 captures still
   import, and the GPU time they measured is kept when a v2 capture bills
   the same pod and day again. Report columns fit longer service names.
-
-### Added
-
-- **Network volume storage as billed cost.** RunPod bills a network volume
-  while it exists, with or without a pod, and v1 never listed it. It is now
-  its own service, `RunPod Network Volumes`, and FOCUS `Storage` rows
-  (`File Storage`). A real capture also listed 14 pod charges from October
-  that no v1 capture had.
-- Ledger schema 10: billed charges record whether their quantity was
-  stated over the period instead of measured (`quantity_stated`). The
-  upgrade marks the Anthropic and OpenAI lines stated that way.
 
 ## [0.13.0] - 2026-11-17
 
