@@ -208,6 +208,12 @@ The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
 never stored.
 
+A run reads again only the Claude Code logs that changed. What each file gave
+is kept in `~/.cache/tokencur/scan-cache.sqlite3` (honours `$XDG_CACHE_HOME`,
+or `$TOKENCUR_CACHE`; `off` turns it off), with the file's size and time, and
+it holds the same metadata as the ledger (ADR 0019). Deleting it costs one
+full read.
+
 ## Billed cost
 
 Showback values usage at list price; a bill is what a provider actually took.

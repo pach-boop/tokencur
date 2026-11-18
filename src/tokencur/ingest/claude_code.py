@@ -16,18 +16,25 @@ every field it reads. It never extracts message content.
 
 from __future__ import annotations
 
+import functools
+import hashlib
 import json
 import math
 import os
-from collections import defaultdict
+import sys
+from collections import Counter, defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass, field, replace
+from dataclasses import astuple, dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TypeGuard
 
 # Re-exported: ``tokencur.ingest.claude_code.UsageRecord`` predates
 # ``tokencur.records`` and stays importable from here.
+from tokencur import records as records_module
+from tokencur.ingest import cache
+from tokencur.ingest import fields as fields_module
+from tokencur.ingest import stats as stats_module
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.ingest.stats import ScanStats
 from tokencur.records import LimitHit, MeterReading, UsageRecord
@@ -64,35 +71,181 @@ def iter_usage_records(
     finished: set[str] = set()  # records a line logged with the call's stop reason
     counters = SessionCounters()
     first_line: dict[str, str] = {}  # each session's earliest logged timestamp
-    for path in sorted(root.rglob("*.jsonl")):
+    for part in _file_parts(root):
         stats.files += 1
-        workspace = _workspace(root, path)
-        # errors="replace": a corrupted byte spoils one line, not the scan.
-        with path.open(encoding="utf-8", errors="replace") as fh:
-            for line in fh:
-                line_entry = entry(line)
-                _read_counters(line_entry, counters)
-                session, logged = (
-                    text(line_entry.get("sessionId")),
-                    text(line_entry.get("timestamp")),
-                )
-                if session and logged:
-                    first_line[session] = min(first_line.get(session, logged), logged)
-                try:
-                    record = _parse_entry(line_entry, workspace, stats)
-                except Malformed:
-                    stats.malformed += 1
-                    continue
-                if record is None:
-                    continue
-                if obj(line_entry.get("message")).get("stop_reason") is not None:
-                    finished.add(record.record_id)
-                first = messages.get(record.record_id)
-                messages[record.record_id] = (
-                    record if first is None else _final_counts(first, record)
-                )
+        stats.usage_lines += part.stats.usage_lines
+        stats.malformed += part.stats.malformed
+        stats.versions.update(part.stats.versions)
+        for line_entry in part.counter_lines:
+            _read_counters(line_entry, counters)
+        for session, logged in part.first_line.items():
+            first_line[session] = min(first_line.get(session, logged), logged)
+        finished |= part.finished
+        for record_id, record in part.records.items():
+            first = messages.get(record_id)
+            messages[record_id] = (
+                record if first is None else _final_counts(first, record)
+            )
     _top_up(messages, finished, counters, first_line, stats)
     yield from messages.values()
+
+
+@dataclass
+class _FilePart:
+    """What one transcript gives a scan, before the files are joined.
+
+    Joining the parts in path order gives what reading every line in that
+    order gives: a message keeps its first line's fields, its first working
+    directory and each count's largest value (``_final_counts``); counter
+    lines are read again in order; firsts take the minimum and the rest
+    add up. So a part can be kept in the scan cache and reused while its
+    file is unchanged (ADR 0019).
+    """
+
+    records: dict[str, UsageRecord] = field(default_factory=dict)
+    finished: set[str] = field(default_factory=set)
+    first_line: dict[str, str] = field(default_factory=dict)
+    counter_lines: list[dict] = field(default_factory=list)  # see _counter_fields
+    prompts: dict[str, int] = field(default_factory=dict)
+    hits: dict[str, LimitHit] = field(default_factory=dict)
+    stubs: dict[str, bool] = field(default_factory=dict)  # see limit_stubs
+    stats: ScanStats = field(default_factory=ScanStats)
+
+    def to_json(self) -> dict:
+        return {
+            "records": [astuple(r) for r in self.records.values()],
+            "finished": sorted(self.finished),
+            "first_line": self.first_line,
+            "counter_lines": self.counter_lines,
+            "prompts": self.prompts,
+            "hits": [astuple(h) for h in self.hits.values()],
+            "stubs": self.stubs,
+            "usage_lines": self.stats.usage_lines,
+            "malformed": self.stats.malformed,
+            "versions": self.stats.versions,
+        }
+
+    @classmethod
+    def from_json(cls, kept: dict) -> _FilePart:
+        records = [UsageRecord(*values) for values in kept["records"]]
+        hits = [LimitHit(*values) for values in kept["hits"]]
+        return cls(
+            records={r.record_id: r for r in records},
+            finished=set(kept["finished"]),
+            first_line=kept["first_line"],
+            counter_lines=kept["counter_lines"],
+            prompts=kept["prompts"],
+            hits={h.record_id: h for h in hits},
+            stubs=kept["stubs"],
+            stats=ScanStats(
+                usage_lines=kept["usage_lines"],
+                malformed=kept["malformed"],
+                versions=Counter(kept["versions"]),
+            ),
+        )
+
+
+def _file_parts(root: Path) -> list[_FilePart]:
+    """Each transcript's part under ``root``, in path order: kept from the
+    scan cache when the file is unchanged, read otherwise."""
+    files = cache.FileCache(root, _code_key())
+    parts = []
+    for path in sorted(root.rglob("*.jsonl")):
+        stat = path.stat()  # before reading: a later write makes it stale
+        part = None
+        kept = files.get(path, stat)
+        if kept is not None:
+            try:
+                part = _FilePart.from_json(kept)
+            except (KeyError, TypeError, ValueError):
+                part = None  # kept by other code: read the file again
+        if part is None:
+            part = _read_file(path, _workspace(root, path))
+            files.put(path, stat, part.to_json())
+        parts.append(part)
+    files.save()
+    return parts
+
+
+@functools.cache
+def _code_key() -> str:
+    """The scan cache's key: the code that decides what a file gives."""
+    return cache.code_key(
+        (sys.modules[__name__], cache, fields_module, records_module, stats_module)
+    )
+
+
+def _read_file(path: Path, workspace: str) -> _FilePart:
+    """Read one transcript's lines into its part."""
+    part = _FilePart()
+    # errors="replace": a corrupted byte spoils one line, not the scan.
+    with path.open(encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            line_entry = entry(line)
+            if line_entry.get("type") in ("cost-state", "continued-in"):
+                part.counter_lines.append(_counter_fields(line_entry))
+            session = text(line_entry.get("sessionId"))
+            logged = text(line_entry.get("timestamp"))
+            if session and logged:
+                part.first_line[session] = min(
+                    part.first_line.get(session, logged), logged
+                )
+            if (
+                line_entry.get("type") == "user"
+                and session
+                and _may_be_prompt(line)
+                and _is_prompt(line_entry)
+            ):
+                part.prompts[session] = part.prompts.get(session, 0) + 1
+            if "quotaLimits" in line_entry or line_entry.get("error") == "rate_limit":
+                _read_stub(line, line_entry, part)
+            try:
+                record = _parse_entry(line_entry, workspace, part.stats)
+            except Malformed:
+                part.stats.malformed += 1
+                continue
+            if record is None:
+                continue
+            if obj(line_entry.get("message")).get("stop_reason") is not None:
+                part.finished.add(record.record_id)
+            first = part.records.get(record.record_id)
+            part.records[record.record_id] = (
+                record if first is None else _final_counts(first, record)
+            )
+    return part
+
+
+def _counter_fields(line_entry: dict) -> dict:
+    """The fields of a ``cost-state`` or ``continued-in`` line that
+    ``_read_counters`` reads, and nothing else: what the cache keeps."""
+    kept = {
+        key: line_entry[key]
+        for key in (
+            "type",
+            "sessionId",
+            "continuedInSessionId",
+            "startTime",
+            "totalAPIDuration",
+            "totalAPIDurationWithoutRetries",
+        )
+        if key in line_entry
+    }
+    usage = line_entry.get("modelUsage")
+    if isinstance(usage, dict):
+        kept["modelUsage"] = {
+            model: {
+                k: v for k, v in obj(each).items() if k in ("costUSD", "outputTokens")
+            }
+            for model, each in usage.items()
+        }
+    return kept
+
+
+def _may_be_prompt(line: str) -> bool:
+    """The cheap test a line passes before ``_is_prompt`` reads it."""
+    if '"cost-state"' in line or '"continued-in"' in line:
+        return False
+    return '"user"' in line and '"tool_result"' not in line
 
 
 def _workspace(root: Path, path: Path) -> str:
@@ -308,25 +461,34 @@ def limit_stubs(root: Path) -> LimitStubs:
     are counted once, however many files repeat them."""
     hits: dict[str, LimitHit] = {}
     stubs: dict[str, bool] = {}  # request -> gave a hit
-    for path in sorted(root.rglob("*.jsonl")):
-        with path.open(encoding="utf-8", errors="replace") as fh:
-            for line in fh:
-                if '"quotaLimits"' not in line and '"rate_limit"' not in line:
-                    continue  # a cheap filter: these lines are rare
-                line_entry = entry(line)
-                hit = _limit_hit(line_entry)
-                if hit is not None:
-                    hits.setdefault(hit.record_id, hit)
-                if line_entry.get("error") == "rate_limit":
-                    request = text(line_entry.get("requestId"))
-                    message = text(obj(line_entry.get("message")).get("id"))
-                    key = f"{request}:{message}" if request or message else line
-                    stubs[key] = stubs.get(key, False) or hit is not None
+    for part in _file_parts(root):
+        for record_id, hit in part.hits.items():
+            hits.setdefault(record_id, hit)
+        for key, read in part.stubs.items():
+            stubs[key] = stubs.get(key, False) or read
     return LimitStubs(
         hits=list(hits.values()),
         stubs=len(stubs),
         unreadable=sum(not read for read in stubs.values()),
     )
+
+
+def _read_stub(line: str, line_entry: dict, part: _FilePart) -> None:
+    """Add a line's limit hit, and its ``rate_limit`` stub, to ``part``."""
+    hit = _limit_hit(line_entry)
+    if hit is not None:
+        part.hits.setdefault(hit.record_id, hit)
+    if line_entry.get("error") == "rate_limit":
+        request = text(line_entry.get("requestId"))
+        message = text(obj(line_entry.get("message")).get("id"))
+        # A stub with no ids counts once per distinct line. Its hash stands
+        # for the line, so the scan cache never keeps the line's text.
+        key = f"{request}:{message}" if request or message else _line_hash(line)
+        part.stubs[key] = part.stubs.get(key, False) or hit is not None
+
+
+def _line_hash(line: str) -> str:
+    return "line:" + hashlib.sha256(line.encode("utf-8", "replace")).hexdigest()
 
 
 def _limit_hit(line_entry: dict) -> LimitHit | None:
@@ -518,16 +680,11 @@ class SessionCounters:
 def session_counters(root: Path) -> SessionCounters:
     """Read Claude Code's own per-session counters under ``root``."""
     counters = SessionCounters()
-    for path in sorted(root.rglob("*.jsonl")):
-        with path.open(encoding="utf-8", errors="replace") as fh:
-            for line in fh:
-                if '"cost-state"' in line or '"continued-in"' in line:
-                    _read_counters(entry(line), counters)
-                elif '"user"' in line and '"tool_result"' not in line:
-                    line_entry = entry(line)
-                    session = text(line_entry.get("sessionId"))
-                    if session and _is_prompt(line_entry):
-                        counters.prompts[session] = counters.prompts.get(session, 0) + 1
+    for part in _file_parts(root):
+        for line_entry in part.counter_lines:
+            _read_counters(line_entry, counters)
+        for session, prompts in part.prompts.items():
+            counters.prompts[session] = counters.prompts.get(session, 0) + prompts
     return counters
 
 
