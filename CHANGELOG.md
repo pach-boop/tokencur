@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed
+
+- **Commands read only the Codex logs that changed, too** (ADR 0019).
+  What each rollout gives the scan is kept in the same cache as Claude
+  Code's transcripts, and a run reads again only the rollouts that changed.
+  On 193 MB of Codex logs the scan takes 0.01 s instead of 0.4, and
+  `tokencur limits` about 1.0 s instead of 1.4. Results are the same as a
+  full read, record by record. Each source now keeps its own key in the
+  cache, so a change to one source's reading code discards only what that
+  source's files gave. The first run after the upgrade reads the Codex
+  logs once.
+
 ## [0.14.0] - 2026-11-17
 
 ### Added

@@ -67,3 +67,29 @@ modification time. Reuse a part while both still match.
 - Codex and Kimi Code logs are still read in full (about 2 s together).
   Codex's copies of forked sessions are matched across files in a
   different way, and the same split can follow when it is worth it.
+
+## Update 2026-11-20: Codex's rollouts too, one key per source
+
+With Claude Code's scan cached, Codex's was the largest part left of a
+`limits` run: 0.4 s of 1.4 on the maintainer's machine, for 193 MB in 102
+rollouts, and growing with every session.
+
+A rollout splits the same way. Its part is its calls in log order and its
+scan counts. The join reads the parts in path order and counts a call the
+first time its content key shows up, the rule that already keeps a forked
+session's copies out (`identity.content_key`). So joining parts gives what
+reading every rollout in that order gives.
+
+The cache had one code key for the whole file. Two sources with different
+reading code would each discard the other's parts on every run. Each root
+now keeps its own key, and a key that no longer matches discards only the
+files under that root. The loop that reuses or reads each file's part
+moved to `cache.file_parts`, which both sources call.
+
+On the maintainer's logs the Codex scan takes 0.01 s instead of 0.4, and
+`limits` 1.0 s instead of 1.4. Records and scan counts match a full read.
+Kimi Code's logs, 3 MB, are still read in full.
+
+An older tokencur still finds its own key under the old name and keeps
+using the Claude Code parts. Their format has not changed, so both
+versions can share the file while an upgrade is under way.

@@ -68,8 +68,8 @@
 - **Writes** a scan cache at `~/.cache/tokencur/scan-cache.sqlite3`
   (honours `$XDG_CACHE_HOME`, or `$TOKENCUR_CACHE`; `off` turns it off),
   `0600` in a `0700` directory. It holds what each Claude Code
-  transcript gave the scan: the fields listed above, never message
-  content. A rate-limit stub without ids is kept as a hash of its line
+  transcript and Codex rollout gave the scan: the fields listed above,
+  never message content. A rate-limit stub without ids is kept as a hash of its line
   (ADR 0019). Deleting it only costs one full read of the logs.
 - **Network**: none at runtime, with one exception: in a partial clone,
   git downloads the past versions of the pricing snapshot that
