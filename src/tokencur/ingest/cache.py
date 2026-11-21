@@ -11,8 +11,9 @@ and modification time, and reused while both still match (ADR 0019).
 - A file modified within ``SETTLED`` of being read is not kept: a later
   rewrite in the same tick of the file system's clock, at the same size,
   would look unchanged (the "racy git" case).
-- The cache is keyed on the reading code itself. Any change to the modules
-  that parse the logs, an upgrade or a local edit, discards it whole.
+- The cache is keyed on the reading code itself, one key per root. Any
+  change to the modules that parse a source's logs, an upgrade or a local
+  edit, discards what that source's files gave.
 - It is a cache: deleting it costs one full scan, and an error reading or
   writing it only means the logs are read in full.
 
@@ -28,11 +29,11 @@ import os
 import sqlite3
 import sys
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import closing
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Protocol, TypeVar
 
 #: How long a file must have stood unmodified before what it gave is kept.
 SETTLED_NS = 2_000_000_000
@@ -61,6 +62,45 @@ def code_key(modules: Iterable[ModuleType]) -> str:
     for module in modules:
         digest.update(Path(str(module.__file__)).read_bytes())
     return digest.hexdigest()
+
+
+class Part(Protocol):
+    """What one log file gives a scan, before the files are joined."""
+
+    def to_json(self) -> Any: ...
+
+
+P = TypeVar("P", bound=Part)
+
+
+def file_parts(
+    root: Path, key: str, read: Callable[[Path], P], load: Callable[[Any], P]
+) -> list[P]:
+    """Each log file's part under ``root``, in path order: kept from the
+    cache when the file is unchanged, read with ``read`` otherwise.
+
+    ``key`` names the code that reads the files (see ``code_key``). ``load``
+    rebuilds a kept part; a ``KeyError``, ``TypeError`` or ``ValueError``
+    from it means the part was kept by other code, and the file is read
+    again.
+    """
+    files = FileCache(root, key)
+    parts = []
+    for path in sorted(root.rglob("*.jsonl")):
+        stat = path.stat()  # before reading: a later write makes it stale
+        part = None
+        kept = files.get(path, stat)
+        if kept is not None:
+            try:
+                part = load(kept)
+            except (KeyError, TypeError, ValueError):
+                part = None
+        if part is None:
+            part = read(path)
+            files.put(path, stat, part.to_json())
+        parts.append(part)
+    files.save()
+    return parts
 
 
 class FileCache:
@@ -116,25 +156,31 @@ class FileCache:
 
     def _load(self) -> None:
         assert self._path is not None
+        # Each root keeps its own key: one source's reading code changing
+        # leaves what another source's files gave.
+        meta_key = f"code:{self._root}"
+        prefix = self._root + os.sep
+        under_root = "substr(path, 1, ?) = ?"
         try:
             with closing(self._connect()) as conn:
                 row = conn.execute(
-                    "SELECT value FROM meta WHERE key = 'code'"
+                    "SELECT value FROM meta WHERE key = ?", (meta_key,)
                 ).fetchone()
                 if row is None or row[0] != self._key:
                     with conn:  # parsed by other code: none of it holds
-                        conn.execute("DELETE FROM files")
                         conn.execute(
-                            "INSERT OR REPLACE INTO meta VALUES ('code', ?)",
-                            (self._key,),
+                            f"DELETE FROM files WHERE {under_root}",
+                            (len(prefix), prefix),
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO meta VALUES (?, ?)",
+                            (meta_key, self._key),
                         )
                     return
-                prefix = self._root + os.sep
                 self._kept = {
                     name: (size, mtime_ns, part)
                     for name, size, mtime_ns, part in conn.execute(
-                        "SELECT path, size, mtime_ns, part FROM files"
-                        " WHERE substr(path, 1, ?) = ?",
+                        f"SELECT path, size, mtime_ns, part FROM files WHERE {under_root}",
                         (len(prefix), prefix),
                     )
                 }

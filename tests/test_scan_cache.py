@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tokencur.ingest import cache, claude_code
+from tokencur.ingest import cache, claude_code, codex
 from tokencur.ingest.stats import ScanStats
 
 HOUR_AGO = time.time() - 3600
@@ -182,3 +182,112 @@ def test_an_unreadable_cache_only_means_a_full_read(
     records, *_ = _scan(logs)
     assert [r.session_id for r in records] == ["a", "b"]
     assert "scan cache" in capsys.readouterr().err
+
+
+def _rollout(session: str, calls: list[tuple[str, int]]) -> str:
+    """A Codex rollout: ``calls`` are (timestamp, output tokens), each
+    moving the session's running total."""
+    lines = [
+        _line(
+            type="session_meta",
+            payload={"id": session, "cwd": "/work", "cli_version": "0.80.0"},
+        )
+    ]
+    total = 0
+    for timestamp, output in calls:
+        total += output
+        usage = {"input_tokens": 100, "cached_input_tokens": 40}
+        lines.append(
+            _line(
+                type="event_msg",
+                timestamp=timestamp,
+                payload={
+                    "type": "token_count",
+                    "info": {
+                        "last_token_usage": {**usage, "output_tokens": output},
+                        "total_token_usage": {**usage, "output_tokens": total},
+                    },
+                },
+            )
+        )
+    return "".join(lines)
+
+
+@pytest.fixture
+def rollouts(tmp_path):
+    """An original session and a fork that copies its call, then makes one."""
+    root = tmp_path / "sessions"
+    first = ("2026-11-17T10:00:00.000Z", 10)
+    _write(root / "2026/11/17/rollout-a.jsonl", _rollout("a", [first]))
+    _write(
+        root / "2026/11/18/rollout-b.jsonl",
+        _rollout("b", [first, ("2026-11-18T10:00:00.000Z", 20)]),
+    )
+    return root
+
+
+@pytest.fixture
+def rollout_reads(monkeypatch):
+    """The rollouts read in full, in order."""
+    read, seen = codex._read_file, []
+
+    def spy(path):
+        seen.append(path.name)
+        return read(path)
+
+    monkeypatch.setattr(codex, "_read_file", spy)
+    return seen
+
+
+def _codex_scan(root):
+    stats = ScanStats()
+    records = list(codex.iter_usage_records(root, stats))
+    return records, stats
+
+
+def test_an_unchanged_rollout_is_not_read_again(rollouts, rollout_reads):
+    first = _codex_scan(rollouts)
+    assert _codex_scan(rollouts) == first
+    assert rollout_reads == ["rollout-a.jsonl", "rollout-b.jsonl"]
+
+
+def test_the_cache_gives_what_reading_the_rollouts_gives(rollouts, monkeypatch):
+    _codex_scan(rollouts)  # filled
+    cached = _codex_scan(rollouts)
+    monkeypatch.setenv("TOKENCUR_CACHE", "off")
+    records, stats = _codex_scan(rollouts)
+    assert (records, stats) == cached
+    # The fork's copy of the first call is counted once, as in a full read.
+    assert [(r.session_id, r.output_tokens) for r in records] == [("a", 10), ("b", 20)]
+    assert stats.files == 2 and stats.versions == {"0.80.0": 2}
+
+
+def test_a_grown_rollout_is_read_again(rollouts, rollout_reads):
+    _codex_scan(rollouts)
+    path = rollouts / "2026/11/17/rollout-a.jsonl"
+    _write(
+        path,
+        _rollout(
+            "a", [("2026-11-17T10:00:00.000Z", 10), ("2026-11-17T11:00:00.000Z", 5)]
+        ),
+    )
+    records, _ = _codex_scan(rollouts)
+    assert rollout_reads == ["rollout-a.jsonl", "rollout-b.jsonl", "rollout-a.jsonl"]
+    assert [r.output_tokens for r in records] == [10, 5, 20]
+
+
+def test_each_source_keeps_its_own_part_of_the_cache(
+    logs, rollouts, reads, rollout_reads, monkeypatch
+):
+    _scan(logs)
+    _codex_scan(rollouts)
+    _scan(logs)
+    _codex_scan(rollouts)
+    assert reads == ["a.jsonl", "b.jsonl"]
+    assert rollout_reads == ["rollout-a.jsonl", "rollout-b.jsonl"]
+    # Other reading code for one source discards only what its files gave.
+    monkeypatch.setattr(codex, "_code_key", lambda: "other code")
+    _codex_scan(rollouts)
+    _scan(logs)
+    assert rollout_reads == ["rollout-a.jsonl", "rollout-b.jsonl"] * 2
+    assert reads == ["a.jsonl", "b.jsonl"]

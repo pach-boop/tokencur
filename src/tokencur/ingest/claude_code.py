@@ -22,7 +22,7 @@ import json
 import math
 import os
 import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import astuple, dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -72,10 +72,7 @@ def iter_usage_records(
     counters = SessionCounters()
     first_line: dict[str, str] = {}  # each session's earliest logged timestamp
     for part in _file_parts(root):
-        stats.files += 1
-        stats.usage_lines += part.stats.usage_lines
-        stats.malformed += part.stats.malformed
-        stats.versions.update(part.stats.versions)
+        stats.add_file(part.stats)
         for line_entry in part.counter_lines:
             _read_counters(line_entry, counters)
         for session, logged in part.first_line.items():
@@ -120,9 +117,7 @@ class _FilePart:
             "prompts": self.prompts,
             "hits": [astuple(h) for h in self.hits.values()],
             "stubs": self.stubs,
-            "usage_lines": self.stats.usage_lines,
-            "malformed": self.stats.malformed,
-            "versions": self.stats.versions,
+            **self.stats.file_counts(),
         }
 
     @classmethod
@@ -137,34 +132,19 @@ class _FilePart:
             prompts=kept["prompts"],
             hits={h.record_id: h for h in hits},
             stubs=kept["stubs"],
-            stats=ScanStats(
-                usage_lines=kept["usage_lines"],
-                malformed=kept["malformed"],
-                versions=Counter(kept["versions"]),
-            ),
+            stats=ScanStats.from_file_counts(kept),
         )
 
 
 def _file_parts(root: Path) -> list[_FilePart]:
     """Each transcript's part under ``root``, in path order: kept from the
     scan cache when the file is unchanged, read otherwise."""
-    files = cache.FileCache(root, _code_key())
-    parts = []
-    for path in sorted(root.rglob("*.jsonl")):
-        stat = path.stat()  # before reading: a later write makes it stale
-        part = None
-        kept = files.get(path, stat)
-        if kept is not None:
-            try:
-                part = _FilePart.from_json(kept)
-            except (KeyError, TypeError, ValueError):
-                part = None  # kept by other code: read the file again
-        if part is None:
-            part = _read_file(path, _workspace(root, path))
-            files.put(path, stat, part.to_json())
-        parts.append(part)
-    files.save()
-    return parts
+    return cache.file_parts(
+        root,
+        _code_key(),
+        lambda path: _read_file(path, _workspace(root, path)),
+        _FilePart.from_json,
+    )
 
 
 @functools.cache
