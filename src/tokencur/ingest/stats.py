@@ -28,3 +28,26 @@ class ScanStats:
     def saw_version(self, version: str) -> None:
         if version:
             self.versions[version] += 1
+
+    def add_file(self, part: ScanStats) -> None:
+        """Count one more file, with what reading it saw."""
+        self.files += 1
+        self.usage_lines += part.usage_lines
+        self.malformed += part.malformed
+        self.versions.update(part.versions)
+
+    def file_counts(self) -> dict:
+        """What reading one file saw, as the scan cache keeps it."""
+        return {
+            "usage_lines": self.usage_lines,
+            "malformed": self.malformed,
+            "versions": self.versions,
+        }
+
+    @classmethod
+    def from_file_counts(cls, kept: dict) -> ScanStats:
+        return cls(
+            usage_lines=kept["usage_lines"],
+            malformed=kept["malformed"],
+            versions=Counter(kept["versions"]),
+        )
