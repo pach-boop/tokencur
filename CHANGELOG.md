@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-22
+
 ### Changed
 
 - **Commands read only the Codex logs that changed, too** (ADR 0019).
