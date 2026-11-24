@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "fetched": "2026-11-20",
+  "fetched": "2026-11-24",
   "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
  },
  "models": {
@@ -1885,6 +1885,12 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 5e-05
   },
+  "gpt-6-astra-healthcare": {
+   "cache_read_input_token_cost": 1e-06,
+   "input_cost_per_token": 1e-05,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 5e-05
+  },
   "gpt-6-astra-law": {
    "cache_read_input_token_cost": 1e-06,
    "input_cost_per_token": 1e-05,
@@ -1942,6 +1948,12 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 1e-05
   },
+  "gpt-6.1-sol-healthcare": {
+   "cache_read_input_token_cost": 1e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 1e-05
+  },
   "gpt-6.1-terra": {
    "cache_creation_input_token_cost": 1.25e-06,
    "cache_read_input_token_cost": 5e-08,
@@ -1956,6 +1968,13 @@
    "litellm_provider": "openai",
    "output_cost_per_token": 4e-05
   },
+  "gpt-6.2-astra-healthcare": {
+   "cache_creation_input_token_cost": 1e-05,
+   "cache_read_input_token_cost": 4e-07,
+   "input_cost_per_token": 8e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 4e-05
+  },
   "gpt-6.2-astra-law": {
    "cache_creation_input_token_cost": 1e-05,
    "cache_read_input_token_cost": 4e-07,
@@ -1964,6 +1983,13 @@
    "output_cost_per_token": 4e-05
   },
   "gpt-6.2-sol": {
+   "cache_creation_input_token_cost": 2.5e-06,
+   "cache_read_input_token_cost": 1e-07,
+   "input_cost_per_token": 2e-06,
+   "litellm_provider": "openai",
+   "output_cost_per_token": 1e-05
+  },
+  "gpt-6.2-sol-healthcare": {
    "cache_creation_input_token_cost": 2.5e-06,
    "cache_read_input_token_cost": 1e-07,
    "input_cost_per_token": 2e-06,
