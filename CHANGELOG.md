@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Fixed
+
+- **No stale context right after a compaction.** `tokencur_hooks.py
+  context`, and the status line when Claude Code sends it no usage, read
+  the last call from before Claude Code compacted the session (223k instead
+  of about 63k) until the next call came in. They now give no figure until
+  that call.
+
 ## [0.15.0] - 2026-11-22
 
 ### Changed

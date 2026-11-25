@@ -106,7 +106,12 @@ def context_of(usage: dict) -> int:
 
 def transcript_context(path: str | Path) -> int | None:
     """The context of the main thread's last call. Subagents run in their
-    own context and are left out."""
+    own context and are left out.
+
+    A compaction after that call leaves it stale: the window now holds the
+    summary, not what the call read, so there is no figure until the next
+    call.
+    """
     try:
         with open(path, "rb") as transcript:
             transcript.seek(0, os.SEEK_END)
@@ -115,13 +120,17 @@ def transcript_context(path: str | Path) -> int | None:
     except OSError:
         return None
     for line in reversed(lines):
-        if b'"usage"' not in line:
+        if b'"usage"' not in line and b'"compact_boundary"' not in line:
             continue
         try:
             entry = json.loads(line)
         except ValueError:
             continue
-        if entry.get("type") != "assistant" or entry.get("isSidechain"):
+        if entry.get("isSidechain"):
+            continue
+        if entry.get("type") == "system" and entry.get("subtype") == "compact_boundary":
+            return None
+        if entry.get("type") != "assistant":
             continue
         return context_of(entry.get("message", {}).get("usage") or {})
     return None
@@ -148,7 +157,7 @@ def find_transcript(prefix: str, projects: Path | None = None) -> Path:
 def context_report(prefix: str, projects: Path | None = None) -> str:
     context = transcript_context(find_transcript(prefix, projects))
     if context is None:
-        return "no calls yet"
+        return "no calls yet since the session started or was compacted"
     cut = context_cut()
     if context >= cut:
         advice = f"past the {cut // 1000}k cut: start a new session at the next break"
