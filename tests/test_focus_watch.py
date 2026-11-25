@@ -1,13 +1,26 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 _SCRIPT = Path(__file__).parent.parent / "scripts/focus_watch.py"
 _spec = importlib.util.spec_from_file_location("focus_watch", _SCRIPT)
 watch = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(watch)
 
-PINNED_DIGEST = f"sha256:{watch.gate.RULES_SHA256}"
-TOLERATED = sorted(watch.gate.TOLERATED)
+# The watch judges main's 1.3 gate (ADR 0016). Its values are pinned here
+# so these tests hold on the focus-1.4 branch, whose gate is 1.4's.
+PINNED_SHA256 = "2c0e38136d12fc5f965c09ef7e005f8ec00dbe2fe6907e8b98d79d8257a0d272"
+PINNED_DIGEST = f"sha256:{PINNED_SHA256}"
+TOLERATED = sorted(
+    {"CAU-CapacityReservationStatus-C-004-C", "CAU-CapacityReservationStatus-C-002-C"}
+)
+
+
+@pytest.fixture(autouse=True)
+def _main_gate(monkeypatch):
+    monkeypatch.setattr(watch.gate, "RULES_SHA256", PINNED_SHA256)
+    monkeypatch.setattr(watch.gate, "TOLERATED", set(TOLERATED))
 
 
 def _asset(name, digest="sha256:0"):

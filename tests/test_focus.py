@@ -2,9 +2,15 @@ import json
 
 import pytest
 
-from tokencur.focus import FOCUS_COLUMNS, to_focus_rows, undated_count, unpriced_models
+from tokencur.focus import (
+    FOCUS_COLUMNS,
+    charge_rows,
+    to_focus_rows,
+    undated_count,
+    unpriced_models,
+)
 from tokencur.pricing import record_cost_usd
-from tokencur.records import UsageRecord
+from tokencur.records import BilledCharge, UsageRecord
 
 
 def _record(**overrides) -> UsageRecord:
@@ -107,6 +113,31 @@ def test_unpriced_records_are_skipped_and_counted():
     rows = list(to_focus_rows(records))
     assert all(r["SkuId"].startswith("claude-opus-4-8/") for r in rows)
     assert unpriced_models(records) == {"mystery-model": 1}
+
+
+def test_focus_1_4_columns():
+    charge = BilledCharge(
+        source="runpod",
+        record_id="pod@2026-09-30T00:00:00Z",
+        period_start="2026-09-30T00:00:00Z",
+        period_end="2026-10-01T00:00:00Z",
+        provider="RunPod",
+        service="RunPod Pods",
+        resource_id="pod",
+        resource_type="GPU pod",
+        quantity=2.5,
+        unit="Hours",
+        amount_usd=1.05,
+    )
+    rows = [*to_focus_rows([_record()]), *charge_rows([charge])]
+
+    for row in rows:
+        # No commitment programs, no payable invoices: explicit nulls.
+        assert row["CommitmentProgramEligibilityDetails"] is None
+        assert row["InvoiceDetailId"] is None
+        # 1.4's text removes these; its rule files still require them.
+        assert row["ProviderName"] == row["ServiceProviderName"]
+        assert row["PublisherName"] == row["ServiceProviderName"]
 
 
 def test_provider_mapping_per_source():
