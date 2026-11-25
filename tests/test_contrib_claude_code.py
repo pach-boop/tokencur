@@ -77,6 +77,39 @@ def test_the_context_is_the_main_threads_last_call(tmp_path):
     assert hooks.transcript_context(tmp_path / "missing.jsonl") is None
 
 
+def _compaction():
+    return json.dumps(
+        {
+            "type": "system",
+            "subtype": "compact_boundary",
+            "isSidechain": False,
+            "compactMetadata": {"trigger": "auto", "preTokens": 223_000},
+        }
+    )
+
+
+def _said(text):
+    return json.dumps({"type": "user", "message": {"content": text}})
+
+
+def test_a_compaction_after_the_last_call_leaves_no_figure(tmp_path):
+    transcript = tmp_path / "s.jsonl"
+    transcript.write_text("\n".join([_call(222_000), _compaction()]), encoding="utf-8")
+    assert hooks.transcript_context(transcript) is None
+
+    with transcript.open("a", encoding="utf-8") as more:
+        more.write("\n" + _call(62_000))
+    assert hooks.transcript_context(transcript) == 63_000
+
+
+def test_only_a_real_compaction_counts(tmp_path):
+    transcript = tmp_path / "s.jsonl"
+    lines = [_call(150_000), _said('what does "compact_boundary" mean?')]
+    transcript.write_text("\n".join(lines), encoding="utf-8")
+
+    assert hooks.transcript_context(transcript) == 151_000
+
+
 def test_a_session_is_found_by_its_id_prefix(tmp_path):
     projects = tmp_path / "projects"
     (projects / "home").mkdir(parents=True)
