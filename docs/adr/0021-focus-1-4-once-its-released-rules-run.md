@@ -73,3 +73,12 @@ what lets the validator run: `focus-validator` 2.2.1 still stops on the
 1.4 files with the "Active-edge cycle" error, the released one included.
 The export passes the new file as it passed the old one, 351 rules and
 none failing, so the pin moves to it.
+
+## Update, 2026-11-24
+
+On 2026-11-19 the Foundation re-published `model-1.4.0.1.json` once more
+(issue #54), now sha256 `ead03517…`. Read as JSON, it differs from the
+released `model-1.4.json` only in its version and in that same
+dependency of two rules. The export passes it, 351 rules and none
+failing, so the pin moves to it. This ADR was 0019 until `main` took that
+number for the scan cache.

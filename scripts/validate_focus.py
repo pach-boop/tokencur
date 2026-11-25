@@ -62,7 +62,7 @@ RULES_URL = (
     "https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS_Spec"
     "/releases/download/latest-draft/model-1.4.0.1.json"
 )
-RULES_SHA256 = "9913fc8a29e64134c5ffb07449c6195fa8cd8c5d6657765359c42811faa81800"
+RULES_SHA256 = "ead035176d41d91d7926ba979e05769cbfa1fa3baa4ea118784887facadf1841"
 # What tokencur's data has, in the validator's terms.
 APPLICABILITY_CRITERIA = (
     "ACCOUNT_NAMING_SUPPORTED",  # billing accounts have names
