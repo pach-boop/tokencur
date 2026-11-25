@@ -10,8 +10,9 @@ against spec 1.4:
   real logs redacted to usage metadata (``tests/fixtures/logs-real``),
   so the validator checks what tokencur produces from the formats agents
   actually write, not only what a test author typed;
-- billed RunPod charges from the billing fixture (real money: Compute
-  rows, including a storage-only charge with no unit price), and billed
+- billed RunPod charges from the billing fixtures, saved from REST API
+  v1 and API v2 (real money: Compute rows, including a disk-only charge
+  priced per GB, and Storage rows for network volumes), and billed
   Anthropic and OpenAI charges from fixtures in their documented shapes
   (AI rows, some with a list price above the billed amount);
 - the hand-built records again under negotiated discounts, so rows where
@@ -20,7 +21,7 @@ against spec 1.4:
 The rules are the Foundation's 1.4.0.1 rule file, a prerelease: the
 released 1.4 file crashes focus-validator 2.2.1 before it checks any
 data, so this branch waits for released 1.4 rules the validator can run
-(ADR 0019). The gate fetches the file, checks its SHA-256 and runs the
+(ADR 0021). The gate fetches the file, checks its SHA-256 and runs the
 validator on it offline (``--block-download``), so a re-published rule
 file cannot change the verdict unseen. The validator is told which
 features tokencur's data has (applicability criteria); rules for
@@ -174,6 +175,8 @@ def main(argv: list[str] | None = None) -> int:
         billing = FIXTURES / "billing"
         charges = [
             *runpod.iter_charges(billing / "runpod-billing-pods.json"),
+            *runpod.iter_charges(billing / "runpod-billing-pods-v2.json"),
+            *runpod.iter_charges(billing / "runpod-billing-network-volumes.json"),
             *ai_cost.iter_anthropic(billing / "anthropic-cost-report.json"),
             *ai_cost.iter_anthropic(billing / "anthropic-analytics-cost.json"),
             *ai_cost.iter_openai(billing / "openai-organization-costs.json"),

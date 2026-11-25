@@ -20,13 +20,24 @@ Mapping notes:
   call. Counting every event roughly doubled Codex usage; with this
   rule, the counted calls sum to Codex's own running total. Reports
   with no billable tokens (only ``total_tokens`` moved) are no call.
+
+What each rollout gives is kept in the scan cache and reused while the
+file is unchanged (``tokencur.ingest.cache``, ADR 0019).
 """
 
 from __future__ import annotations
 
+import functools
+import sys
 from collections.abc import Iterator
+from dataclasses import astuple, dataclass, field
 from pathlib import Path
 
+from tokencur import records as records_module
+from tokencur.ingest import cache
+from tokencur.ingest import fields as fields_module
+from tokencur.ingest import identity as identity_module
+from tokencur.ingest import stats as stats_module
 from tokencur.ingest.fields import Malformed, count, entry, obj, text
 from tokencur.ingest.identity import content_key, fingerprint
 from tokencur.ingest.stats import ScanStats
@@ -48,14 +59,62 @@ def iter_usage_records(
     """
     stats = stats if stats is not None else ScanStats()
     seen: set[str] = set()
-    for path in sorted(root.rglob("*.jsonl")):
-        stats.files += 1
-        for record in _parse_file(path, stats):
+    for part in cache.file_parts(root, _code_key(), _read_file, _FilePart.from_json):
+        stats.add_file(part.stats)
+        for record in part.records:
             key = content_key(record.record_id)
             if key in seen:
                 continue
             seen.add(key)
             yield record
+
+
+@dataclass
+class _FilePart:
+    """What one rollout gives a scan: its calls in log order and what the
+    reading saw. Joining the parts in path order, counting each call the
+    first time its content key shows up, gives what reading every file in
+    that order gives. So a part can be kept in the scan cache and reused
+    while its file is unchanged (ADR 0019).
+    """
+
+    records: list[UsageRecord] = field(default_factory=list)
+    stats: ScanStats = field(default_factory=ScanStats)
+
+    def to_json(self) -> dict:
+        return {
+            "records": [astuple(r) for r in self.records],
+            **self.stats.file_counts(),
+        }
+
+    @classmethod
+    def from_json(cls, kept: dict) -> _FilePart:
+        return cls(
+            records=[UsageRecord(*values) for values in kept["records"]],
+            stats=ScanStats.from_file_counts(kept),
+        )
+
+
+@functools.cache
+def _code_key() -> str:
+    """The scan cache's key: the code that decides what a rollout gives."""
+    return cache.code_key(
+        (
+            sys.modules[__name__],
+            cache,
+            fields_module,
+            identity_module,
+            records_module,
+            stats_module,
+        )
+    )
+
+
+def _read_file(path: Path) -> _FilePart:
+    """Read one rollout's lines into its part."""
+    part = _FilePart()
+    part.records.extend(_parse_file(path, part.stats))
+    return part
 
 
 def _parse_file(path: Path, stats: ScanStats) -> Iterator[UsageRecord]:

@@ -65,14 +65,20 @@
   you name, and `observatory` and
   `prices` write their pages where you point them (by default
   `docs/observatory` and `docs/prices` under the current directory).
+- **Writes** a scan cache at `~/.cache/tokencur/scan-cache.sqlite3`
+  (honours `$XDG_CACHE_HOME`, or `$TOKENCUR_CACHE`; `off` turns it off),
+  `0600` in a `0700` directory. It holds what each Claude Code
+  transcript and Codex rollout gave the scan: the fields listed above,
+  never message content. A rate-limit stub without ids is kept as a hash of its line
+  (ADR 0019). Deleting it only costs one full read of the logs.
 - **Network**: none at runtime, with one exception: in a partial clone,
   git downloads the past versions of the pricing snapshot that
   `tokencur prices` asks for. Three scripts go online when you run them:
   `scripts/update_pricing_snapshot.py` downloads the LiteLLM price database
   (also run by the daily price-watch action);
-  `scripts/fetch_runpod_billing.py` downloads your RunPod billing history,
-  sending the API key only in the Authorization header and never writing
-  it; and `scripts/fetch_github_ci.py` lists one GitHub Actions workflow's
+  `scripts/fetch_runpod_billing.py` downloads your RunPod billing history
+  (pods and network volumes) from api.runpod.io, sending the API key only
+  in the Authorization header and never writing it; and `scripts/fetch_github_ci.py` lists one GitHub Actions workflow's
   runs. It runs `git remote get-url origin` to find the repository unless
   you name it, and it needs no token for a public repository. A token
   you set in `$GITHUB_TOKEN` or `$GH_TOKEN` goes only to api.github.com,

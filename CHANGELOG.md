@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Changed
 
-- **tokencur targets FOCUS 1.4** (ADR 0019, superseding ADR 0016). CI fails
+- **tokencur targets FOCUS 1.4** (ADR 0021, superseding ADR 0016). CI fails
   unless the export passes the Foundation's `focus-validator` on its 1.4.0.1
   rules, a prerelease pinned by SHA-256, with nothing tolerated: 351 rules
   pass. The released 1.4 rule file crashes the validator 2.2.1.
@@ -17,6 +17,70 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
   `PublisherName` stay: the text of 1.4 removes them, but its rule files
   still require them. 67 columns, up from 65; every value exported before is
   unchanged.
+## [0.15.0] - 2026-11-22
+
+### Changed
+
+- **Commands read only the Codex logs that changed, too** (ADR 0019).
+  What each rollout gives the scan is kept in the same cache as Claude
+  Code's transcripts, and a run reads again only the rollouts that changed.
+  On 193 MB of Codex logs the scan takes 0.01 s instead of 0.4, and
+  `tokencur limits` about 1.0 s instead of 1.4. Results are the same as a
+  full read, record by record. Each source now keeps its own key in the
+  cache, so a change to one source's reading code discards only what that
+  source's files gave. The first run after the upgrade reads the Codex
+  logs once.
+
+## [0.14.0] - 2026-11-17
+
+### Added
+
+- **Network volume storage as billed cost.** RunPod bills a network volume
+  while it exists, with or without a pod, and v1 never listed it. It is now
+  its own service, `RunPod Network Volumes`, and FOCUS `Storage` rows
+  (`File Storage`). A real capture also listed 14 pod charges from October
+  that no v1 capture had.
+- Ledger schema 10: billed charges record whether their quantity was
+  stated over the period instead of measured (`quantity_stated`). The
+  upgrade marks the Anthropic and OpenAI lines stated that way.
+
+### Changed
+
+- **Commands read only the Claude Code logs that changed** (ADR 0019).
+  What each transcript gives the scan is kept in a cache with the file's
+  size and modification time. A run reads again only the files that
+  changed since the last run. On 3.2 GB of logs, `tokencur limits` reads
+  usage in about 1 s instead of 13, and its limit hits in under 1 s
+  instead of 4. Results are the same as a full read, record by record. The
+  first run after an upgrade reads everything once. The cache is at
+  `~/.cache/tokencur/scan-cache.sqlite3` (honours `$XDG_CACHE_HOME`, or
+  `$TOKENCUR_CACHE`; `TOKENCUR_CACHE=off` turns it off). It holds the
+  same metadata the ledger does, never message content.
+
+### Fixed
+
+- **RunPod billing from API v2** (#49, ADR 0020). REST API v1, which
+  `scripts/fetch_runpod_billing.py` called, went away between 14 and 17
+  November 2026, so no RunPod bill reached the ledger after 14 November.
+  The script now calls API v2 and saves two files, pods and network
+  volumes, which `tokencur import runpod` takes together. v2 gives no GPU
+  time: its charges are stated over their bucket, in hours, and the
+  detail gives the GPU, CPU and disk split. Saved v1 captures still
+  import, and the GPU time they measured is kept when a v2 capture bills
+  the same pod and day again. Report columns fit longer service names.
+
+## [0.13.0] - 2026-11-17
+
+### Added
+
+- **A model's own weekly limit** (ADR 0015). Since 2026-11, Claude Code's
+  meter lists a weekly limit for Fable alone, on top of the plan's.
+  `tokencur limits` reads it from the same key and stores it in the ledger
+  with the other readings, as the limit `seven_day:Fable`. It sets the
+  limit against Fable's usage value only, and shows the share used, what
+  the whole limit is worth and how much is left. `--json` lists it under
+  the week's `models`. The status line and the session-start notice add
+  `Fable 76%`, and the limits watch reports it at the week's steps.
 
 ## [0.12.0] - 2026-11-14
 

@@ -1,4 +1,4 @@
-# 0019. Target FOCUS 1.4 once the validator runs its released rules
+# 0021. Target FOCUS 1.4 once the validator runs its released rules
 
 - Status: Proposed (supersedes ADR 0016 when accepted)
 - Date: 2026-10-15

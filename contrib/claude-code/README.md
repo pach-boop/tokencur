@@ -8,12 +8,12 @@ through a cache.
 
 | Command | Wired as | What it does |
 | --- | --- | --- |
-| `statusline` | status line | This session's context against a cut (green, yellow from 250k, red from 300k), then the plan limits: `ctx 216k │ week 68% · 5h 15%` |
+| `statusline` | status line | This session's context against a cut (green, yellow from 250k, red from 300k), then the plan limits, and a model's own weekly limit when the meter lists one: `ctx 216k │ week 68% · 5h 15% · Fable 76%` |
 | `session-start` | `SessionStart` hook | Logs the start and tells the new session how close the limits are, when the week's pace reaches its limit, and how to measure its own context |
 | `session-end` | `SessionEnd` hook | Logs the end |
 | `context ID` | run by hand, or by the agent | A session's real context, from its transcript (`ID` can be a prefix) |
 | `refresh` | started by the hooks | Runs `tokencur limits --json` into the cache, one at a time, at the lowest priority |
-| `watch` | systemd timer | A desktop notice once per step a limit crosses: week 85 % and 95 %, five hours 65 % and 85 % |
+| `watch` | systemd timer | A desktop notice once per step a limit crosses: week 85 % and 95 % (a model's own weekly limit, such as Fable's, too), five hours 65 % and 85 % |
 
 ## Why
 
@@ -60,7 +60,7 @@ All optional, from the environment of Claude Code (or of the systemd unit):
 | `TOKENCUR_STATE_DIR` | `$XDG_STATE_HOME/tokencur-hooks` | the cache `limits.json`, the session log `sessions.tsv`, the watch marks |
 | `TOKENCUR_CONTEXT_CUT` | `300000` | context past which to start a new session |
 | `TOKENCUR_CONTEXT_WARN` | `250000` | context at which the status line turns yellow |
-| `TOKENCUR_WATCH_WEEK` | `85,95` | weekly steps, in percent |
+| `TOKENCUR_WATCH_WEEK` | `85,95` | weekly steps, in percent; a model's own weekly limit takes them too |
 | `TOKENCUR_WATCH_5H` | `65,85` | five-hour steps, in percent |
 
 ## Limits

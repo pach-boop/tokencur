@@ -25,4 +25,6 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0016](0016-focus-1-3-gated-on-the-released-rules.md) | Target FOCUS 1.3, gated by the Foundation's validator on its released rules | Accepted |
 | [0017](0017-fill-in-subagent-output-from-the-agents-counters.md) | Fill in subagents' short output counts from Claude Code's counters | Accepted |
 | [0018](0018-billed-ai-cost-from-saved-admin-reports.md) | Billed AI cost from saved admin cost reports, one grouping per day | Accepted |
-| [0019](0019-focus-1-4-once-its-released-rules-run.md) | Target FOCUS 1.4 once the validator runs its released rules | Proposed |
+| [0019](0019-cache-each-log-files-part-of-the-scan.md) | Cache what each log file gives the scan, keyed on the file and the code | Accepted |
+| [0020](0020-runpod-billing-from-api-v2.md) | RunPod billing from API v2: no usage time, and storage of its own | Accepted |
+| [0021](0021-focus-1-4-once-its-released-rules-run.md) | Target FOCUS 1.4 once the validator runs its released rules | Proposed |

@@ -208,16 +208,26 @@ The ledger keeps only what it has seen: usage deleted before the first run is
 gone. An explicit path (`python -m tokencur report ROOT`) is reported as-is and
 never stored.
 
+A run reads again only the Claude Code and Codex logs that changed. What each file gave
+is kept in `~/.cache/tokencur/scan-cache.sqlite3` (honours `$XDG_CACHE_HOME`,
+or `$TOKENCUR_CACHE`; `off` turns it off), with the file's size and time, and
+it holds the same metadata as the ledger (ADR 0019). Deleting it costs one
+full read.
+
 ## Billed cost
 
 Showback values usage at list price; a bill is what a provider actually took.
 RunPod is the first billed source: `scripts/fetch_runpod_billing.py` saves the
-billing history from RunPod's REST API (the one step that goes online, when you
-run it), and `tokencur import runpod FILE` keeps it in the ledger. Reports show
-it as a separate total, "BILLED (real money, from provider bills)", the FOCUS
-export gains Compute rows whose `BilledCost` is the billed amount, and the
+billing history of pods and network volumes from RunPod's API v2 (the one step
+that goes online, when you run it), and `tokencur import runpod FILE...` keeps
+it in the ledger. Reports show it as a separate total, "BILLED (real money,
+from provider bills)", the FOCUS export gains Compute rows for pods and Storage
+rows for network volumes whose `BilledCost` is the billed amount, and the
 observatory shows it as actual money outside subscription leverage
 ([ADR 0009](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0009-billed-charges-next-to-showback.md)).
+v2 gives no GPU time, so its charges are stated over their day; captures saved
+from the retired REST API v1 still import, and the GPU time they measured is
+kept ([ADR 0020](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0020-runpod-billing-from-api-v2.md)).
 
 API usage billed by Anthropic and OpenAI comes from their admin cost reports,
 which you save yourself with an admin key (tokencur never fetches them):
@@ -376,6 +386,18 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
   $1,412. The current share and the week's projection then use that limit,
   and the estimate from ceilings hit stays next to it
   ([ADR 0015](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0015-read-the-agents-own-usage-meter.md)).
+- **A model's own weekly limit.** Since November 2026 the meter also lists a
+  weekly limit for Fable alone, on top of the plan's. tokencur reads it from
+  the same key and sets it against Fable's usage value only:
+
+  ```text
+  Fable has a weekly limit of its own: $236.11 of Fable's usage value = 76% of it by Claude Code's meter (75% at Tue 2026-11-17 18:02 CST); the meter puts it at about $311.84, $75.73 left
+  ```
+
+  Fable also fills the plan's week faster per dollar of usage value. On the
+  week to 2026-11-18, the meter counted $6.15 of Fable usage per point of the
+  week. The plan's earlier weeks, almost all Opus 5.5, took $13.30 to $14.40
+  per point.
 - **A gauge, not a balance.** Limits are not priced like the API, and usage
   these logs do not hold (claude.ai chat, Claude Code's background calls)
   draws on the same limits. Several agents on one subscription share the same
@@ -384,7 +406,8 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
 `tokencur limits --json` prints the same figures for scripts: per window the
 usage value, the share of the limit and what it was measured against
 (`meter`, `meter_reading` or `lowest_ceiling`), the reset, and for the week
-when its pace reaches the limit. The status line and hooks in
+when its pace reaches the limit and, under `models`, each model's own weekly
+limit with the same figures. The status line and hooks in
 [`contrib/claude-code/`](https://github.com/pach-boop/tokencur/tree/main/contrib/claude-code)
 read it.
 
@@ -515,7 +538,7 @@ last rate), then regenerates this page from that history.
   land on the next UTC day.
 - Targets FOCUS 1.4, checked in CI by the Foundation's `focus-validator` on its 1.4.0.1
   rules, a prerelease pinned by hash, with nothing tolerated
-  ([ADR 0019](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0019-focus-1-4-once-its-released-rules-run.md)).
+  ([ADR 0021](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0021-focus-1-4-once-its-released-rules-run.md)).
   The released 1.4 rule file crashes the validator; a weekly
   [focus-watch action](https://github.com/pach-boop/tokencur/blob/main/.github/workflows/focus-watch.yml)
   opens an issue the day it runs. The text of 1.4 removes `ProviderName` and

@@ -11,6 +11,13 @@ def _isolated_ledger(tmp_path_factory, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _isolated_scan_cache(tmp_path_factory, monkeypatch):
+    """No test may read or write the real scan cache in the user's home."""
+    cache = tmp_path_factory.mktemp("cache") / "scan-cache.sqlite3"
+    monkeypatch.setenv("TOKENCUR_CACHE", str(cache))
+
+
+@pytest.fixture(autouse=True)
 def _no_host_logs(monkeypatch):
     """No test may read the agent logs of the machine it runs on: a test
     that passes only where real logs exist fails in CI. Tests that need

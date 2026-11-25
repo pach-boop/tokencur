@@ -1,0 +1,19 @@
+{
+ "captured_at": "20261118T044100Z",
+ "request_url": "https://api.runpod.io/v2/billing/pods?bucketSize=day&startTime=2026-09-01T00%3A00%3A00Z&endTime=2026-11-19T00%3A00%3A00Z",
+ "response": {
+  "records": [
+   {"startTime": "2026-09-27T00:00:00Z", "endTime": "2026-09-28T00:00:00Z", "podId": "pod-alpha", "totalAmount": 0.42, "gpuAmount": 0.4, "cpuAmount": 0, "diskAmount": 0.02},
+   {"startTime": "2026-11-15T00:00:00Z", "endTime": "2026-11-16T00:00:00Z", "podId": "pod-delta", "totalAmount": 1.2, "gpuAmount": 1.15, "cpuAmount": 0, "diskAmount": 0.05},
+   {"startTime": "2026-11-16T00:00:00Z", "endTime": "2026-11-17T00:00:00Z", "podId": "pod-epsilon", "totalAmount": 0.1, "gpuAmount": 0, "cpuAmount": 0.09, "diskAmount": 0.01},
+   {"startTime": "2026-11-16T00:00:00Z", "endTime": "2026-11-17T00:00:00Z", "podId": "pod-zeta", "totalAmount": "0.20", "gpuAmount": 0.2, "cpuAmount": 0, "diskAmount": 0},
+   {"startTime": "2026-11-17T00:00:00Z", "endTime": "2026-11-17T00:00:00Z", "podId": "pod-eta", "totalAmount": 0.3, "gpuAmount": 0.3, "cpuAmount": 0, "diskAmount": 0}
+  ],
+  "metadata": {
+   "query": {"startTime": "2026-09-01T00:00:00Z", "endTime": "2026-11-19T00:00:00Z", "bucketSize": "day"},
+   "recordCount": 5,
+   "totals": {"totalAmount": 2.22, "gpuAmount": 2.05, "cpuAmount": 0.09, "diskAmount": 0.08},
+   "uniquePodCount": 5
+  }
+ }
+}

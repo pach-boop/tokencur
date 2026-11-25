@@ -10,7 +10,10 @@ from tokencur import cli, ledger, sources
 from tokencur.focus import charge_rows
 from tokencur.ingest import claude_code, runpod
 
-EXPORT = Path(__file__).parent / "fixtures" / "billing" / "runpod-billing-pods.json"
+BILLING = Path(__file__).parent / "fixtures" / "billing"
+EXPORT = BILLING / "runpod-billing-pods.json"  # REST API v1, as saved until 2026-11
+PODS_V2 = BILLING / "runpod-billing-pods-v2.json"
+VOLUMES_V2 = BILLING / "runpod-billing-network-volumes.json"
 
 
 def test_an_export_becomes_billed_charges():
@@ -148,19 +151,179 @@ def test_import_then_report_and_export_show_real_money(tmp_path, monkeypatch, ca
     assert "2026-09-27" not in text  # outside the period
 
 
-def test_the_fetch_script_asks_for_the_period_the_way_the_api_expects():
+def test_api_v2_pod_records_are_charges_stated_over_their_bucket():
+    charges = list(runpod.iter_charges(PODS_V2))
+
+    # A total written as text and a bucket that ends where it starts are
+    # not charges: skipped, never guessed at.
+    assert [c.record_id for c in charges] == [
+        "pod-alpha@2026-09-27T00:00:00Z",
+        "pod-delta@2026-11-15T00:00:00Z",
+        "pod-epsilon@2026-11-16T00:00:00Z",
+    ]
+    first = charges[0]
+    assert (first.period_start, first.period_end) == (
+        "2026-09-27T00:00:00Z",
+        "2026-09-28T00:00:00Z",
+    )
+    assert (first.service, first.resource_type, first.amount_usd) == (
+        "RunPod Pods",
+        "GPU pod",
+        0.42,
+    )
+    # v2 gives no GPU time: a day's charge is stated over its 24 hours.
+    assert (first.quantity, first.unit, first.quantity_stated) == (24.0, "Hours", True)
+    assert first.detail == (
+        "GPU $0.4000, disk $0.0200; "
+        "no usage time in RunPod's API v2: stated over the period"
+    )
+    assert charges[2].resource_type == "CPU pod"
+
+
+def test_a_bare_v2_response_also_reads(tmp_path):
+    response = json.loads(PODS_V2.read_text(encoding="utf-8"))["response"]
+    bare = tmp_path / "bare.json"
+    bare.write_text(json.dumps(response), encoding="utf-8")
+
+    assert list(runpod.iter_charges(bare)) == list(runpod.iter_charges(PODS_V2))
+
+
+def test_network_volumes_are_their_own_service_and_focus_storage_rows():
+    charges = list(runpod.iter_charges(VOLUMES_V2))
+
+    assert [c.record_id for c in charges] == [
+        "vol-one@2026-11-15T00:00:00Z",
+        "vol-one@2026-11-16T00:00:00Z",
+    ]
+    assert (charges[0].service, charges[0].resource_type) == (
+        "RunPod Network Volumes",
+        "network volume",
+    )
+    assert charges[0].detail.startswith("standard storage $0.0467; ")
+
+    row = next(charge_rows(charges))
+    assert (row["ServiceCategory"], row["ServiceSubcategory"]) == (
+        "Storage",
+        "File Storage",
+    )
+    assert (row["SkuId"], row["SkuMeter"]) == (
+        "runpod/network-volume/hours",
+        "network volume time",
+    )
+    assert row["BilledCost"] == 0.0467
+    assert row["ListCost"] == pytest.approx(0.0467)
+
+
+def test_a_v2_capture_keeps_the_gpu_time_v1_measured(tmp_path):
+    """The same pod and day in both APIs is the same charge. The newer
+    bill sets the money; the usage stays the one a bill measured."""
+    path = tmp_path / "ledger.sqlite3"
+    measured = next(runpod.iter_charges(EXPORT))
+    stated = next(runpod.iter_charges(PODS_V2))
+    assert measured.record_id == stated.record_id
+    revised = dataclasses.replace(stated, amount_usd=0.43)
+
+    ledger.record_charges([measured], path)
+    assert ledger.record_charges([revised], path) == 0
+
+    (kept,) = ledger.read_charges(path)
+    assert kept == dataclasses.replace(measured, amount_usd=0.43)
+    assert (kept.quantity, kept.unit, kept.detail) == (1.0, "Hours", "50 GB disk")
+
+
+def test_a_measured_charge_replaces_a_stated_one(tmp_path):
+    path = tmp_path / "ledger.sqlite3"
+    measured = next(runpod.iter_charges(EXPORT))
+    stated = next(runpod.iter_charges(PODS_V2))
+
+    ledger.record_charges([stated], path)
+    ledger.record_charges([measured], path)
+
+    assert ledger.read_charges(path) == [measured]
+
+
+def test_schema_9_charges_learn_which_quantities_were_stated(tmp_path, capsys):
+    path = tmp_path / "ledger.sqlite3"
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(ledger._V4_CHARGES)
+        conn.execute("ALTER TABLE charges ADD COLUMN list_usd REAL")
+        conn.execute("PRAGMA user_version = 9")
+        for record_id, unit, detail in (
+            ("pod-a@2026-09-27T00:00:00Z", "Hours", "50 GB disk"),
+            (
+                "line@2026-11-01",
+                "Hours",
+                "no quantity in the report: stated over the period",
+            ),
+        ):
+            conn.execute(
+                f"INSERT INTO charges VALUES ({', '.join('?' * 14)})",
+                (
+                    "runpod" if record_id.startswith("pod") else "anthropic",
+                    record_id,
+                    "2026-09-27T00:00:00Z",
+                    "2026-09-28T00:00:00Z",
+                    "Some provider",
+                    "Some service",
+                    "some resource",
+                    "some type",
+                    24.0,
+                    unit,
+                    0.42,
+                    detail,
+                    "2026-10-01T00:00:00Z",
+                    None,
+                ),
+            )
+
+    charges = ledger.read_charges(path)
+
+    stated = {c.record_id: c.quantity_stated for c in charges}
+    assert stated == {"pod-a@2026-09-27T00:00:00Z": False, "line@2026-11-01": True}
+    assert "schema 10" in capsys.readouterr().err
+    assert (tmp_path / "ledger.sqlite3.schema-9.bak").exists()
+
+
+def _fetch_script():
     import importlib.util
-    from datetime import date
 
     script = Path(__file__).parent.parent / "scripts" / "fetch_runpod_billing.py"
     spec = importlib.util.spec_from_file_location("fetch_runpod_billing", script)
     fetch = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fetch)
+    return fetch
 
-    url = fetch.billing_url(date(2026, 1, 1), date(2026, 10, 2))
 
-    # The same request that produced the export saved on 2026-10-01.
-    assert url == (
-        "https://rest.runpod.io/v1/billing/pods?bucketSize=day"
-        "&startTime=2026-01-01T00%3A00%3A00Z&endTime=2026-10-02T00%3A00%3A00Z"
+def test_the_fetch_script_asks_for_the_period_the_way_the_api_expects():
+    from datetime import date
+
+    fetch = _fetch_script()
+
+    urls = [
+        fetch.billing_url(endpoint, date(2026, 1, 1), date(2026, 11, 19))
+        for endpoint in fetch.ENDPOINTS.values()
+    ]
+
+    # The same requests that answered on 2026-11-18.
+    query = "bucketSize=day&startTime=2026-01-01T00%3A00%3A00Z&endTime=2026-11-19T00%3A00%3A00Z"
+    assert urls == [
+        f"https://api.runpod.io/v2/billing/pods?{query}",
+        f"https://api.runpod.io/v2/billing/network-volumes?{query}",
+    ]
+
+
+def test_the_fetch_script_files_import_together(tmp_path, monkeypatch, capsys):
+    _agent_call(tmp_path / "projects")  # a report needs some usage
+    monkeypatch.setattr(
+        sources,
+        "DEFAULT_SOURCES",
+        ((tmp_path / "projects", claude_code.iter_usage_records),),
     )
+
+    assert cli.main(["import", "runpod", str(PODS_V2), str(VOLUMES_V2)]) == 0
+    assert "5 billed charges (5 new), $1.81 from RunPod" in capsys.readouterr().out
+
+    assert cli.main(["report"]) == 0
+    out = capsys.readouterr().out
+    assert "  RunPod Network Volumes $0.09  (2 charges)" in out
+    assert "  RunPod Pods            $1.72  (3 charges)" in out

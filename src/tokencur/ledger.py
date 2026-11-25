@@ -36,14 +36,14 @@ import sqlite3
 import sys
 from collections.abc import Iterable
 from contextlib import closing
-from dataclasses import asdict, fields
+from dataclasses import asdict, fields, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
 from tokencur.ingest.identity import COPYABLE_SOURCES, content_key, fingerprint
 from tokencur.records import BilledCharge, CIRun, LimitHit, MeterReading, UsageRecord
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 class LedgerError(RuntimeError):
@@ -118,11 +118,21 @@ _V4_CHARGES = """CREATE TABLE IF NOT EXISTS charges (
     first_seen    TEXT NOT NULL,
     PRIMARY KEY (source, record_id)
 )"""
+# A later bill of the same charge replaces the money. Its usage replaces
+# the stored usage unless the stored usage was measured and the new one is
+# only stated over the period: RunPod's API v1 gave GPU time, v2 gives none.
+_USAGE_FIELDS = ("quantity", "unit", "detail", "quantity_stated")
+_KEEP_MEASURED = "excluded.quantity_stated AND NOT charges.quantity_stated"
 _UPSERT_CHARGE = (
     f"INSERT INTO charges ({', '.join(_CHARGE_FIELDS)}, first_seen) "
     f"VALUES ({', '.join('?' * (len(_CHARGE_FIELDS) + 1))}) "
     "ON CONFLICT (source, record_id) DO UPDATE SET "
-    + ", ".join(f"{f} = excluded.{f}" for f in _CHARGE_FIELDS[2:])
+    + ", ".join(
+        f"{f} = CASE WHEN {_KEEP_MEASURED} THEN charges.{f} ELSE excluded.{f} END"
+        if f in _USAGE_FIELDS
+        else f"{f} = excluded.{f}"
+        for f in _CHARGE_FIELDS[2:]
+    )
 )
 
 # CI runs (schema 6): which code a forge's CI tested and how that went,
@@ -265,7 +275,9 @@ def read_charges(path: Path | None = None) -> list[BilledCharge]:
             f"SELECT {', '.join(_CHARGE_FIELDS)} FROM charges "
             "ORDER BY period_start, source, record_id"
         )
-        return [BilledCharge(*row) for row in cursor]
+        charges = [BilledCharge(*row) for row in cursor]
+    # SQLite keeps the flag as an integer.
+    return [replace(c, quantity_stated=bool(c.quantity_stated)) for c in charges]
 
 
 def record_ci_runs(runs: Iterable[CIRun], path: Path | None = None) -> int:
@@ -595,6 +607,20 @@ def _v8_to_v9(conn: sqlite3.Connection) -> str:
     return "added list_usd to billed charges (list price, when a bill states it)"
 
 
+def _v9_to_v10(conn: sqlite3.Connection) -> str:
+    """Schema 10: ``quantity_stated`` on charges, set when a bill gave no
+    usage and the quantity is the period's length (ADR 0020). Stored
+    charges stated that way say so in their detail, as ADR 0018 wrote it."""
+    with conn:
+        _add_column(conn, "charges", "quantity_stated INTEGER NOT NULL DEFAULT 0")
+        conn.execute(
+            "UPDATE charges SET quantity_stated = 1 "
+            "WHERE detail LIKE '%stated over the period%'"
+        )
+        conn.execute("PRAGMA user_version = 10")
+    return "added quantity_stated to billed charges (usage the bill did not give)"
+
+
 # Step from version N to N + 1, keyed by N.
 _MIGRATIONS = {
     1: _v1_to_v2,
@@ -605,6 +631,7 @@ _MIGRATIONS = {
     6: _v6_to_v7,
     7: _v7_to_v8,
     8: _v8_to_v9,
+    9: _v9_to_v10,
 }
 
 
