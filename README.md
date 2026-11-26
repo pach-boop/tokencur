@@ -398,6 +398,23 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
   week to 2026-11-18, the meter counted $6.15 of Fable usage per point of the
   week. The plan's earlier weeks, almost all Opus 5.5, took $13.30 to $14.40
   per point.
+- **The five-hour limit at each window's model mix.** Fable draws about twice
+  as much of the five-hour limit per dollar as Opus: in November 2026 it was
+  hit at $87 to $105 with most of the usage on Fable, and the meter put it at
+  $163 to $194 with Opus alone. When the meter names a model with a limit of
+  its own, tokencur fits that factor on every five-hour hit and meter reading,
+  and sets a window with no fresh reading against the lowest ceiling at that
+  window's own mix:
+
+  ```text
+  5 hours: $112.52 = 67% of the lowest ceiling at this window's model mix since Thu 2026-11-26 08:00 CST (window inferred from call times); resets Thu 2026-11-26 13:00 CST (in 3m)
+    a dollar of Fable draws 2.03 times what one of other models does on this limit (fit on 58 hits and meter readings): at this window's mix (0% Fable) the lowest ceiling hit is worth $168.07, against $87.14 in dollars alone
+  ```
+
+  On one week's eight readings it came within 5.5 points of the meter on
+  average, always at or above it, where the lowest ceiling in dollars alone
+  was 32 points off
+  ([ADR 0022](https://github.com/pach-boop/tokencur/blob/main/docs/adr/0022-five-hour-ceiling-at-the-windows-model-mix.md)).
 - **A gauge, not a balance.** Limits are not priced like the API, and usage
   these logs do not hold (claude.ai chat, Claude Code's background calls)
   draws on the same limits. Several agents on one subscription share the same
@@ -405,9 +422,10 @@ week: $111.07 = 10% of the lowest ceiling since Wed 2026-10-14 05:00 CST; resets
 
 `tokencur limits --json` prints the same figures for scripts: per window the
 usage value, the share of the limit and what it was measured against
-(`meter`, `meter_reading` or `lowest_ceiling`), the reset, and for the week
-when its pace reaches the limit and, under `models`, each model's own weekly
-limit with the same figures. The status line and hooks in
+(`meter`, `meter_reading`, `lowest_ceiling_by_mix` or `lowest_ceiling`), the
+reset, for five hours the model `mix` when one is fit, and for the week when
+its pace reaches the limit and, under `models`, each model's own weekly limit
+with the same figures. The status line and hooks in
 [`contrib/claude-code/`](https://github.com/pach-boop/tokencur/tree/main/contrib/claude-code)
 read it.
 

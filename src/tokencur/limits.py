@@ -22,6 +22,11 @@ API-equivalent usage value:
 - A model can have a weekly limit of its own on top of the plan's (Fable,
   since 2026-11). The meter reads it as ``seven_day:<model>``; it is set
   against that model's usage value only.
+- Such a model also draws more of the five-hour limit per dollar of usage
+  value than the others. Without a fresh reading, the five-hour window is
+  set against the lowest ceiling at its own model mix: every dollar of
+  those models counts a factor fit on the hits and readings of past
+  windows (ADR 0022).
 
 These are estimates by nature. Limits are not priced like the API, and
 usage the logs do not hold (claude.ai chat, Claude Code's own background
@@ -71,6 +76,12 @@ _SAME_RESET = timedelta(minutes=2)
 #: whole-percent rounding tilts it.
 _LINE_READINGS = 3
 _LINE_SPREAD = 20.0
+#: A model with a weekly limit of its own drew about twice as much of the
+#: five-hour limit per dollar: in November 2026 the limit was hit at $87 to
+#: $105 with 62-94% Fable, and the meter put it at $163 to $194 with Opus
+#: alone. The factor is fit only when the share of those models
+#: differs this much among the hits and readings it is fit on.
+_MIX_SPREAD = 0.5
 _SHOWN_HITS = 3
 _SOURCE = "claude-code"
 
@@ -85,6 +96,7 @@ class Ceiling:
     value: float
     plan: str  # the plan in force that day, "" when unknown
     spans_plans: bool = False  # the window began under another plan
+    own_limit_value: float = 0.0  # of ``value``, models with a limit of their own
 
 
 @dataclass(frozen=True)
@@ -102,6 +114,18 @@ class Window:
     meter_limit: float | None = None  # the limit's usage value it implies
     meter_base: float = 0.0  # the meter's percent before any usage logged here
     meter_readings: int = 0  # readings behind meter_limit: 1, or a line's points
+    own_limit_value: float = 0.0  # of ``value``, models with a limit of their own
+
+
+@dataclass(frozen=True)
+class Mix:
+    """How the five-hour limit weighs the models with a weekly limit of
+    their own: a dollar of their usage value draws ``factor`` dollars of
+    the others'. Fit on ``points`` five-hour hits and meter readings."""
+
+    models: tuple[str, ...]
+    factor: float
+    points: int
 
 
 @dataclass(frozen=True)
@@ -118,6 +142,7 @@ class Limits:
     unpriced: dict[str, int] = field(default_factory=dict)  # model -> calls
     #: a model's own weekly limit, by the model's name in the meter
     models: dict[str, Window] = field(default_factory=dict)
+    mix: Mix | None = None  # how the five-hour limit weighs those models
 
 
 def plans_path(explicit: Path | None = None) -> Path | None:
@@ -186,6 +211,12 @@ def limits(
     now = now or datetime.now(UTC)
     timeline = _Timeline(records)
     plans = plans_of(subscriptions).get("Claude Code", [])
+    own_limits = sorted(
+        {r.kind.split(":", 1)[1] for r in readings if r.kind.startswith("seven_day:")}
+    )
+    own_timeline = _Timeline(
+        [r for r in records if any(of_model(n, r.model) for n in own_limits)]
+    )
     first: dict[tuple[str, datetime], datetime] = {}
     other_kinds = set()
     implausible = 0
@@ -213,10 +244,13 @@ def limits(
                 value=timeline.value(start, hit_at),
                 plan=plan,
                 spans_plans=plan != _plan_at(plans, start.astimezone(tz).date()),
+                own_limit_value=own_timeline.value(start, hit_at),
             )
         )
     ceilings.sort(key=lambda c: c.hit_at)
-    meter = _meter_now(readings, now, _plan_start(plans, now.astimezone(tz).date()), tz)
+    plan_now = _plan_at(plans, now.astimezone(tz).date())
+    plan_start = _plan_start(plans, now.astimezone(tz).date())
+    meter = _meter_now(readings, now, plan_start, tz)
     weekly_resets = [
         moment
         for r in readings
@@ -232,6 +266,19 @@ def limits(
         kind: _with_meter(window, meter.get(kind), timeline)
         for kind, window in current.items()
     }
+    if (five := current["five_hour"]) is not None:
+        current["five_hour"] = replace(
+            five, own_limit_value=own_timeline.value(five.start, now)
+        )
+    mix = None
+    if own_limits:
+        points = [
+            (c.value - c.own_limit_value, c.own_limit_value, 1.0)
+            for c in _on_plan(ceilings, plan_now, "five_hour")[1]
+        ]
+        points += _reading_points(readings, timeline, own_timeline, now, plan_start, tz)
+        if (factor := _mix_factor(points)) is not None:
+            mix = Mix(tuple(own_limits), factor, len(points))
     models = {
         kind.split(":", 1)[1]: _model_week(kind, reading, records, now)
         for kind, reading in sorted(meter.items())
@@ -246,7 +293,7 @@ def limits(
             unpriced[model] = unpriced.get(model, 0) + 1
     return Limits(
         now=now,
-        plan=_plan_at(plans, now.astimezone(tz).date()),
+        plan=plan_now,
         ceilings=ceilings,
         current=current,
         pace_per_day=timeline.value(now - timedelta(days=_PACE_DAYS), now) / _PACE_DAYS,
@@ -256,6 +303,7 @@ def limits(
         implausible=implausible,
         unpriced=unpriced,
         models=models,
+        mix=mix,
     )
 
 
@@ -415,6 +463,64 @@ def _line(points: list[tuple[float, float]]) -> tuple[float, float] | None:
     return base, 1 / slope
 
 
+def _reading_points(
+    readings: Sequence[MeterReading],
+    timeline: _Timeline,
+    own_timeline: _Timeline,
+    now: datetime,
+    plan_start: date | None,
+    tz: tzinfo | None,
+) -> list[tuple[float, float, float]]:
+    """The five-hour readings taken by ``now`` on the plan in force (from
+    ``plan_start``, a day in ``tz``), each as (the other models' usage
+    value, that of the models with a limit of their own, the share read),
+    from the window's start to the reading. Readings too low to tell, or
+    with almost no usage here, are left out."""
+    points = []
+    for reading in readings:
+        at, resets = (
+            parse_timestamp(reading.fetched_at),
+            parse_timestamp(reading.resets_at),
+        )
+        if (
+            reading.kind != "five_hour"
+            or reading.percent < _METER_FLOOR
+            or at is None
+            or resets is None
+            or at > now
+            or (plan_start is not None and at.astimezone(tz).date() < plan_start)
+        ):
+            continue
+        start = resets - WINDOWS["five_hour"]
+        used, own = timeline.value(start, at), own_timeline.value(start, at)
+        if used >= _MEASURED:
+            points.append((used - own, own, reading.percent / 100))
+    return points
+
+
+def _mix_factor(points: list[tuple[float, float, float]]) -> float | None:
+    """The factor that fits ``points`` best, each (the other models'
+    usage value, the value of the models with a limit of their own, the
+    share of the limit used), by least squares on share = others / per
+    dollar + own / per dollar of theirs, through zero: their dollars over
+    the others'. None when the points are too few, the share of those
+    models too even among them to tell, or the fit puts either at no cost."""
+    shares = [own / (others + own) for others, own, _ in points]
+    if len(points) < _LINE_READINGS or max(shares) - min(shares) < _MIX_SPREAD:
+        return None
+    oo = sum(others * others for others, _, _ in points)
+    ff = sum(own * own for _, own, _ in points)
+    of = sum(others * own for others, own, _ in points)
+    op = sum(others * share for others, _, share in points)
+    fp = sum(own * share for _, own, share in points)
+    determinant = oo * ff - of * of  # above zero: the share is not even
+    per_other = (op * ff - fp * of) / determinant
+    per_own = (oo * fp - of * op) / determinant
+    if per_other <= 0 or per_own <= 0:
+        return None
+    return per_own / per_other
+
+
 def meter_share(window: Window) -> float | None:
     """The share of the limit ``window`` has used by Claude Code's meter:
     the meter's base, then straight on to the whole limit; None when the
@@ -555,16 +661,42 @@ def _plan_line(result: Limits) -> str:
 
 
 def _ceilings(result: Limits, kind: str) -> tuple[list[Ceiling], list[Ceiling]]:
-    """The ceilings of ``kind`` on the plan in force, and those that are a
+    return _on_plan(result.ceilings, result.plan, kind)
+
+
+def _on_plan(
+    ceilings: list[Ceiling], plan: str, kind: str
+) -> tuple[list[Ceiling], list[Ceiling]]:
+    """The ceilings of ``kind`` on ``plan``, and those that are a
     reference for it: their whole window ran on it and these logs hold its
     usage."""
-    seen = [c for c in result.ceilings if c.kind == kind]
-    mine = [c for c in seen if c.plan == result.plan] if result.plan else seen
+    seen = [c for c in ceilings if c.kind == kind]
+    mine = [c for c in seen if c.plan == plan] if plan else seen
     return mine, [c for c in mine if not c.spans_plans and c.value >= _MEASURED]
 
 
 def _lowest(result: Limits, kind: str) -> float | None:
     return min((c.value for c in _ceilings(result, kind)[1]), default=None)
+
+
+def _own_share(window: Window) -> float:
+    """The share of ``window``'s usage value spent on the models with a
+    limit of their own; none when it has used nothing."""
+    return window.own_limit_value / window.value if window.value else 0.0
+
+
+def _lowest_by_mix(result: Limits) -> float | None:
+    """The lowest five-hour ceiling at the open window's model mix: each
+    ceiling with the dollars of the models with a limit of their own
+    counted ``factor`` times, the lowest, and back in dollars at the share
+    those models have in the open window. None without a fitted mix, an
+    open window or a reference ceiling."""
+    window, mix = result.current["five_hour"], result.mix
+    references = _ceilings(result, "five_hour")[1]
+    if mix is None or window is None or not references:
+        return None
+    lowest = min(c.value + (mix.factor - 1) * c.own_limit_value for c in references)
+    return lowest / (1 + (mix.factor - 1) * _own_share(window))
 
 
 @dataclass(frozen=True)
@@ -611,11 +743,17 @@ def as_dict(result: Limits) -> dict:
     Times are UTC ISO 8601. ``percent`` is the share of the limit used:
     by Claude Code's meter when it says what the whole limit is worth
     (``"meter"``), the meter's own reading when it was too low to say
-    (``"meter_reading"``), else against the lowest ceiling seen on this
-    plan (``"lowest_ceiling"``); null when there is nothing to set it
-    against. A model with a weekly limit of its own has the same figures
-    under the week's ``models``, keyed by the model's name in the meter and
-    valued by that model's calls only."""
+    (``"meter_reading"``), else, for five hours, against the lowest ceiling
+    at the window's model mix (``"lowest_ceiling_by_mix"``, ADR 0022), else
+    against the lowest ceiling seen on this plan (``"lowest_ceiling"``);
+    null when there is nothing to set it against. ``lowest_ceiling`` stays
+    in dollars alone; the five-hour ``mix``, when fit, says how it weighs
+    the models with a weekly limit of their own and what that ceiling is
+    worth at the window's mix. Such a model has the same figures as the
+    week under the week's ``models``, keyed by the model's name in the
+    meter and valued by that model's calls only."""
+
+    by_mix = _lowest_by_mix(result)
 
     def iso(moment: datetime | None) -> str | None:
         if moment is None:
@@ -626,13 +764,18 @@ def as_dict(result: Limits) -> dict:
         current = result.current[kind]
         if current is None:
             return None
-        return figures(current, _lowest(result, kind))
+        mixed = by_mix if kind == "five_hour" else None
+        return figures(current, _lowest(result, kind), mixed)
 
-    def figures(current: Window, lowest: float | None) -> dict:
+    def figures(
+        current: Window, lowest: float | None, by_mix: float | None = None
+    ) -> dict:
         if (share := meter_share(current)) is not None:
             percent, reference = 100 * share, "meter"
         elif current.meter_percent is not None:
             percent, reference = current.meter_percent, "meter_reading"
+        elif by_mix:
+            percent, reference = 100 * current.value / by_mix, "lowest_ceiling_by_mix"
         elif lowest:
             percent, reference = 100 * current.value / lowest, "lowest_ceiling"
         else:
@@ -662,6 +805,17 @@ def as_dict(result: Limits) -> dict:
             "lowest_ceiling": None if lowest is None else round(lowest, 2),
         }
 
+    five, current, mix = window("five_hour"), result.current["five_hour"], result.mix
+    if five is not None and current is not None:
+        five["mix"] = None
+        if mix is not None:
+            five["mix"] = {
+                "models": list(mix.models),
+                "factor": round(mix.factor, 2),
+                "points": mix.points,
+                "share": round(_own_share(current), 3),
+                "lowest_ceiling": None if by_mix is None else round(by_mix, 2),
+            }
     week = window("seven_day")
     if week is not None:
         week["models"] = {
@@ -683,7 +837,7 @@ def as_dict(result: Limits) -> dict:
         "now": iso(result.now),
         "plan": result.plan or None,
         "pace_per_day": round(result.pace_per_day, 2),
-        "windows": {"seven_day": week, "five_hour": window("five_hour")},
+        "windows": {"seven_day": week, "five_hour": five},
         "provenance": asdict(provenance()),
     }
 
@@ -694,6 +848,7 @@ def _section(result: Limits, kind: str, at) -> list[str]:
     seen = [c for c in result.ceilings if c.kind == kind]
     mine, references = _ceilings(result, kind)
     lowest = _lowest(result, kind)
+    by_mix = _lowest_by_mix(result) if kind == "five_hour" else None
     lines = []
     if window is None and kind == "seven_day":
         lines.append(
@@ -713,6 +868,11 @@ def _section(result: Limits, kind: str, at) -> list[str]:
             share = f" = {by_meter:.0%} of the limit by Claude Code's meter ({read})"
         elif window.meter_percent is not None:
             share = ""
+        elif by_mix:
+            share = (
+                f" = {window.value / by_mix:.0%} of the lowest ceiling at this "
+                "window's model mix"
+            )
         else:
             share = (
                 f" = {window.value / lowest:.0%} of the lowest ceiling"
@@ -733,12 +893,18 @@ def _section(result: Limits, kind: str, at) -> list[str]:
             f"{at(window.meter_at)}: too little to tell what the whole limit is worth"
         )
     if window is not None and window.meter_limit is not None:
-        compare = (
-            f"; by the lowest ceiling hit (${lowest:,.2f}) it would read "
-            f"{window.value / lowest:.0%}"
-            if lowest
-            else ""
-        )
+        if by_mix:
+            compare = (
+                f"; by the lowest ceiling hit at this window's model mix "
+                f"(${by_mix:,.2f}) it would read {window.value / by_mix:.0%}"
+            )
+        elif lowest:
+            compare = (
+                f"; by the lowest ceiling hit (${lowest:,.2f}) it would read "
+                f"{window.value / lowest:.0%}"
+            )
+        else:
+            compare = ""
         line = (
             f" (it starts at {window.meter_base:.1f}% and adds a point per "
             f"${window.meter_limit / (100 - window.meter_base):,.2f})"
@@ -751,6 +917,8 @@ def _section(result: Limits, kind: str, at) -> list[str]:
         )
     if kind == "seven_day":
         lines += [_model_line(n, w, at) for n, w in result.models.items()]
+    if window is not None and result.mix is not None and by_mix and lowest:
+        lines.append("  " + _mix_line(result.mix, window, by_mix, lowest))
     on_plan = " on this plan" if result.plan else ""
     if references:
         recent = sorted(references, key=lambda c: c.hit_at, reverse=True)
@@ -807,6 +975,19 @@ def _model_line(name: str, window: Window, at) -> str:
         f"{own}: ${window.value:,.2f} of {name}'s usage value = {share:.0%} of it "
         f"by Claude Code's meter ({read}); the meter puts it at about "
         f"${window.meter_limit:,.2f}, ${left:,.2f} left"
+    )
+
+
+def _mix_line(mix: Mix, window: Window, by_mix: float, lowest: float) -> str:
+    """How the five-hour limit weighs the models with a limit of their own,
+    and what the lowest ceiling is worth at the open window's mix."""
+    names = ", ".join(mix.models)
+    return (
+        f"a dollar of {names} draws {mix.factor:.2f} times what one of other "
+        f"models does on this limit (fit on {mix.points} hits and meter "
+        f"readings): at this window's mix ({_own_share(window):.0%} {names}) the "
+        f"lowest ceiling hit is worth ${by_mix:,.2f}, against ${lowest:,.2f} in "
+        "dollars alone"
     )
 
 

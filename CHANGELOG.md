@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed
+
+- **The five-hour gauge counts each window's model mix** (ADR 0022). A
+  model the meter gives a weekly limit of its own, Fable today, draws about
+  twice as much of the five-hour limit per dollar of usage value, so the
+  lowest ceiling (a Fable window, $87.14) put an Opus window at about twice
+  its real share: 184% when the meter read 92%. tokencur now fits that
+  factor on every five-hour hit and meter reading, and sets a window with no
+  fresh reading against the lowest ceiling at its own mix. On one week's
+  eight readings the mean distance to the meter fell from 32 points to 5.5,
+  always at or above it. `limits --json` keeps `lowest_ceiling` in dollars
+  alone, adds the five-hour `mix`, and `percent_of` gains
+  `lowest_ceiling_by_mix`. With no model limit in the meter, nothing changes.
+
 ### Fixed
 
 - **No stale context right after a compaction.** `tokencur_hooks.py
