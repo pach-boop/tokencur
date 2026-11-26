@@ -27,3 +27,4 @@ prints can be traced. Format: [Michael Nygard's ADRs](https://cognitect.com/blog
 | [0018](0018-billed-ai-cost-from-saved-admin-reports.md) | Billed AI cost from saved admin cost reports, one grouping per day | Accepted |
 | [0019](0019-cache-each-log-files-part-of-the-scan.md) | Cache what each log file gives the scan, keyed on the file and the code | Accepted |
 | [0020](0020-runpod-billing-from-api-v2.md) | RunPod billing from API v2: no usage time, and storage of its own | Accepted |
+| [0022](0022-five-hour-ceiling-at-the-windows-model-mix.md) | The five-hour ceiling at each window's model mix | Accepted |
