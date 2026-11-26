@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-26
+
 ### Changed
 
 - **The five-hour gauge counts each window's model mix** (ADR 0022). A
